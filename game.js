@@ -23,7 +23,11 @@ const defaultPlayerData = {
     lastScoutRefresh: 0,
     // --- NOVÉ POLOŽKY ---
     officeTasks: [],      // Uložené úkoly, aby nezmizely po F5
-    lastEnergyUpdate: 0   // Kdy se naposledy zvedla energie
+    lastEnergyUpdate: 0,   // Kdy se naposledy zvedla energie
+    league: null,
+    nextMatchTime: 0,
+    isPrepared: false,
+    seasonEndTime: 0, // PŘIDÁNO: Konec celé sezóny
 };
 
 // --- LOGIN A PROFIL ---
@@ -58,9 +62,7 @@ window.registerManager = function() {
     startGameUI();
 }
 
-
-// --- INICIALIZACE A HERNÍ SMYČKA ---
-// --- INICIALIZACE A HERNÍ SMYČKA ---
+// --- INICIALIZACE A HERNÍ SMYČKA ----------------------------------------------
 function initGame() {
     let savedData = localStorage.getItem('footballManagerData');
     if (savedData === null) {
@@ -92,6 +94,27 @@ function initGame() {
         for (let i = 0; i < 16; i++) {
             playerData.players.push(generatePlayer(true)); 
         }
+        saveGame();
+    }
+
+    // --- NOVÉ: GENEROVÁNÍ PRÁZDNÉ LIGY (Pokud ještě neexistuje) ---
+    if (!playerData.league || playerData.league.length === 0) {
+        const myTeamName = playerData.managerName ? `FC ${playerData.managerName}` : "Tvůj Tým";
+        const botNames = ["Sokol Horní Lhota", "SK Prdelkovice", "FC Dřeváci", "Baník Ostrava (C)", "Tatran Sedlčany", "Slavoj Žižkov", "Dynamo Vesnice", "AFK Bída", "Zoufalci United"];
+        
+        playerData.league = [];
+        // Hráč
+        playerData.league.push({ name: myTeamName, z: 0, v: 0, r: 0, p: 0, points: 0, isPlayer: true });
+        // Boti
+        botNames.forEach(botName => {
+            playerData.league.push({ name: botName, z: 0, v: 0, r: 0, p: 0, points: 0, isPlayer: false });
+        });
+        
+        // Nastavení časovačů
+        playerData.seasonEndTime = Date.now() + (14 * 24 * 60 * 60 * 1000); // Sezóna končí za 14 dní
+        playerData.nextMatchTime = Date.now() + (8 * 60 * 60 * 1000); // První zápas za 8 hodin
+        playerData.isPrepared = false;
+        
         saveGame();
     }
 
@@ -179,6 +202,15 @@ function gameLoop() {
         updateTimerUI('scout-timer', nextScoutRefresh);
     }
 
+    // --- Odpočet pro Zápasy a Sezónu ---
+    if (playerData.league && playerData.league.length > 0) {
+        updateTimerUI('match-timer', playerData.nextMatchTime);
+        updateTimerUI('topbar-season-timer', playerData.seasonEndTime);
+
+        // Zde později přijde volání zápasového enginu, když nextMatchTime vyprší
+        // if (now >= playerData.nextMatchTime) { playMatch(); }
+    }
+
     if (uiNeedsUpdate) updateTopBarUI();
 }
 
@@ -191,14 +223,21 @@ function updateTimerUI(elementId, endTime) {
 }
 
 function formatTime(seconds) {
-    const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+    const d = Math.floor(seconds / 86400); // Výpočet celých dnů
+    const h = Math.floor((seconds % 86400) / 3600).toString().padStart(2, '0');
     const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
     const s = (seconds % 60).toString().padStart(2, '0');
 
-    if (h === '00') {
-        return `${m}:${s}`;
+    // Pokud zbývá více než 1 den, ukážeme i dny
+    if (d > 0) {
+        return `${d}d ${h}:${m}:${s}`;
     }
-    return `${h}:${m}:${s}`; // Zobrazí HH:MM:SS
+    // Pokud je to pod den, ale nad hodinu
+    if (h !== '00') {
+        return `${h}:${m}:${s}`;
+    }
+    // Pro krátké úkoly pod hodinu
+    return `${m}:${s}`; 
 }
 
 // --- LEVELOVACÍ SYSTÉM ---
@@ -908,29 +947,37 @@ window.startNewClub = function() {
     }
 }
 
+window.prepareForMatch = function() {
+    if (!playerData.isPrepared) {
+        playerData.isPrepared = true;
+        saveGame();
+        renderMatches(); // Překreslíme, aby se tlačítko změnilo
+    }
+}
+
 // -------------------------------------  // ZAPASY // -------------------------------------------- //
 
-// === ZÁPASY A LIGOVÁ TABULKA ===
+// -------------------------------------  // ZÁPASY // -------------------------------------------- //
 
 function renderMatches() {
     const mainContent = document.getElementById('main-content');
 
-    // Názvy klubů (TVŮJ TÝM se pojmenuje podle tvého profilu)
-    const myTeamName = playerData.managerName ? `FC ${playerData.managerName}` : "Tvůj Tým";
+    // Aktualizujeme jméno týmu, pokud se změnilo
+    const myTeamIndex = playerData.league.findIndex(t => t.isPlayer);
+    if (myTeamIndex !== -1 && playerData.managerName) {
+        playerData.league[myTeamIndex].name = `FC ${playerData.managerName}`;
+    }
 
-    // DOČASNÁ DATA: Jen abychom viděli vzhled (Později se to bude tahat z playerData.league)
-    const mockLeague = [
-        { rank: 1, name: myTeamName, z: 14, v: 10, r: 2, p: 2, points: 32, isPlayer: true },
-        { rank: 2, name: "Sokol Horní Lhota", z: 14, v: 9, r: 3, p: 2, points: 30, isPlayer: false },
-        { rank: 3, name: "SK Prdelkovice", z: 14, v: 8, r: 4, p: 2, points: 28, isPlayer: false },
-        { rank: 4, name: "FC Dřeváci", z: 14, v: 7, r: 3, p: 4, points: 24, isPlayer: false },
-        { rank: 5, name: "Baník Ostrava (C)", z: 14, v: 6, r: 5, p: 3, points: 23, isPlayer: false },
-        { rank: 6, name: "Tatran Sedlčany", z: 14, v: 5, r: 2, p: 7, points: 17, isPlayer: false },
-        { rank: 7, name: "Slavoj Žižkov", z: 14, v: 4, r: 4, p: 6, points: 16, isPlayer: false },
-        { rank: 8, name: "Dynamo Vesnice", z: 14, v: 2, r: 5, p: 7, points: 11, isPlayer: false },
-        { rank: 9, name: "AFK Bída", z: 14, v: 1, r: 3, p: 10, points: 6, isPlayer: false },
-        { rank: 10, name: "Zoufalci United", z: 14, v: 0, r: 1, p: 13, points: 1, isPlayer: false }
-    ];
+    // Seřadíme ligu podle bodů (na začátku budou všichni na nule)
+    const sortedLeague = [...playerData.league].sort((a, b) => b.points - a.points);
+    
+    // Prozatím vybereme jako soupeře náhodného bota (později to bude přesný kalendář)
+    const opponent = sortedLeague.find(t => !t.isPlayer); 
+
+    // Tlačítko přípravy reaguje na stav
+    const prepareBtnHtml = playerData.isPrepared 
+        ? `<button class="btn-task" style="width: 100%; background-color: #4b5563; border-color: #374151; padding: 15px; font-size: 1.1rem; cursor: not-allowed;" disabled>Tým je plně připraven! ✓</button>`
+        : `<button class="btn-task" style="width: 100%; background-color: #166534; border-color: #14532d; padding: 15px; font-size: 1.1rem;" onclick="prepareForMatch()">Připravit se na zápas (+10% Síly)</button>`;
 
     mainContent.innerHTML = `
         <div style="text-align: center;">
@@ -940,15 +987,15 @@ function renderMatches() {
         <div class="next-match-card">
             <h3 style="margin-top: 0; color: #fcd34d; letter-spacing: 1px; text-transform: uppercase;">Nadcházející zápas</h3>
             <p style="font-size: 1.3rem; margin: 15px 0;">
-                <span style="color: #60a5fa;">${myTeamName}</span> 
+                <span style="color: #60a5fa;">${playerData.league[myTeamIndex].name}</span> 
                 <span style="color: #9ca3af; font-size: 1rem; margin: 0 10px;">VS</span> 
-                <span style="color: #ef4444;">${mockLeague[1].name}</span>
+                <span style="color: #ef4444;">${opponent.name}</span>
             </p>
             <div style="font-size: 2.5rem; font-family: 'Courier New', monospace; font-weight: bold; color: #f59e0b; margin: 15px 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
-                07:59:59
+                <span id="match-timer">Počítám...</span>
             </div>
             <p style="font-size: 0.9rem; color: #9ca3af; margin-bottom: 15px;">Aktivuj přípravu, dokud je čas. Zvýšíš tím šanci na výhru a zkušenosti hráčů.</p>
-            <button class="btn-task" style="width: 100%; background-color: #166534; border-color: #14532d; padding: 15px; font-size: 1.1rem;">Připravit se na zápas (+10% Síly)</button>
+            ${prepareBtnHtml}
         </div>
 
         <div style="border-radius: 8px; overflow: hidden; max-width: 800px; margin: 0 auto; border: 3px solid #8d6e63; box-shadow: 5px 5px 15px rgba(0,0,0,0.5);">
@@ -965,9 +1012,9 @@ function renderMatches() {
                     </tr>
                 </thead>
                 <tbody>
-                    ${mockLeague.map(team => `
+                    ${sortedLeague.map((team, index) => `
                         <tr class="${team.isPlayer ? 'player-team-row' : ''}">
-                            <td style="font-weight: bold; color: ${team.rank <= 2 ? '#166534' : team.rank >= 9 ? '#dc2626' : 'inherit'};">${team.rank}.</td>
+                            <td style="font-weight: bold; color: ${index + 1 <= 2 ? '#166534' : index + 1 >= 9 ? '#dc2626' : 'inherit'};">${index + 1}.</td>
                             <td style="text-align: left;">${team.name}</td>
                             <td>${team.z}</td>
                             <td>${team.v}</td>
@@ -980,4 +1027,7 @@ function renderMatches() {
             </table>
         </div>
     `;
+
+    // Okamžitá aktualizace časovačů, aby neproblikávalo "Počítám..."
+    updateTimerUI('match-timer', playerData.nextMatchTime);
 }
