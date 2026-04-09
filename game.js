@@ -26,6 +26,40 @@ const defaultPlayerData = {
     lastEnergyUpdate: 0   // Kdy se naposledy zvedla energie
 };
 
+// --- LOGIN A PROFIL ---
+let tempSelectedAvatar = 'images/avatar1.jpg'; // Výchozí volba
+
+window.selectAvatar = function(src) {
+    tempSelectedAvatar = src;
+    // Odstraníme zelený rámeček všem obrázkům
+    document.querySelectorAll('.avatar-option').forEach(img => img.classList.remove('selected'));
+    // Přidáme zelený rámeček tomu, na který jsme klikli
+    document.querySelector(`.avatar-option[src="${src}"]`).classList.add('selected');
+}
+
+window.registerManager = function() {
+    const nameInput = document.getElementById('manager-name-input').value.trim();
+    if (nameInput.length < 3) {
+        alert("Manažere, tvé jméno musí mít alespoň 3 znaky!");
+        return;
+    }
+    
+    playerData.managerName = nameInput;
+    
+    // Pokud hráč ještě nemá avatara (nový klub), použijeme ten vybraný z tempSelectedAvatar
+    if (!playerData.avatar) {
+        playerData.avatar = tempSelectedAvatar;
+    }
+
+    playerData.isLoggedIn = true;
+    saveGame();
+    
+    document.getElementById('login-screen').style.display = 'none';
+    startGameUI();
+}
+
+
+// --- INICIALIZACE A HERNÍ SMYČKA ---
 // --- INICIALIZACE A HERNÍ SMYČKA ---
 function initGame() {
     let savedData = localStorage.getItem('footballManagerData');
@@ -34,47 +68,59 @@ function initGame() {
     } else {
         playerData = JSON.parse(savedData);
         
-        // Pojistky pro staré uložené pozice
+        // --- POJISTKY PRO STARÉ SAVY ---
         if(!playerData.buildings) playerData.buildings = defaultPlayerData.buildings;
         if(playerData.activeUpgrade === undefined) playerData.activeUpgrade = null;
-        
-        // Ošetření chyby se zaseknutým úkolem
         if (playerData.activeTask !== null && playerData.activeTask.endTime === undefined) {
-            console.log("Mažu starý nekompatibilní úkol.");
             playerData.activeTask = null;
         }
-
-        // --- PŘIDÁNO: Pojistky pro Skauting ---
         if(!playerData.scoutedPlayers) playerData.scoutedPlayers = [];
         if(!playerData.lastScoutRefresh) playerData.lastScoutRefresh = 0;
-        
-        // --- PŘIDÁNO: Pojistky pro pevné úkoly a dobíjení energie ---
         if(!playerData.officeTasks) playerData.officeTasks = [];
         if(!playerData.lastEnergyUpdate) playerData.lastEnergyUpdate = Date.now();
+        
+        // Zpětná kompatibilita pro přihlášení (pokud má jméno, ale chybí mu nová proměnná)
+        if(playerData.isLoggedIn === undefined) {
+            playerData.isLoggedIn = (playerData.managerName !== null);
+        }
     }
 
-    // Generování prvního týmu, pokud je pole hráčů prázdné
+    // Generování startovního týmu
     if (!playerData.formation) playerData.formation = '4-4-2';
     if (!playerData.players || playerData.players.length === 0) {
         playerData.players = [];
         for (let i = 0; i < 16; i++) {
-            // Posíláme 'true', což znamená, že jde o startovního hráče
             playerData.players.push(generatePlayer(true)); 
         }
         saveGame();
     }
 
-    // Zkontrolujeme, zda hráč po načtení hry nemá dostatek XP na nový level
-    checkLevelUp();
+    // --- ROZHODOVACÍ LOGIKA PRO PŘIHLÁŠENÍ ---
+    if (!playerData.isLoggedIn) {
+        document.getElementById('login-screen').style.display = 'flex';
+        
+        // Pokud už hráč má vybraného avatara z dřívějška, schováme výběr
+        const avatarSection = document.getElementById('avatar-section');
+        if (playerData.avatar && avatarSection) {
+            avatarSection.style.display = 'none';
+        } else {
+            // Default pro úplně nové hráče
+            selectAvatar('images/avatar1.jpg'); 
+        }
+    } else {
+        startGameUI();
+    }
+}
 
+// Tato funkce se spustí až POTÉ, co se okno zavře (nebo pokud už ho známe)
+function startGameUI() {
+    checkLevelUp();
     updateTopBarUI();
     setupNavigation();
 
-    // Vychytávka: Automaticky nasimulujeme kliknutí na Kancelář při startu hry
     const officeBtn = document.querySelector('[data-target="office"]');
     if (officeBtn) officeBtn.click();
 
-    // Spuštění hlavní herní smyčky (tiká každou 1 vteřinu)
     setInterval(gameLoop, 1000);
 }
 
@@ -86,29 +132,22 @@ function gameLoop() {
     const now = Date.now();
     let uiNeedsUpdate = false;
 
-    // --- NOVÉ: Regenerace energie (1 energie = 1 minuta = 60 000 milisekund) ---
+    // --- Regenerace energie (1 energie = 1 minuta = 60 000 milisekund) ---
     if (playerData.energy < 100) {
         const timePassed = now - playerData.lastEnergyUpdate;
         const energyGained = Math.floor(timePassed / 60000); // Vypočítáme celé uběhlé minuty
         
         if (energyGained > 0) {
-            // Přičteme energii, ale nikdy nepřekročíme 100
             playerData.energy = Math.min(100, playerData.energy + energyGained);
-            // Posuneme časomíru dopředu přesně o tolik minut, které jsme zrovna "vybrali"
             playerData.lastEnergyUpdate += energyGained * 60000; 
-            
             uiNeedsUpdate = true;
-            saveGame(); // Uložíme nový stav energie
+            saveGame(); 
         }
     } else {
-        // Pokud je energie na 100 (plno), časomíru držíme na aktuálním čase
         playerData.lastEnergyUpdate = now;
     }
 
-    // --- PŮVODNÍ KÓD PRO ÚKOLY A BUDOVY ---
-
-    // Vylepšená kontrola: Spustí se jen tehdy, pokud activeTask opravdu existuje 
-    // a zároveň má v sobě uložený čas endTime.
+    // --- KÓD PRO ÚKOLY A BUDOVY ---
     if (playerData.activeTask && playerData.activeTask.endTime) {
         if (now >= playerData.activeTask.endTime) {
             finishTask();
@@ -118,7 +157,6 @@ function gameLoop() {
         }
     }
 
-    // To samé pro budovy
     if (playerData.activeUpgrade && playerData.activeUpgrade.endTime) {
         if (now >= playerData.activeUpgrade.endTime) {
             finishUpgrade();
@@ -163,6 +201,9 @@ function checkLevelUp() {
 }
 
 function updateTopBarUI() {
+    // Aktualizace profilu manažera
+    document.getElementById('manager-name-display').innerText = playerData.managerName || 'Neznámý';
+    document.getElementById('topbar-avatar').src = playerData.avatar || 'images/avatar1.jpg';
     document.getElementById('ui-level').textContent = playerData.level;
     document.getElementById('ui-xp').textContent = Math.floor(playerData.xp);
     document.getElementById('ui-max-xp').textContent = getRequiredXp();
@@ -255,15 +296,20 @@ function renderOffice() {
     }
 
     // 3. Vykreslení vygenerovaných úkolů
-    // ... (ZDE ZŮSTÁVÁ ZBYTEK TVÉ FUNKCE RENDEROFFICE) ...
     mainContent.innerHTML = `
-        <h2>Kancelář manažera</h2>
+        <div style="text-align: center;">
+            <h2 class="section-title">Kancelář manažera</h2>
+        </div>
         <div class="office-container">
             ${playerData.officeTasks.map((task, index) => `
                 <div class="task-card">
                     <h3>${task.title}</h3>
-                    <div class="task-reward">Odměna: +${task.reward} ${task.type === 'money' ? 'Peníze' : 'XP'}</div>
-                    <div class="task-cost">Cena: -${task.energy} Energie (${task.energy} min)</div>
+                    <div style="margin: 10px 0; font-size: 1.1rem;">
+                        <span style="font-weight: bold; color: #166534;">+${task.reward} ${task.type === 'money' ? '💰' : '⭐'}</span>
+                    </div>
+                    <div style="color: #d84315; margin-bottom: 10px;">
+                        Cena: ⚡ ${task.energy} (${task.energy} min)
+                    </div>
                     <button class="btn-task" onclick="startTask(${index})">Začít úkol</button>
                 </div>
             `).join('')}
@@ -426,6 +472,16 @@ window.hardReset = function() {
     if (confirm("Opravdu chceš smazat všechna data? Tuto akci nelze vzít zpět!")) {
         localStorage.removeItem('footballManagerData'); // Smaže náš konkrétní save
         location.reload(); // Obnoví stránku, čímž se vytvoří nový čistý profil
+    }
+}
+
+// ODHLÁŠENÍ
+window.logout = function() {
+    if(confirm("Opravdu se chceš odhlásit?")) {
+        // Ponecháme managerName i avatar v paměti, ale nastavíme příznak odhlášení
+        playerData.isLoggedIn = false; 
+        saveGame();
+        location.reload(); 
     }
 }
 
@@ -784,5 +840,12 @@ window.skipTask = function() {
         saveGame();
         // Rovnou zavoláme herní smyčku, aby si toho všimla a úkol dokončila
         gameLoop(); 
+    }
+}
+
+window.startNewClub = function() {
+    if(confirm("Tímto smažeš celou svou aktuální hru a začneš úplně od nuly. Jsi si jistý?")) {
+        localStorage.removeItem('footballManagerData'); // Kompletní smazání dat
+        location.reload(); // Obnovení stránky pro čistý start
     }
 }
