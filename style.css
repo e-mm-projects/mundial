@@ -473,3 +473,68 @@ body {
     margin-left: 30px; /* Tímto se položky od sebe krásně oddělí */
     display: inline-block; /* Pro jistotu, aby texty zůstaly hezky v řádku */
 }
+
+/* === SEKCE ZÁPASY A LIGOVÁ TABULKA === */
+
+.next-match-card {
+    background-color: rgba(0, 0, 0, 0.85);
+    color: white;
+    border: 2px solid #f59e0b;
+    border-radius: 10px;
+    padding: 25px;
+    text-align: center;
+    max-width: 550px;
+    margin: 0 auto 30px auto;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+}
+
+.league-table {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    border-collapse: collapse;
+    background-color: rgba(253, 245, 230, 0.95);
+    border: 3px solid #8d6e63;
+    border-radius: 8px;
+    box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
+    /* Nutné pro zaoblené rohy u tabulky: */
+    overflow: hidden; 
+}
+
+.league-table th, .league-table td {
+    padding: 12px 10px;
+    text-align: center;
+    border-bottom: 1px solid #d7ccc8;
+}
+
+.league-table th {
+    background-color: #4e342e;
+    color: #fdf5e6;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+}
+
+/* Zvýraznění sudých řádků pro lepší čitelnost */
+.league-table tbody tr:nth-child(even) {
+    background-color: rgba(215, 204, 200, 0.3);
+}
+
+/* ZELENÁ linka pro top 2 postupující týmy */
+.league-table tbody tr:nth-child(1),
+.league-table tbody tr:nth-child(2) {
+    border-left: 6px solid #166534;
+}
+
+/* ČERVENÁ linka pro poslední 2 sestupující týmy */
+.league-table tbody tr:nth-child(9),
+.league-table tbody tr:nth-child(10) {
+    border-left: 6px solid #dc2626;
+}
+
+/* Speciální řádek pro tým hráče */
+.player-team-row {
+    background-color: rgba(245, 158, 11, 0.25) !important;
+    font-weight: bold;
+    color: #92400e;
+}

@@ -165,6 +165,19 @@ function gameLoop() {
             updateTimerUI('upgrade-timer', playerData.activeUpgrade.endTime);
         }
     }
+    // --- Odpočet pro Skauting ---
+    const nextScoutRefresh = playerData.lastScoutRefresh + getScoutInterval();
+    if (now >= nextScoutRefresh) {
+        // Pokud je čas na nové hráče a jsme zrovna ve Skautingu, stránka se rovnou obnoví
+        const activeBtn = document.querySelector('.nav-btn.active');
+        if (activeBtn && activeBtn.getAttribute('data-target') === 'scouting') {
+            renderScouting();
+            uiNeedsUpdate = true;
+        }
+    } else {
+        // Jinak jen posouváme vteřiny na ciferníku
+        updateTimerUI('scout-timer', nextScoutRefresh);
+    }
 
     if (uiNeedsUpdate) updateTopBarUI();
 }
@@ -178,9 +191,14 @@ function updateTimerUI(elementId, endTime) {
 }
 
 function formatTime(seconds) {
-    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
     const s = (seconds % 60).toString().padStart(2, '0');
-    return `${m}:${s}`;
+
+    if (h === '00') {
+        return `${m}:${s}`;
+    }
+    return `${h}:${m}:${s}`; // Zobrazí HH:MM:SS
 }
 
 // --- LEVELOVACÍ SYSTÉM ---
@@ -247,7 +265,9 @@ const backgrounds = {
             mainContent.style.backgroundPosition = 'center';
 
             // 3. Původní logika vykreslování
-            if (target === 'office') renderOffice();
+            if (target === 'office') { renderOffice();
+            } 
+            else if (target === 'match') renderMatches();
             else if (target === 'stadium') renderStadium();
             else if (target === 'locker-room') renderLockerRoom();
             else if (target === 'scouting') renderScouting();
@@ -456,6 +476,20 @@ function finishUpgrade() {
 
 window.skipUpgrade = function() {
     if(playerData.activeUpgrade) playerData.activeUpgrade.endTime = Date.now();
+}
+
+
+// --- VÝPOČET ČASU SKAUTINGU ---
+function getScoutInterval() {
+    // POZNÁMKA: Místo 'scoutOffice' doplň přesný název proměnné tvé budovy ze sekce Stadion!
+    // Pokud tam budovu ještě nemáš, defaultně počítá s levelem 1.
+    const scoutLevel = (playerData.buildings && playerData.buildings.scoutOffice) ? playerData.buildings.scoutOffice : 1;
+    
+    const baseTime = 24 * 60 * 60 * 1000; // 24 hodin v milisekundách
+    const reduction = (scoutLevel - 1) * 30 * 60 * 1000; // 30 minut za každý level navíc
+    const minTime = 8 * 60 * 60 * 1000; // Ochrana: nikdy to neklesne pod 8 hodin
+    
+    return Math.max(minTime, baseTime - reduction);
 }
 
 // --- TESTOVACÍ FUNKCE ---
@@ -739,21 +773,35 @@ window.handlePlayerClick = function(index) {
 }
 
 // --- SKAUTING ---
+
+// NOVÉ: Matematika pro výpočet času skautování
+function getScoutInterval() {
+    const scoutLevel = (playerData.buildings && playerData.buildings.scout) ? playerData.buildings.scout : 1;
+    const baseTime = 24 * 60 * 60 * 1000; // 24 hodin
+    const reduction = (scoutLevel - 1) * 30 * 60 * 1000; // mínus 30 minut za každý level navíc
+    const minTime = 8 * 60 * 60 * 1000; // minimum je 8 hodin
+    
+    return Math.max(minTime, baseTime - reduction);
+}
+
 function renderScouting() {
     const mainContent = document.getElementById('main-content');
     
-    // 🛡️ POJISTKA: Pokud data ve starém savu chybí, hra je teď sama bezpečně vytvoří
+    // 🛡️ POJISTKA: Pokud data ve starém savu chybí
     if (!playerData.scoutedPlayers) playerData.scoutedPlayers = [];
     if (!playerData.lastScoutRefresh) playerData.lastScoutRefresh = 0;
     
     const now = Date.now();
-    const oneDayInMs = 24 * 60 * 60 * 1000;
+    const scoutInterval = getScoutInterval(); // Použijeme náš dynamický čas
     
-    // Pokud je nabídka prázdná, nebo uběhlo 24 hodin od posledního generování
-    if (playerData.scoutedPlayers.length === 0 || now - playerData.lastScoutRefresh > oneDayInMs) {
+    // Pokud je nabídka prázdná, nebo uběhl vypočítaný čas
+    if (playerData.scoutedPlayers.length === 0 || now - playerData.lastScoutRefresh > scoutInterval) {
         generateScoutedPlayers();
     }
 
+    let nextRefresh = playerData.lastScoutRefresh + scoutInterval;
+
+    // Tvoje perfektní HTML pro generování kartiček hráčů zůstává nedotčeno!
     const playersHtml = playerData.scoutedPlayers.map((player, index) => {
         const starsHtml = player.stars > 0 ? '⭐'.repeat(player.stars) : '<span style="color: #94a3b8; font-size: 0.8rem;">Amatér</span>';
         const canAfford = playerData.money >= player.price;
@@ -781,32 +829,42 @@ function renderScouting() {
         `;
     }).join('');
 
+    // NOVÝ VIZUÁL: Upravená hlavička, temná kartička s vtipným textem a tvé testovací tlačítko
     mainContent.innerHTML = `
-        <h2>Skauting (Úroveň kanceláře: ${playerData.buildings.scout})</h2>
-        <div class="locker-room-controls">
-            <p>Každý den ti skauti přinesou novou nabídku. Vyšší úroveň kanceláře = vyšší základní statistiky hráčů.</p>
-            <button class="btn-task btn-skip" onclick="forceScoutRefresh()">[TEST] Vygenerovat nový den</button>
+        <div style="text-align: center;">
+            <h2 class="section-title">Kancelář hlavního skauta</h2>
+            
+            <div style="background-color: rgba(0, 0, 0, 0.75); color: #fdf5e6; padding: 15px 30px; border-radius: 8px; border: 2px solid #a1887f; max-width: 700px; margin: 0 auto 20px auto; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+                <p style="margin: 0; font-size: 1.1rem; font-style: italic;">
+                    "Skautování nových hráčů bude trvat ještě <strong id="scout-timer" style="color: #f59e0b; font-family: monospace; font-size: 1.3rem;">Počítám...</strong><br>Zatím si musíte vybrat z toho, co jsem objevil, šéfe."
+                </p>
+                <div style="margin-top: 10px; font-size: 0.85rem; color: #a1887f;">
+                    Úroveň kanceláře: ${playerData.buildings.scout} (Každý další level zrychlí skauty o 30 minut)
+                </div>
+                <button class="btn-task btn-skip" style="margin-top: 10px; padding: 5px 10px;" onclick="forceScoutRefresh()">[TEST] Vygenerovat hned</button>
+            </div>
         </div>
+        
         <div class="player-list">
             ${playersHtml}
         </div>
     `;
+
+    updateTimerUI('scout-timer', nextRefresh);
 }
 
 function generateScoutedPlayers() {
     playerData.scoutedPlayers = [];
-    // Počet nabízených hráčů: základ 3, +1 za každé 2 levely Kanceláře
     const amount = 3 + Math.floor(playerData.buildings.scout / 2); 
     
     for (let i = 0; i < amount; i++) {
-        playerData.scoutedPlayers.push(generatePlayer(false)); // false = Není to startovní hráč!
+        playerData.scoutedPlayers.push(generatePlayer(false)); 
     }
     playerData.lastScoutRefresh = Date.now();
     saveGame();
 }
 
 window.buyPlayer = function(index) {
-    // NOVÁ POJISTKA: Má hráč v klubu místo?
     if (playerData.players.length >= 16) {
         alert("Máš plnou střídačku (16/16)! Než koupíš dalšího hráče, musíš jít do Šatny a někoho prodat.");
         return;
@@ -848,4 +906,78 @@ window.startNewClub = function() {
         localStorage.removeItem('footballManagerData'); // Kompletní smazání dat
         location.reload(); // Obnovení stránky pro čistý start
     }
+}
+
+// -------------------------------------  // ZAPASY // -------------------------------------------- //
+
+// === ZÁPASY A LIGOVÁ TABULKA ===
+
+function renderMatches() {
+    const mainContent = document.getElementById('main-content');
+
+    // Názvy klubů (TVŮJ TÝM se pojmenuje podle tvého profilu)
+    const myTeamName = playerData.managerName ? `FC ${playerData.managerName}` : "Tvůj Tým";
+
+    // DOČASNÁ DATA: Jen abychom viděli vzhled (Později se to bude tahat z playerData.league)
+    const mockLeague = [
+        { rank: 1, name: myTeamName, z: 14, v: 10, r: 2, p: 2, points: 32, isPlayer: true },
+        { rank: 2, name: "Sokol Horní Lhota", z: 14, v: 9, r: 3, p: 2, points: 30, isPlayer: false },
+        { rank: 3, name: "SK Prdelkovice", z: 14, v: 8, r: 4, p: 2, points: 28, isPlayer: false },
+        { rank: 4, name: "FC Dřeváci", z: 14, v: 7, r: 3, p: 4, points: 24, isPlayer: false },
+        { rank: 5, name: "Baník Ostrava (C)", z: 14, v: 6, r: 5, p: 3, points: 23, isPlayer: false },
+        { rank: 6, name: "Tatran Sedlčany", z: 14, v: 5, r: 2, p: 7, points: 17, isPlayer: false },
+        { rank: 7, name: "Slavoj Žižkov", z: 14, v: 4, r: 4, p: 6, points: 16, isPlayer: false },
+        { rank: 8, name: "Dynamo Vesnice", z: 14, v: 2, r: 5, p: 7, points: 11, isPlayer: false },
+        { rank: 9, name: "AFK Bída", z: 14, v: 1, r: 3, p: 10, points: 6, isPlayer: false },
+        { rank: 10, name: "Zoufalci United", z: 14, v: 0, r: 1, p: 13, points: 1, isPlayer: false }
+    ];
+
+    mainContent.innerHTML = `
+        <div style="text-align: center;">
+            <h2 class="section-title">Amatérská Liga (10. Divize)</h2>
+        </div>
+
+        <div class="next-match-card">
+            <h3 style="margin-top: 0; color: #fcd34d; letter-spacing: 1px; text-transform: uppercase;">Nadcházející zápas</h3>
+            <p style="font-size: 1.3rem; margin: 15px 0;">
+                <span style="color: #60a5fa;">${myTeamName}</span> 
+                <span style="color: #9ca3af; font-size: 1rem; margin: 0 10px;">VS</span> 
+                <span style="color: #ef4444;">${mockLeague[1].name}</span>
+            </p>
+            <div style="font-size: 2.5rem; font-family: 'Courier New', monospace; font-weight: bold; color: #f59e0b; margin: 15px 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
+                07:59:59
+            </div>
+            <p style="font-size: 0.9rem; color: #9ca3af; margin-bottom: 15px;">Aktivuj přípravu, dokud je čas. Zvýšíš tím šanci na výhru a zkušenosti hráčů.</p>
+            <button class="btn-task" style="width: 100%; background-color: #166534; border-color: #14532d; padding: 15px; font-size: 1.1rem;">Připravit se na zápas (+10% Síly)</button>
+        </div>
+
+        <div style="border-radius: 8px; overflow: hidden; max-width: 800px; margin: 0 auto; border: 3px solid #8d6e63; box-shadow: 5px 5px 15px rgba(0,0,0,0.5);">
+            <table class="league-table" style="border: none; box-shadow: none;">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">#</th>
+                        <th style="text-align: left;">Tým</th>
+                        <th title="Zápasy">Z</th>
+                        <th title="Výhry">V</th>
+                        <th title="Remízy">R</th>
+                        <th title="Prohry">P</th>
+                        <th title="Body">B</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${mockLeague.map(team => `
+                        <tr class="${team.isPlayer ? 'player-team-row' : ''}">
+                            <td style="font-weight: bold; color: ${team.rank <= 2 ? '#166534' : team.rank >= 9 ? '#dc2626' : 'inherit'};">${team.rank}.</td>
+                            <td style="text-align: left;">${team.name}</td>
+                            <td>${team.z}</td>
+                            <td>${team.v}</td>
+                            <td>${team.r}</td>
+                            <td>${team.p}</td>
+                            <td style="font-weight: bold; font-size: 1.1rem;">${team.points}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
 }
