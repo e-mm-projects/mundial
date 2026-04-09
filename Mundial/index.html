@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Football Idle Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header id="top-bar">
+        <div class="resource">Level trenéra: <span id="ui-level">-</span></div>
+        <div class="resource">XP: <span id="ui-xp">-</span> / <span id="ui-max-xp">-</span></div>
+        <div class="resource">Peníze: <span id="ui-money">-</span></div>
+        <div class="resource">Energie: <span id="ui-energy">-</span> / 100
+            <button onclick="resetEnergy()" style="margin-left: 10px; padding: 2px 8px; background-color: #f59e0b; color: white; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;">[TEST] Max</button>
+            <button onclick="hardReset()" style="margin-left: 5px; padding: 2px 8px; background-color: #dc2626; color: white; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;">[TEST] Smazat Save</button>
+        </div>
+    </header>
+
+    <div id="container">
+        <nav id="sidebar">
+            <button class="nav-btn" data-target="office" data-name="Kancelář">Kancelář</button>
+            <button class="nav-btn" data-target="training" data-name="Tréninkové hřiště">Tréninkové hřiště</button>
+            <button class="nav-btn" data-target="match" data-name="Zápasy">Zápasy</button>
+            <button class="nav-btn" data-target="shop" data-name="Obchod">Obchod</button>
+            <button class="nav-btn" data-target="scouting" data-name="Skauting">Skauting</button>
+            <button class="nav-btn" data-target="stadium" data-name="Stadion">Stadion</button>
+            <button class="nav-btn" data-target="locker-room" data-name="Šatna">Šatna</button>
+            <button class="nav-btn" data-target="pve" data-name="Podzemí (PvE)">Podzemí (PvE)</button>
+            <button class="nav-btn" data-target="hall-of-fame" data-name="Síň Slávy">Síň Slávy</button>
+            <button class="nav-btn" data-target="mail" data-name="Pošta">Pošta</button>
+            <button class="nav-btn" data-target="alliance" data-name="Aliance">Aliance</button>
+        </nav>
+
+        <main id="main-content">
+            <h1>Vítej v klubu, trenére!</h1>
+            <p>Vyber si v menu, kam chceš jít. Většina klubu se teprve staví!</p>
+        </main>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
