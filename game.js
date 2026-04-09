@@ -8,7 +8,6 @@ const buildingsConfig = {
 };
 
 let playerData = {};
-let currentTasks = [];
 
 const defaultPlayerData = {
     level: 1,
@@ -19,7 +18,12 @@ const defaultPlayerData = {
     activeTask: null,
     activeUpgrade: null,
     formation: '4-4-2',
-    players: []
+    players: [],
+    scoutedPlayers: [],
+    lastScoutRefresh: 0,
+    // --- NOVÉ POLOŽKY ---
+    officeTasks: [],      // Uložené úkoly, aby nezmizely po F5
+    lastEnergyUpdate: 0   // Kdy se naposledy zvedla energie
 };
 
 // --- INICIALIZACE A HERNÍ SMYČKA ---
@@ -39,6 +43,14 @@ function initGame() {
             console.log("Mažu starý nekompatibilní úkol.");
             playerData.activeTask = null;
         }
+
+        // --- PŘIDÁNO: Pojistky pro Skauting ---
+        if(!playerData.scoutedPlayers) playerData.scoutedPlayers = [];
+        if(!playerData.lastScoutRefresh) playerData.lastScoutRefresh = 0;
+        
+        // --- PŘIDÁNO: Pojistky pro pevné úkoly a dobíjení energie ---
+        if(!playerData.officeTasks) playerData.officeTasks = [];
+        if(!playerData.lastEnergyUpdate) playerData.lastEnergyUpdate = Date.now();
     }
 
     // Generování prvního týmu, pokud je pole hráčů prázdné
@@ -46,7 +58,7 @@ function initGame() {
     if (!playerData.players || playerData.players.length === 0) {
         playerData.players = [];
         for (let i = 0; i < 16; i++) {
-            //  Posíláme 'true', což znamená, že jde o startovního hráče
+            // Posíláme 'true', což znamená, že jde o startovního hráče
             playerData.players.push(generatePlayer(true)); 
         }
         saveGame();
@@ -73,6 +85,27 @@ function saveGame() {
 function gameLoop() {
     const now = Date.now();
     let uiNeedsUpdate = false;
+
+    // --- NOVÉ: Regenerace energie (1 energie = 1 minuta = 60 000 milisekund) ---
+    if (playerData.energy < 100) {
+        const timePassed = now - playerData.lastEnergyUpdate;
+        const energyGained = Math.floor(timePassed / 60000); // Vypočítáme celé uběhlé minuty
+        
+        if (energyGained > 0) {
+            // Přičteme energii, ale nikdy nepřekročíme 100
+            playerData.energy = Math.min(100, playerData.energy + energyGained);
+            // Posuneme časomíru dopředu přesně o tolik minut, které jsme zrovna "vybrali"
+            playerData.lastEnergyUpdate += energyGained * 60000; 
+            
+            uiNeedsUpdate = true;
+            saveGame(); // Uložíme nový stav energie
+        }
+    } else {
+        // Pokud je energie na 100 (plno), časomíru držíme na aktuálním čase
+        playerData.lastEnergyUpdate = now;
+    }
+
+    // --- PŮVODNÍ KÓD PRO ÚKOLY A BUDOVY ---
 
     // Vylepšená kontrola: Spustí se jen tehdy, pokud activeTask opravdu existuje 
     // a zároveň má v sobě uložený čas endTime.
@@ -142,16 +175,41 @@ function setupNavigation() {
     const navButtons = document.querySelectorAll('.nav-btn');
     const mainContent = document.getElementById('main-content');
 
+    // 1. Vytvoříme si "slovník" s cestami k obrázkům ve tvé složce
+    // (Uprav si názvy souborů tak, jak je máš reálně uložené!)
+const backgrounds = {
+        'office': 'images/kancelar_pozadi.png',
+        'training': 'images/treninkove_hriste1.png',     // Tréninkové hřiště
+        'match': 'images/treninkove_hriste1.png',          // Zápasy
+        'shop': 'images/obchod1.png',          // Obchod
+        'scouting': 'images/skauting1.png',    // Skauting
+        'stadium': 'images/stadion1.png',      // Stadion
+        'locker-room': 'images/satna1.png',    // Šatna
+        'pve': 'images/podzemi1.png',          // Podzemí (PvE)
+        'hall-of-fame': 'images/sin_slavy1.png', // Síň Slávy
+        'mail': 'images/posta_pozadi.jpg',           // Pošta
+        'alliance': 'images/aliance1.png',     // Aliance
+        'default': 'images/vychozi_pergamen.jpg'     // Pro případ, že obrázek chybí
+    };
+
     navButtons.forEach(button => {
         button.addEventListener('click', function() {
             navButtons.forEach(btn => btn.classList.remove('active'));
             this.classList.add('active');
 
             const target = this.getAttribute('data-target');
+            
+            // 2. Nastavení správného pozadí (pokud obrázek pro sekci nemáme, dáme defaultní)
+            const bgImage = backgrounds[target] || backgrounds['default'];
+            mainContent.style.backgroundImage = `url('${bgImage}')`;
+            mainContent.style.backgroundSize = 'cover';
+            mainContent.style.backgroundPosition = 'center';
+
+            // 3. Původní logika vykreslování
             if (target === 'office') renderOffice();
             else if (target === 'stadium') renderStadium();
             else if (target === 'locker-room') renderLockerRoom();
-            else if (target === 'scouting') renderScouting(); // <-- PŘIDÁNO: Tímto se odemkne Skauting!
+            else if (target === 'scouting') renderScouting();
             else {
                 mainContent.innerHTML = `<div class="under-construction"><h2>🚧 ${this.getAttribute('data-name')} 🚧</h2></div>`;
             }
@@ -162,22 +220,46 @@ function setupNavigation() {
 // --- KANCELÁŘ (ÚKOLY) ---
 function renderOffice() {
     const mainContent = document.getElementById('main-content');
+    
+    // 1. Zobrazení probíhajícího úkolu (Vylepšený vizuál s vtipy)
     if (playerData.activeTask !== null) {
+        
+        // Slovník vtipných textů podle názvu úkolu
+        const flavorTexts = {
+            'Jednání se sponzory': 'Přesvědčuješ ředitele místního uzenářství, že obří logo klobásy na dresech je přesně to, co jejich značka potřebuje. Zatím se tváří nedůvěřivě a nabízí ti k úplatku jen tlačenku...',
+            'Taktický rozbor videa': 'Snažíš se hráčům na videu vysvětlit, proč by v obraně neměli nahrávat přímo útočníkům soupeře. Většina týmu už po pěti minutách usnula...'
+        };
+        
+        // Pokud náhodou přidáme úkol a zapomeneme na vtip, dáme tam záložní text
+        const currentFlavorText = flavorTexts[playerData.activeTask.title] || 'Pracuješ na úkolu, pot z tebe leje...';
+
         mainContent.innerHTML = `
-            <div class="active-task-view">
-                <h2>Probíhá: ${playerData.activeTask.title}</h2>
-                <div class="timer" id="task-timer">Počítám...</div>
-                <button class="btn-task btn-skip" onclick="skipTask()">[TEST] Přeskočit čas</button>
+            <h2>Kancelář manažera</h2>
+            <div style="background-color: #fdf5e6; border: 3px solid #8d6e63; border-radius: 10px; padding: 25px; max-width: 500px; margin: 30px auto; text-align: center; box-shadow: 5px 5px 15px rgba(0,0,0,0.5);">
+                <h3 style="color: #1e3a8a; margin-top: 0; border-bottom: 2px solid #a1887f; padding-bottom: 10px;">Probíhá: ${playerData.activeTask.title}</h3>
+                
+                <p style="font-style: italic; color: #5d4037; font-size: 1.1rem; margin: 20px 0; line-height: 1.5;">"${currentFlavorText}"</p>
+                
+                <div class="timer" id="task-timer" style="font-size: 2.5rem; font-weight: bold; color: #d84315; margin: 20px 0; font-family: 'Courier New', monospace; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);">
+                    Počítám...
+                </div>
+                
+                <button class="btn-task btn-skip" onclick="skipTask()" style="background-color: #ef4444; border-color: #b91c1c; margin-top: 10px;">[TEST] Přeskočit čas</button>
             </div>`;
         return;
     }
 
-    if (currentTasks.length === 0) generateTasks();
+    // 2. POJISTKA: Pokud v paměti chybí úkoly, musíme je nejprve vygenerovat
+    if (!playerData.officeTasks || playerData.officeTasks.length === 0) {
+        generateTasks();
+    }
 
+    // 3. Vykreslení vygenerovaných úkolů
+    // ... (ZDE ZŮSTÁVÁ ZBYTEK TVÉ FUNKCE RENDEROFFICE) ...
     mainContent.innerHTML = `
         <h2>Kancelář manažera</h2>
         <div class="office-container">
-            ${currentTasks.map((task, index) => `
+            ${playerData.officeTasks.map((task, index) => `
                 <div class="task-card">
                     <h3>${task.title}</h3>
                     <div class="task-reward">Odměna: +${task.reward} ${task.type === 'money' ? 'Peníze' : 'XP'}</div>
@@ -197,14 +279,15 @@ function generateTasks() {
     const baseMoney = energyMoney * (Math.floor(Math.random() * 15) + 10);
     const baseXP = energyXP * (Math.floor(Math.random() * 5) + 5);
 
-    currentTasks = [
+    playerData.officeTasks = [
         { title: 'Jednání se sponzory', type: 'money', energy: energyMoney, reward: Math.floor(baseMoney * levelMultiplier) },
         { title: 'Taktický rozbor videa', type: 'xp', energy: energyXP, reward: Math.floor(baseXP * levelMultiplier) }
     ];
+    saveGame();
 }
 
 window.startTask = function(taskIndex) {
-    const task = currentTasks[taskIndex];
+    const task = playerData.officeTasks[taskIndex]; // OPRAVENO ZDE
     if (playerData.energy < task.energy) return alert("Nedostatek energie!");
 
     playerData.energy -= task.energy;
@@ -230,18 +313,16 @@ function finishTask() {
 
     alert(`Úkol dokončen! +${task.reward} ${task.type === 'money' ? 'Peníze' : 'XP'}`);
     playerData.activeTask = null;
-    currentTasks = [];
+    
+    // Vymažeme splněné úkoly, čímž donutíme hru při dalším vykreslení Kanceláře vytvořit nové
+    playerData.officeTasks = []; 
+    
     saveGame();
     
-    // Pouze pokud je hráč stále v záložce Kancelář, překreslíme ji
     const activeBtn = document.querySelector('.nav-btn.active');
     if (activeBtn && activeBtn.getAttribute('data-target') === 'office') {
         renderOffice();
     }
-}
-
-window.skipTask = function() {
-    if(playerData.activeTask) playerData.activeTask.endTime = Date.now();
 }
 
 // --- STADION (BUDOVY) ---
@@ -693,4 +774,15 @@ window.buyPlayer = function(index) {
 window.forceScoutRefresh = function() {
     generateScoutedPlayers();
     renderScouting();
+}
+
+// --- TESTOVACÍ FUNKCE ---
+window.skipTask = function() {
+    if (playerData.activeTask) {
+        // Posuneme čas konce úkolu přesně na tuto milisekundu
+        playerData.activeTask.endTime = Date.now(); 
+        saveGame();
+        // Rovnou zavoláme herní smyčku, aby si toho všimla a úkol dokončila
+        gameLoop(); 
+    }
 }

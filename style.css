@@ -72,17 +72,15 @@ body {
     transform: translateX(10px);
 }
 
-/* Hlavní obsahová část - Pergamen */
+/* Hlavní obsahová část */
 #main-content {
-    flex: 1;
-    /* Barva starého papíru */
-    background-color: #f4e4bc;
-    /* Dvojitý okraj pro efekt rámečku */
+    flex: 1;    
     border: 5px solid #8d6e63;
+    /* Zde už NENÍ žádný background-color ani background-image, stará se o to JS! */
     border-radius: 8px;
     padding: 30px;
     overflow-y: auto;
-    /* Vnitřní stín pro pocit ošoupanosti */
+    /* Vnitřní stín funguje dál a překryje tvé nové obrázky */
     box-shadow: inset 0 0 40px rgba(139, 69, 19, 0.2), 5px 5px 15px rgba(0,0,0,0.5);
 }
 
