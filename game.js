@@ -129,13 +129,13 @@ function initGame() {
         
         playerData.league = [];
         // Vložení hráče (tobě hráče negenerujeme, máš své vlastní v playerData.players)
-        playerData.league.push({ name: myTeamName, z: 0, v: 0, r: 0, p: 0, points: 0, isPlayer: true });
+        playerData.league.push({ name: myTeamName, z: 0, v: 0, r: 0, p: 0, gf: 0, ga: 0, points: 0, isPlayer: true });
         
         // Vložení botů (každému vygenerujeme jeho 11 hráčů a formaci)
         botsConfig.forEach(bot => {
             const teamData = generateBotTeam(bot.diff);
             playerData.league.push({ 
-                name: bot.name, z: 0, v: 0, r: 0, p: 0, points: 0, isPlayer: false,
+                name: bot.name, z: 0, v: 0, r: 0, p: 0, gf: 0, ga: 0, points: 0, isPlayer: false,
                 formation: teamData.formation,
                 players: teamData.players
             });
@@ -237,8 +237,10 @@ function gameLoop() {
         updateTimerUI('match-timer', playerData.nextMatchTime);
         updateTimerUI('topbar-season-timer', playerData.seasonEndTime);
 
-        // Zde později přijde volání zápasového enginu, když nextMatchTime vyprší
-        // if (now >= playerData.nextMatchTime) { playMatch(); }
+        // NOVÉ: Automatické spuštění zápasu
+        if (now >= playerData.nextMatchTime) {
+            processMatch();
+        }
     }
 
     if (uiNeedsUpdate) updateTopBarUI();
@@ -340,6 +342,7 @@ const backgrounds = {
             else if (target === 'stadium') renderStadium();
             else if (target === 'locker-room') renderLockerRoom();
             else if (target === 'scouting') renderScouting();
+            else if (target === 'mail') renderMail();
             else {
                 mainContent.innerHTML = `<div class="under-construction"><h2>🚧 ${this.getAttribute('data-name')} 🚧</h2></div>`;
             }
@@ -1089,7 +1092,10 @@ function renderMatches() {
     }
 
     // Seřadíme ligu podle bodů (na začátku budou všichni na nule)
-    const sortedLeague = [...playerData.league].sort((a, b) => b.points - a.points);
+    const sortedLeague = [...playerData.league].sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    return (b.gf - b.ga) - (a.gf - a.ga); // Rozdíl skóre jako druhý faktor
+    });
     
     // Prozatím vybereme jako soupeře náhodného bota (později to bude přesný kalendář)
     const opponent = sortedLeague.find(t => !t.isPlayer); 
@@ -1114,6 +1120,7 @@ function renderMatches() {
             <div style="font-size: 2.5rem; font-family: 'Courier New', monospace; font-weight: bold; color: #f59e0b; margin: 15px 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
                 <span id="match-timer">Počítám...</span>
             </div>
+            <button class="btn-task btn-skip" style="margin-bottom: 15px; padding: 5px 15px; background-color: #ef4444; border-color: #b91c1c;" onclick="skipMatchTime()">[TEST] Odehrát hned</button>
             <p style="font-size: 0.9rem; color: #9ca3af; margin-bottom: 15px;">Aktivuj přípravu, dokud je čas. Zvýšíš tím šanci na výhru a zkušenosti hráčů.</p>
             ${prepareBtnHtml}
         </div>
@@ -1125,6 +1132,7 @@ function renderMatches() {
                         <th style="width: 50px;">#</th>
                         <th style="text-align: left;">Tým</th>
                         <th title="Zápasy">Z</th>
+                        <th title="Skóre">Skóre</th>
                         <th title="Výhry">V</th>
                         <th title="Remízy">R</th>
                         <th title="Prohry">P</th>
@@ -1142,6 +1150,7 @@ function renderMatches() {
                                 }
                             </td>
                             <td>${team.z}</td>
+                            <td style="font-size: 0.9rem; color: #8d6e63;">${team.gf}:${team.ga}</td> <td>${team.v}</td>
                             <td>${team.v}</td>
                             <td>${team.r}</td>
                             <td>${team.p}</td>
@@ -1159,77 +1168,151 @@ function renderMatches() {
 
 // -------------------------------- ZÁPASOVÝ ENGINE ---------------------------- //
 
-function calculateTeamSectors() {
-    const starters = playerData.players.slice(0, 11);
+function calculateSectorStrength(players, formation, isPrepared = false) {
     const sectors = { mid: 0, att: 0, def: 0, gk: 0 };
+    const formations = {
+        '4-4-2': { gk: [0, 1], def: [1, 5], mid: [5, 9], att: [9, 11] },
+        '4-3-3': { gk: [0, 1], def: [1, 5], mid: [5, 8], att: [8, 11] },
+        '5-4-1': { gk: [0, 1], def: [1, 6], mid: [6, 10], att: [10, 11] }
+    };
+    const layout = formations[formation];
 
-    starters.forEach((p, index) => {
-        // Určíme roli podle indexu (0=GK, 1-4=DEF, 5-8=MID, 9-10=ATT pro 4-4-2)
-        // V reálném kódu to můžeme brát dynamicky podle formace
-        let role = 'mid';
-        if (index === 0) role = 'gk';
-        else if (index <= 4) role = 'def';
-        else if (index <= 8) role = 'mid';
-        else role = 'att';
-
-        if (role === 'gk') {
-            sectors.gk += (p.stats.gk * 1.2) + p.stats.def + p.stats.spd + p.stats.tek;
-        } else if (role === 'def') {
+    players.slice(0, 11).forEach((p, index) => {
+        if (index >= layout.gk[0] && index < layout.gk[1]) {
+            sectors.gk += (p.stats.gk * 1.2) + p.stats.tek + p.stats.def + p.stats.spd;
+        } else if (index >= layout.def[0] && index < layout.def[1]) {
             sectors.def += (p.stats.def * 1.2) + p.stats.str + p.stats.spd + p.stats.eng;
-        } else if (role === 'mid') {
+        } else if (index >= layout.mid[0] && index < layout.mid[1]) {
             sectors.mid += (p.stats.tek * 1.2) + p.stats.atk + p.stats.def + p.stats.spd + p.stats.eng;
-        } else if (role === 'att') {
+        } else if (index >= layout.att[0] && index < layout.att[1]) {
             sectors.att += (p.stats.atk * 1.2) + p.stats.spd + p.stats.tek + p.stats.eng;
         }
     });
 
-    // Bonus za přípravu (+10 %)
-    if (playerData.isPrepared) {
-        sectors.gk *= 1.1; sectors.def *= 1.1; sectors.mid *= 1.1; sectors.att *= 1.1;
+    if (isPrepared) {
+        for (let key in sectors) sectors[key] = Math.floor(sectors[key] * 1.1);
     }
-
     return sectors;
 }
 
 // SIMULACE 10 AKCÍ //
 
-function simulateMatch(mySectors, botSectors, opponentName) {
+function simulateMatch(mySectors, botSectors, myFormation, botFormation, opponentName) {
     let myGoals = 0;
     let botGoals = 0;
     let matchLog = [];
 
+    // Taktický bonus (Kámen-Nůžky-Papír)
+    let myFinalSectors = { ...mySectors };
+    let botFinalSectors = { ...botSectors };
+
+    if ((myFormation === '5-4-1' && botFormation === '4-3-3') ||
+        (myFormation === '4-3-3' && botFormation === '4-4-2') ||
+        (myFormation === '4-4-2' && botFormation === '5-4-1')) {
+        for (let key in myFinalSectors) myFinalSectors[key] *= 1.1;
+        matchLog.push({ min: 0, text: `Šéf vybral skvělou taktiku! Naše formace ${myFormation} dává týmu výhodu proti soupeřově ${botFormation}.`, score: "0:0" });
+    } else if (myFormation !== botFormation) {
+        for (let key in botFinalSectors) botFinalSectors[key] *= 1.1;
+        matchLog.push({ min: 0, text: `Soupeř nás takticky přečetl. Jejich ${botFormation} nám bude dělat problémy.`, score: "0:0" });
+    }
+
+    // 10 herních akcí
     for (let i = 1; i <= 10; i++) {
-        let minute = Math.floor((i * 9) - Math.random() * 5); // Rozprostře akce do 90 minut
-        
-        // 1. Kdo vyhraje střed pole?
-        let myMidChance = mySectors.mid / (mySectors.mid + botSectors.mid);
-        if (Math.random() < myMidChance) {
-            // Útočím JÁ
-            if (Math.random() * mySectors.att > Math.random() * botSectors.def) {
-                // Prošel jsem obranou
-                if (Math.random() * mySectors.att > Math.random() * botSectors.gk) {
+        let minute = Math.floor(i * 9 - Math.random() * 5);
+        let myMidPower = myFinalSectors.mid * Math.random();
+        let botMidPower = botFinalSectors.mid * Math.random();
+
+        if (myMidPower > botMidPower) { // Útočí HRÁČ
+            if (myFinalSectors.att * Math.random() > botFinalSectors.def * Math.random()) {
+                if (myFinalSectors.att * Math.random() > botFinalSectors.gk * Math.random()) {
                     myGoals++;
-                    matchLog.push({ min: minute, text: `GÓÓÓL! Tvůj útočník propálil vše, co mu stálo v cestě!`, score: `${myGoals}:${botGoals}` });
+                    matchLog.push({ min: minute, text: `GÓÓÓL! Po krásné akci zvyšujeme skóre!`, score: `${myGoals}:${botGoals}` });
                 } else {
-                    matchLog.push({ min: minute, text: `Skvělý zákrok brankáře týmu ${opponentName}!`, score: `${myGoals}:${botGoals}` });
+                    matchLog.push({ min: minute, text: `Vaše střela orazítkovala jen tyč! Brankář ${opponentName} měl štěstí.`, score: `${myGoals}:${botGoals}` });
                 }
-            } else {
-                matchLog.push({ min: minute, text: `Tvoje akce ztroskotala na pozorné obraně soupeře.`, score: `${myGoals}:${botGoals}` });
             }
-        } else {
-            // Útočí BOT (stejná logika obráceně)
-            if (Math.random() * botSectors.att > Math.random() * mySectors.def) {
-                if (Math.random() * botSectors.att > Math.random() * mySectors.gk) {
+        } else { // Útočí BOT
+            if (botFinalSectors.att * Math.random() > myFinalSectors.def * Math.random()) {
+                if (botFinalSectors.att * Math.random() > myFinalSectors.gk * Math.random()) {
                     botGoals++;
-                    matchLog.push({ min: minute, text: `Gól pro ${opponentName}. Obrana zaspala...`, score: `${myGoals}:${botGoals}` });
+                    matchLog.push({ min: minute, text: `Gól... Soupeř využil chybu v naší obraně.`, score: `${myGoals}:${botGoals}` });
+                } else {
+                    matchLog.push({ min: minute, text: `Vynikající zákrok našeho brankáře! Drží nás nad vodou.`, score: `${myGoals}:${botGoals}` });
                 }
             }
         }
     }
-
     return { myGoals, botGoals, log: matchLog };
 }
 
+// Tato funkce všechno propojí, rozdá peníze a XP a pošle mail.
+
+window.processMatch = function() {
+    const allTeams = [...playerData.league];
+    const myTeam = allTeams.find(t => t.isPlayer);
+    const bots = allTeams.filter(t => !t.isPlayer);
+
+    // 1. Vybereme tvého soupeře (vždy ten, kdo má stejně zápasů jako ty, aby se to nehádalo)
+    const opponent = bots.find(b => b.z === myTeam.z);
+    if (!opponent) return; // Pojistka
+
+    // 2. Tvůj zápas (Detailní simulace s logem)
+    const mySectors = calculateSectorStrength(playerData.players, playerData.formation, playerData.isPrepared);
+    const botSectors = calculateSectorStrength(opponent.players, opponent.formation, false);
+    const result = simulateMatch(mySectors, botSectors, playerData.formation, opponent.formation, opponent.name);
+
+    // Aktualizace tvého výsledku
+    updateTeamStats(myTeam, opponent, result.myGoals, result.botGoals);
+    
+    // 3. Simulace zbytku ligy (Zjednodušená pro ostatní boty)
+    const remainingBots = bots.filter(b => b.name !== opponent.name);
+    // Spárujeme je po dvou
+    for (let i = 0; i < remainingBots.length; i += 2) {
+        const teamA = remainingBots[i];
+        const teamB = remainingBots[i+1];
+        if (teamA && teamB) {
+            // Jednoduchý výpočet gólů pro boty (0-4 góly podle náhody)
+            const goalsA = Math.floor(Math.random() * 4);
+            const goalsB = Math.floor(Math.random() * 4);
+            updateTeamStats(teamA, teamB, goalsA, goalsB);
+        }
+    }
+
+    // Odměny, Pošta a Reset (stejné jako předtím)
+    let rewardMoney = 50 + (result.myGoals * 10);
+    let rewardXP = 20 + (result.myGoals > result.botGoals ? 30 : result.myGoals === result.botGoals ? 10 : 0);
+    playerData.money += rewardMoney;
+    playerData.xp += rewardXP;
+    
+    addMailMessage(`Report: ${myTeam.name} vs ${opponent.name}`, result.log, `${result.myGoals}:${result.botGoals}`);
+
+    playerData.isPrepared = false;
+    playerData.nextMatchTime = Date.now() + (8 * 60 * 60 * 1000);
+    
+    saveGame();
+    checkLevelUp();
+    updateTopBarUI();
+    alert(`Kolo dohráno! Tvůj výsledek: ${result.myGoals}:${result.botGoals}`);
+    if (document.querySelector('.nav-btn.active')?.getAttribute('data-target') === 'match') renderMatches();
+}
+
+// Pomocná funkce pro zápis výsledku do tabulky
+function updateTeamStats(t1, t2, g1, g2) {
+    t1.z++; t2.z++;
+    t1.gf += g1; t1.ga += g2;
+    t2.gf += g2; t2.ga += g1;
+    if (g1 > g2) { t1.v++; t1.points += 3; t2.p++; }
+    else if (g1 === g2) { t1.r++; t1.points += 1; t2.r++; t2.points += 1; }
+    else { t1.p++; t2.v++; t2.points += 3; }
+}
+
+
+// testovací tlačítko pro skipnutí limitu na zápas
+
+window.skipMatchTime = function() {
+    playerData.nextMatchTime = Date.now();
+    saveGame();
+}
 
 // SLEDOVÁNÍ REPLAY //
 
@@ -1365,4 +1448,71 @@ window.viewBotTeam = function(teamName) {
 
     // Vrátíme zpět tvoje opravdové hráče do paměti! (VELMI DŮLEŽITÉ)
     playerData.players = originalPlayers;
+}
+
+
+// --------------- POŠTA --------------- //
+
+function renderMail() {
+    const mainContent = document.getElementById('main-content');
+    
+    if (playerData.mail.length === 0) {
+        mainContent.innerHTML = `<h2 class="section-title">Pošta</h2><p style="text-align:center; color: white;">Schránka je zatím prázdná.</p>`;
+        return;
+    }
+
+    mainContent.innerHTML = `
+        <h2 class="section-title">Doručená pošta</h2>
+        <div style="max-width: 800px; margin: 0 auto; background: rgba(0,0,0,0.7); border-radius: 10px; padding: 20px; border: 2px solid #8d6e63;">
+            ${playerData.mail.map((m, index) => `
+                <div style="background: #fdf5e6; margin-bottom: 10px; padding: 15px; border-radius: 5px; color: #4e342e; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid ${m.read ? '#9ca3af' : '#d84315'};">
+                    <div>
+                        <strong style="font-size: 1.1rem;">${m.subject}</strong> <span style="font-size: 0.8rem; color: #8d6e63;">(${m.date})</span>
+                        <br><span style="color: #166534; font-weight: bold;">Konečné skóre: ${m.result}</span>
+                    </div>
+                    <button class="btn-task" onclick="openMatchReport(${index})" style="padding: 5px 15px;">Přehrát zápas</button>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+window.openMatchReport = function(index) {
+    const msg = playerData.mail[index];
+    msg.read = true; // Označíme jako přečtené
+    saveGame();
+
+    const mainContent = document.getElementById('main-content');
+    mainContent.innerHTML = `
+        <div style="text-align: center; margin-bottom: 20px;">
+            <button onclick="renderMail()" style="padding: 10px 20px; background: #4e342e; color: white; border: none; border-radius: 5px; cursor: pointer;">⬅ Zpět do schránky</button>
+            <h2 class="section-title" style="margin-top: 15px;">Záznam utkání</h2>
+            <div id="match-score-board" style="font-size: 3rem; font-weight: bold; color: #fcd34d; margin-bottom: 10px;">0:0</div>
+        </div>
+        <div id="replay-window" style="background: #000; color: #00ff00; padding: 20px; font-family: 'Courier New', monospace; height: 350px; overflow-y: auto; border: 4px solid #333; border-radius: 10px; max-width: 700px; margin: 0 auto; line-height: 1.6;">
+            <p>>>> Inicializace přenosu...</p>
+        </div>
+    `;
+
+    let step = 0;
+    const replayInterval = setInterval(() => {
+        const replayWindow = document.getElementById('replay-window');
+        const scoreBoard = document.getElementById('match-score-board');
+        
+        if (!replayWindow) { // Pokud uživatel během přehrávání odešel jinam
+            clearInterval(replayInterval);
+            return;
+        }
+
+        if (step < msg.content.length) {
+            const action = msg.content[step];
+            replayWindow.innerHTML += `<p><span style="color: #fcd34d;">[${action.min}']</span> ${action.text}</p>`;
+            scoreBoard.innerText = action.score;
+            replayWindow.scrollTop = replayWindow.scrollHeight;
+            step++;
+        } else {
+            replayWindow.innerHTML += `<h3 style="color: #fff; text-align: center; margin-top: 20px;">--- KONEC UTKÁNÍ ---</h3>`;
+            clearInterval(replayInterval);
+        }
+    }, 1500); // Rychlost výpisu (1.5 vteřiny na akci)
 }
