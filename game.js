@@ -1085,22 +1085,22 @@ window.prepareForMatch = function() {
 function renderMatches() {
     const mainContent = document.getElementById('main-content');
 
-    // Aktualizujeme jméno týmu, pokud se změnilo
     const myTeamIndex = playerData.league.findIndex(t => t.isPlayer);
     if (myTeamIndex !== -1 && playerData.managerName) {
         playerData.league[myTeamIndex].name = `FC ${playerData.managerName}`;
     }
 
-    // Seřadíme ligu podle bodů (na začátku budou všichni na nule)
+    // Seřazení ligy (body a pak rozdíl skóre)
     const sortedLeague = [...playerData.league].sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points;
-    return (b.gf - b.ga) - (a.gf - a.ga); // Rozdíl skóre jako druhý faktor
+        if (b.points !== a.points) return b.points - a.points;
+        return (b.gf - b.ga) - (a.gf - a.ga); 
     });
     
-    // Prozatím vybereme jako soupeře náhodného bota (později to bude přesný kalendář)
-    const opponent = sortedLeague.find(t => !t.isPlayer); 
+    // NOVÉ: Výběr soupeře "kolotočem" podle počtu odehraných zápasů
+    const botsOnly = playerData.league.filter(t => !t.isPlayer);
+    const matchesPlayed = playerData.league[myTeamIndex].z;
+    const opponent = botsOnly[matchesPlayed % botsOnly.length];
 
-    // Tlačítko přípravy reaguje na stav
     const prepareBtnHtml = playerData.isPrepared 
         ? `<button class="btn-task" style="width: 100%; background-color: #4b5563; border-color: #374151; padding: 15px; font-size: 1.1rem; cursor: not-allowed;" disabled>Tým je plně připraven! ✓</button>`
         : `<button class="btn-task" style="width: 100%; background-color: #166534; border-color: #14532d; padding: 15px; font-size: 1.1rem;" onclick="prepareForMatch()">Připravit se na zápas (+10% Síly)</button>`;
@@ -1150,7 +1150,7 @@ function renderMatches() {
                                 }
                             </td>
                             <td>${team.z}</td>
-                            <td style="font-size: 0.9rem; color: #8d6e63;">${team.gf}:${team.ga}</td> <td>${team.v}</td>
+                            <td style="font-size: 0.9rem; color: #8d6e63;">${team.gf}:${team.ga}</td>
                             <td>${team.v}</td>
                             <td>${team.r}</td>
                             <td>${team.p}</td>
@@ -1162,7 +1162,6 @@ function renderMatches() {
         </div>
     `;
 
-    // Okamžitá aktualizace časovačů, aby neproblikávalo "Počítám..."
     updateTimerUI('match-timer', playerData.nextMatchTime);
 }
 
@@ -1252,8 +1251,10 @@ window.processMatch = function() {
     const myTeam = allTeams.find(t => t.isPlayer);
     const bots = allTeams.filter(t => !t.isPlayer);
 
-    // 1. Vybereme tvého soupeře (vždy ten, kdo má stejně zápasů jako ty, aby se to nehádalo)
-    const opponent = bots.find(b => b.z === myTeam.z);
+    // 1. Vybereme soupeře systémem "kolotoč" (Round-Robin)
+    const opponentIndex = myTeam.z % bots.length;
+    const opponent = bots[opponentIndex];
+
     if (!opponent) return; // Pojistka
 
     // 2. Tvůj zápas (Detailní simulace s logem)
@@ -1265,13 +1266,13 @@ window.processMatch = function() {
     updateTeamStats(myTeam, opponent, result.myGoals, result.botGoals);
     
     // 3. Simulace zbytku ligy (Zjednodušená pro ostatní boty)
+    // Vyfiltrujeme bota, se kterým jsi zrovna hrál, abychom zbytek spárovali proti sobě
     const remainingBots = bots.filter(b => b.name !== opponent.name);
     // Spárujeme je po dvou
     for (let i = 0; i < remainingBots.length; i += 2) {
         const teamA = remainingBots[i];
         const teamB = remainingBots[i+1];
         if (teamA && teamB) {
-            // Jednoduchý výpočet gólů pro boty (0-4 góly podle náhody)
             const goalsA = Math.floor(Math.random() * 4);
             const goalsB = Math.floor(Math.random() * 4);
             updateTeamStats(teamA, teamB, goalsA, goalsB);
