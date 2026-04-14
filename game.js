@@ -28,6 +28,7 @@ const defaultPlayerData = {
     nextMatchTime: 0,
     isPrepared: false,
     seasonEndTime: 0, // PŘIDÁNO: Konec celé sezóny
+    mail: []
 };
 
 // --- LOGIN A PROFIL ---
@@ -80,6 +81,18 @@ function initGame() {
         if(!playerData.lastScoutRefresh) playerData.lastScoutRefresh = 0;
         if(!playerData.officeTasks) playerData.officeTasks = [];
         if(!playerData.lastEnergyUpdate) playerData.lastEnergyUpdate = Date.now();
+
+        if(!playerData.mail) playerData.mail = []; //schránka pro staré savy
+
+        // NOVÉ: Vytvoření presetů pro formace, pokud chybí
+        if(!playerData.presets) {
+            const currentIds = playerData.players.map(p => p.id);
+            playerData.presets = {
+                '4-4-2': [...currentIds],
+                '4-3-3': [...currentIds],
+                '5-4-1': [...currentIds]
+            };
+        }
         
         // Zpětná kompatibilita pro přihlášení (pokud má jméno, ale chybí mu nová proměnná)
         if(playerData.isLoggedIn === undefined) {
@@ -97,22 +110,39 @@ function initGame() {
         saveGame();
     }
 
-    // --- NOVÉ: GENEROVÁNÍ PRÁZDNÉ LIGY (Pokud ještě neexistuje) ---
+// --- NOVÉ: GENEROVÁNÍ PRÁZDNÉ LIGY S REALNÝMI HRÁČI PRO BOTY ---
     if (!playerData.league || playerData.league.length === 0) {
         const myTeamName = playerData.managerName ? `FC ${playerData.managerName}` : "Tvůj Tým";
-        const botNames = ["Sokol Horní Lhota", "SK Prdelkovice", "FC Dřeváci", "Baník Ostrava (C)", "Tatran Sedlčany", "Slavoj Žižkov", "Dynamo Vesnice", "AFK Bída", "Zoufalci United"];
+        
+        // Jména botů a jejich "násobič obtížnosti" (čím vyšší, tím lepší staty hráčů)
+        const botsConfig = [
+            { name: "Sokol Horní Lhota", diff: 1.8 },
+            { name: "SK Prdelkovice", diff: 1.6 },
+            { name: "FC Dřeváci", diff: 1.5 },
+            { name: "Baník Ostrava (C)", diff: 2.2 },
+            { name: "Tatran Sedlčany", diff: 1.4 },
+            { name: "Slavoj Žižkov", diff: 1.9 },
+            { name: "Dynamo Vesnice", diff: 1.2 },
+            { name: "AFK Bída", diff: 1.1 },
+            { name: "Zoufalci United", diff: 1.0 }
+        ];
         
         playerData.league = [];
-        // Hráč
+        // Vložení hráče (tobě hráče negenerujeme, máš své vlastní v playerData.players)
         playerData.league.push({ name: myTeamName, z: 0, v: 0, r: 0, p: 0, points: 0, isPlayer: true });
-        // Boti
-        botNames.forEach(botName => {
-            playerData.league.push({ name: botName, z: 0, v: 0, r: 0, p: 0, points: 0, isPlayer: false });
+        
+        // Vložení botů (každému vygenerujeme jeho 11 hráčů a formaci)
+        botsConfig.forEach(bot => {
+            const teamData = generateBotTeam(bot.diff);
+            playerData.league.push({ 
+                name: bot.name, z: 0, v: 0, r: 0, p: 0, points: 0, isPlayer: false,
+                formation: teamData.formation,
+                players: teamData.players
+            });
         });
         
-        // Nastavení časovačů
-        playerData.seasonEndTime = Date.now() + (14 * 24 * 60 * 60 * 1000); // Sezóna končí za 14 dní
-        playerData.nextMatchTime = Date.now() + (8 * 60 * 60 * 1000); // První zápas za 8 hodin
+        playerData.seasonEndTime = Date.now() + (14 * 24 * 60 * 60 * 1000); 
+        playerData.nextMatchTime = Date.now() + (8 * 60 * 60 * 1000); 
         playerData.isPrepared = false;
         
         saveGame();
@@ -646,54 +676,133 @@ function generatePlayer(isStarter = false) {
     };
 }
 
+// PŘEPÍNÁNÍ FORMACÍ //
+
+window.changeFormation = function(newFormation) {
+    // 1. Uložíme aktuální rozestavení hráčů do presetu současné formace
+    playerData.presets[playerData.formation] = playerData.players.map(p => p.id);
+
+    // 2. Přepneme formaci
+    playerData.formation = newFormation;
+
+    // 3. Načteme šablonu (ID hráčů) pro novou formaci
+    const presetIds = playerData.presets[newFormation];
+
+    // 4. Seřadíme naše skutečné hráče podle načtené šablony
+    playerData.players.sort((a, b) => {
+        let indexA = presetIds.indexOf(a.id);
+        let indexB = presetIds.indexOf(b.id);
+        // Pokud jsme mezitím koupili někoho nového, hodíme ho na konec (střídačku)
+        if (indexA === -1) indexA = 999; 
+        if (indexB === -1) indexB = 999;
+        return indexA - indexB;
+    });
+
+    // 5. Aktualizujeme novou šablonu, aby obsahovala i případné nováčky
+    playerData.presets[newFormation] = playerData.players.map(p => p.id);
+
+    saveGame();
+    renderLockerRoom();
+}
+
+
+// BLOK PRO ŠATNU //
+
 let selectedPlayerIndex = null; // Uchovává index prvního kliknutého hráče pro výměnu
 let isSellMode = false;
+
+// NOVÁ FUNKCE: Přepínání a ukládání formací
+window.changeFormation = function(newFormation) {
+    // 1. Uložíme aktuální rozestavení hráčů do presetu současné formace
+    playerData.presets[playerData.formation] = playerData.players.map(p => p.id);
+
+    // 2. Přepneme formaci
+    playerData.formation = newFormation;
+
+    // 3. Načteme šablonu (ID hráčů) pro novou formaci
+    const presetIds = playerData.presets[newFormation];
+
+    // 4. Seřadíme naše skutečné hráče podle načtené šablony
+    playerData.players.sort((a, b) => {
+        let indexA = presetIds.indexOf(a.id);
+        let indexB = presetIds.indexOf(b.id);
+        // Pokud jsme mezitím koupili někoho nového, hodíme ho na konec (střídačku)
+        if (indexA === -1) indexA = 999; 
+        if (indexB === -1) indexB = 999;
+        return indexA - indexB;
+    });
+
+    // 5. Aktualizujeme novou šablonu
+    playerData.presets[newFormation] = playerData.players.map(p => p.id);
+
+    saveGame();
+    renderLockerRoom();
+}
 
 function renderLockerRoom() {
     const mainContent = document.getElementById('main-content');
     const formations = {
         '4-4-2': { gk: [0, 1], def: [1, 5], mid: [5, 9], att: [9, 11] },
-        '4-3-3': { gk: [0, 1], def: [1, 5], mid: [5, 8], att: [8, 11] }
+        '4-3-3': { gk: [0, 1], def: [1, 5], mid: [5, 8], att: [8, 11] },
+        '5-4-1': { gk: [0, 1], def: [1, 6], mid: [6, 10], att: [10, 11] }
     };
     const layout = formations[playerData.formation];
 
+    // Vtipné a strategické rady k formacím
+    const formationHints = {
+        '4-4-2': 'Zlatá střední cesta. Výborně si poradí s týmy, které hrají ustrašeného zanďoura.',
+        '4-3-3': 'Všechno dopředu! Těžká noční můra pro týmy hrající opatrný vyvážený fotbal.',
+        '5-4-1': 'Zaparkovat autobus před bránu je nejlepší proti týmům, které hrají bezhlavý útočný fotbal!'
+    };
+    
+    // Zjistíme, jaký textík se má zrovna zobrazit
+    const currentHint = formationHints[playerData.formation];
+
     mainContent.innerHTML = `
-        <h2>Šatna a Sestava</h2>
-        <div class="locker-room-controls">
-            <label for="formation-select">Taktická formace: </label>
-            <select id="formation-select" onchange="changeFormation(this.value)">
-                <option value="4-4-2" ${playerData.formation === '4-4-2' ? 'selected' : ''}>4-4-2 (Vyvážená)</option>
-                <option value="4-3-3" ${playerData.formation === '4-3-3' ? 'selected' : ''}>4-3-3 (Útočná)</option>
-            </select>
-            <p>Klikni na hráče a prohoď ho s jiným na požadovanou pozici.</p>
+        <div style="text-align: center;">
+            <h2 class="section-title">Šatna a Sestava</h2>
+            
+            <div style="background-color: rgba(0, 0, 0, 0.85); color: #fdf5e6; padding: 15px 30px; border-radius: 8px; border: 2px solid #a1887f; max-width: 650px; margin: 0 auto 20px auto; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+                <div style="margin-bottom: 15px;">
+                    <label for="formation-select" style="font-weight: bold; font-size: 1.1rem; margin-right: 10px;">Taktická formace:</label>
+                    <select id="formation-select" onchange="changeFormation(this.value)" style="padding: 6px 10px; font-size: 1rem; border-radius: 5px; background-color: #fdf5e6; color: #4e342e; font-weight: bold; border: 2px solid #8d6e63; cursor: pointer;">
+                        <option value="4-4-2" ${playerData.formation === '4-4-2' ? 'selected' : ''}>4-4-2 (Vyvážená)</option>
+                        <option value="4-3-3" ${playerData.formation === '4-3-3' ? 'selected' : ''}>4-3-3 (Útočná)</option>
+                        <option value="5-4-1" ${playerData.formation === '5-4-1' ? 'selected' : ''}>5-4-1 (Obranná)</option>
+                    </select>
+                </div>
+                
+                <p style="font-style: italic; color: #fcd34d; margin: 0 0 10px 0; font-size: 1.05rem;">💡 "${currentHint}"</p>
+                <p style="margin: 0; font-size: 0.85rem; color: #9ca3af;">Klikni na hráče a prohoď ho s jiným. Rozestavení se automaticky uloží.</p>
+            </div>
         </div>
 
         <div class="pitch-section">
-            <h3>Útočníci</h3>
+            <h3 style="background-color: rgba(78, 52, 46, 0.85); color: #fdf5e6; padding: 5px 15px; border-radius: 5px; display: inline-block; margin-bottom: 10px; border: 1px solid #a1887f;">Útočníci</h3>
             <div class="player-list">${renderPlayerGroup(layout.att[0], layout.att[1], 'att')}</div>
         </div>
         <div class="pitch-section">
-            <h3>Záložníci</h3>
+            <h3 style="background-color: rgba(78, 52, 46, 0.85); color: #fdf5e6; padding: 5px 15px; border-radius: 5px; display: inline-block; margin-bottom: 10px; border: 1px solid #a1887f;">Záložníci</h3>
             <div class="player-list">${renderPlayerGroup(layout.mid[0], layout.mid[1], 'mid')}</div>
         </div>
         <div class="pitch-section">
-            <h3>Obránci</h3>
+            <h3 style="background-color: rgba(78, 52, 46, 0.85); color: #fdf5e6; padding: 5px 15px; border-radius: 5px; display: inline-block; margin-bottom: 10px; border: 1px solid #a1887f;">Obránci</h3>
             <div class="player-list">${renderPlayerGroup(layout.def[0], layout.def[1], 'def')}</div>
         </div>
         <div class="pitch-section">
-            <h3>Brankář</h3>
+            <h3 style="background-color: rgba(78, 52, 46, 0.85); color: #fdf5e6; padding: 5px 15px; border-radius: 5px; display: inline-block; margin-bottom: 10px; border: 1px solid #a1887f;">Brankář</h3>
             <div class="player-list">${renderPlayerGroup(layout.gk[0], layout.gk[1], 'gk')}</div>
         </div>
         
-        <div class="pitch-section" style="background-color: rgba(0,0,0,0.1); border-color: #5d4037;">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #5d4037; padding-bottom: 5px; margin-bottom: 15px;">
-                <h3 style="margin: 0; border: none; padding: 0;">Střídačka (Kapacita: ${playerData.players.length - 11}/5)</h3>
-                <button onclick="toggleSellMode()" style="padding: 5px 15px; font-weight: bold; cursor: pointer; border: none; border-radius: 5px; font-family: 'Kalam', cursive; font-size: 1rem; background-color: ${isSellMode ? '#ef4444' : '#f59e0b'}; color: white; box-shadow: 2px 2px 5px rgba(0,0,0,0.2);">
+        <div class="pitch-section" style="background-color: rgba(0,0,0,0.4); border-color: #5d4037; border-radius: 8px; padding: 15px; margin-top: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #8d6e63; padding-bottom: 10px; margin-bottom: 15px;">
+                <h3 style="margin: 0; color: #fdf5e6; background: none; border: none; padding: 0;">Střídačka (Kapacita: ${playerData.players.length - 11}/5)</h3>
+                <button onclick="toggleSellMode()" style="padding: 8px 15px; font-weight: bold; cursor: pointer; border: none; border-radius: 5px; font-family: 'Kalam', cursive; font-size: 1rem; background-color: ${isSellMode ? '#ef4444' : '#f59e0b'}; color: white; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); transition: 0.2s;">
                     ${isSellMode ? '❌ Zrušit prodej' : '💰 Režim prodeje'}
                 </button>
             </div>
             
-            ${isSellMode ? '<p style="text-align: center; margin-top: 0; color: #dc2626; font-weight: bold;">Klikni na hráče, kterého chceš vyhodit z klubu.</p>' : ''}
+            ${isSellMode ? '<p style="text-align: center; margin-top: 0; color: #fca5a5; font-weight: bold; background-color: rgba(220, 38, 38, 0.2); padding: 5px; border-radius: 4px;">Klikni na hráče, kterého chceš vyhodit z klubu.</p>' : ''}
             
             <div class="player-list">${renderPlayerGroup(11, 16, 'bench')}</div>
         </div>
@@ -703,7 +812,7 @@ function renderLockerRoom() {
 // Přepínač režimu prodeje
 window.toggleSellMode = function() {
     isSellMode = !isSellMode;
-    selectedPlayerIndex = null; // Vyrušíme případný nakliknutý výběr
+    selectedPlayerIndex = null; 
     renderLockerRoom();
 }
 
@@ -714,7 +823,7 @@ function renderPlayerGroup(startIndex, endIndex, role) {
         if (currentRole === 'att' && ['atk', 'spd', 'tek', 'eng'].includes(statName)) return 'highlighted';
         if (currentRole === 'mid' && ['atk', 'def', 'spd', 'tek', 'eng'].includes(statName)) return 'highlighted';
         if (currentRole === 'def' && ['def', 'str', 'spd', 'eng'].includes(statName)) return 'highlighted';
-        if (currentRole === 'gk'  && ['gk'].includes(statName)) return 'highlighted';
+        if (currentRole === 'gk'  && ['gk', 'tek', 'def', 'spd'].includes(statName)) return 'highlighted';
         return ''; 
     };
 
@@ -768,26 +877,34 @@ function renderPlayerGroup(startIndex, endIndex, role) {
 }
 
 window.handlePlayerClick = function(index) {
-    // Pokud máme zapnutý režim prodeje
     if (isSellMode) {
-        if (index < 11) {
-            alert("Základní sestavu nelze prodat! Pokud se ho chceš zbavit, přesuň ho nejprve na střídačku.");
+        const playerToSell = playerData.players[index];
+        
+        // NOVÁ POJISTKA: Kontrola, zda hráč nehraje v ZÁKLADU některé z formací
+        let activeFormations = [];
+        for (const form in playerData.presets) {
+            const presetIds = playerData.presets[form];
+            const playerIndexInPreset = presetIds.indexOf(playerToSell.id);
+            // Index 0-10 znamená, že je na hřišti (v základu)
+            if (playerIndexInPreset !== -1 && playerIndexInPreset < 11) {
+                activeFormations.push(form);
+            }
+        }
+
+        if (activeFormations.length > 0) {
+            alert(`Tohoto hráče nelze prodat! Nastupuje v základní sestavě pro formace: ${activeFormations.join(', ')}.\nMusíš ho v těchto formacích nejprve přesunout na střídačku.`);
             return;
         }
         
-        const player = playerData.players[index];
-        
-        const fallbackPrice = 50 + ((player.stats.atk + player.stats.def + player.stats.spd + player.stats.str + player.stats.eng + player.stats.gk + player.stats.tek) * 3);
-        const fullPrice = player.price || fallbackPrice;
-        
-        // OPRAVA: Prodejní částka je polovina
+        const fallbackPrice = 50 + ((playerToSell.stats.atk + playerToSell.stats.def + playerToSell.stats.spd + playerToSell.stats.str + playerToSell.stats.eng + playerToSell.stats.gk + playerToSell.stats.tek) * 3);
+        const fullPrice = playerToSell.price || fallbackPrice;
         const sellPrice = Math.floor(fullPrice / 2); 
         
-        if (confirm(`Opravdu chceš vyhodit hráče ${player.name} z klubu? Dostaneš za něj ${sellPrice} Peněz.`)) {
+        if (confirm(`Opravdu chceš vyhodit hráče ${playerToSell.name} z klubu? Dostaneš za něj ${sellPrice} Peněz.`)) {
             playerData.money += sellPrice;
             playerData.players.splice(index, 1); 
-            
             isSellMode = false; 
+            
             saveGame();
             updateTopBarUI();
             renderLockerRoom();
@@ -804,8 +921,11 @@ window.handlePlayerClick = function(index) {
         const temp = playerData.players[selectedPlayerIndex];
         playerData.players[selectedPlayerIndex] = playerData.players[index];
         playerData.players[index] = temp;
-        
         selectedPlayerIndex = null;
+        
+        // NOVÉ: Jakmile hráče prohodíme, rovnou to uložíme do presetu formace!
+        playerData.presets[playerData.formation] = playerData.players.map(p => p.id);
+        
         saveGame();
     }
     renderLockerRoom();
@@ -1015,7 +1135,12 @@ function renderMatches() {
                     ${sortedLeague.map((team, index) => `
                         <tr class="${team.isPlayer ? 'player-team-row' : ''}">
                             <td style="font-weight: bold; color: ${index + 1 <= 2 ? '#166534' : index + 1 >= 9 ? '#dc2626' : 'inherit'};">${index + 1}.</td>
-                            <td style="text-align: left;">${team.name}</td>
+                            <td style="text-align: left;">
+                                ${team.isPlayer ? 
+                                    `<strong>${team.name}</strong>` : 
+                                    `<span onclick="viewBotTeam('${team.name}')" style="cursor: pointer; color: #2563eb; text-decoration: underline; font-weight: bold;" title="Klikni pro zobrazení taktiky soupeře">📋 ${team.name}</span>`
+                                }
+                            </td>
                             <td>${team.z}</td>
                             <td>${team.v}</td>
                             <td>${team.r}</td>
@@ -1030,4 +1155,214 @@ function renderMatches() {
 
     // Okamžitá aktualizace časovačů, aby neproblikávalo "Počítám..."
     updateTimerUI('match-timer', playerData.nextMatchTime);
+}
+
+// -------------------------------- ZÁPASOVÝ ENGINE ---------------------------- //
+
+function calculateTeamSectors() {
+    const starters = playerData.players.slice(0, 11);
+    const sectors = { mid: 0, att: 0, def: 0, gk: 0 };
+
+    starters.forEach((p, index) => {
+        // Určíme roli podle indexu (0=GK, 1-4=DEF, 5-8=MID, 9-10=ATT pro 4-4-2)
+        // V reálném kódu to můžeme brát dynamicky podle formace
+        let role = 'mid';
+        if (index === 0) role = 'gk';
+        else if (index <= 4) role = 'def';
+        else if (index <= 8) role = 'mid';
+        else role = 'att';
+
+        if (role === 'gk') {
+            sectors.gk += (p.stats.gk * 1.2) + p.stats.def + p.stats.spd + p.stats.tek;
+        } else if (role === 'def') {
+            sectors.def += (p.stats.def * 1.2) + p.stats.str + p.stats.spd + p.stats.eng;
+        } else if (role === 'mid') {
+            sectors.mid += (p.stats.tek * 1.2) + p.stats.atk + p.stats.def + p.stats.spd + p.stats.eng;
+        } else if (role === 'att') {
+            sectors.att += (p.stats.atk * 1.2) + p.stats.spd + p.stats.tek + p.stats.eng;
+        }
+    });
+
+    // Bonus za přípravu (+10 %)
+    if (playerData.isPrepared) {
+        sectors.gk *= 1.1; sectors.def *= 1.1; sectors.mid *= 1.1; sectors.att *= 1.1;
+    }
+
+    return sectors;
+}
+
+// SIMULACE 10 AKCÍ //
+
+function simulateMatch(mySectors, botSectors, opponentName) {
+    let myGoals = 0;
+    let botGoals = 0;
+    let matchLog = [];
+
+    for (let i = 1; i <= 10; i++) {
+        let minute = Math.floor((i * 9) - Math.random() * 5); // Rozprostře akce do 90 minut
+        
+        // 1. Kdo vyhraje střed pole?
+        let myMidChance = mySectors.mid / (mySectors.mid + botSectors.mid);
+        if (Math.random() < myMidChance) {
+            // Útočím JÁ
+            if (Math.random() * mySectors.att > Math.random() * botSectors.def) {
+                // Prošel jsem obranou
+                if (Math.random() * mySectors.att > Math.random() * botSectors.gk) {
+                    myGoals++;
+                    matchLog.push({ min: minute, text: `GÓÓÓL! Tvůj útočník propálil vše, co mu stálo v cestě!`, score: `${myGoals}:${botGoals}` });
+                } else {
+                    matchLog.push({ min: minute, text: `Skvělý zákrok brankáře týmu ${opponentName}!`, score: `${myGoals}:${botGoals}` });
+                }
+            } else {
+                matchLog.push({ min: minute, text: `Tvoje akce ztroskotala na pozorné obraně soupeře.`, score: `${myGoals}:${botGoals}` });
+            }
+        } else {
+            // Útočí BOT (stejná logika obráceně)
+            if (Math.random() * botSectors.att > Math.random() * mySectors.def) {
+                if (Math.random() * botSectors.att > Math.random() * mySectors.gk) {
+                    botGoals++;
+                    matchLog.push({ min: minute, text: `Gól pro ${opponentName}. Obrana zaspala...`, score: `${myGoals}:${botGoals}` });
+                }
+            }
+        }
+    }
+
+    return { myGoals, botGoals, log: matchLog };
+}
+
+
+// SLEDOVÁNÍ REPLAY //
+
+function viewMatchReplay(log) {
+    const mainContent = document.getElementById('main-content');
+    mainContent.innerHTML = `
+        <div id="replay-box" style="background: black; color: #00ff00; padding: 20px; font-family: monospace; height: 400px; overflow-y: auto;">
+            <h3>Sledujete záznam utkání...</h3>
+            <div id="replay-text"></div>
+        </div>
+    `;
+
+    let step = 0;
+    const interval = setInterval(() => {
+        if (step < log.length) {
+            const entry = log[step];
+            document.getElementById('replay-text').innerHTML += `<p>[${entry.min}'] ${entry.text} <strong>(${entry.score})</strong></p>`;
+            step++;
+            // Automatické skrolování dolů
+            const box = document.getElementById('replay-box');
+            box.scrollTop = box.scrollHeight;
+        } else {
+            clearInterval(interval);
+            document.getElementById('replay-text').innerHTML += `<h4>KONEC UTKÁNÍ</h4>`;
+        }
+    }, 2000); // Každé 2 sekundy nová akce
+}
+
+// --- POMOCNÁ FUNKCE PRO POŠTU ---
+function addMailMessage(subject, log, result) {
+    // Vytvoříme objekt zprávy
+    const newMessage = {
+        id: Date.now(),
+        subject: subject,
+        content: log, // Pole textových akcí zápasu
+        result: result, // Skóre, např "2:1"
+        date: new Date().toLocaleString('cs-CZ'), // Datum a čas doručení
+        read: false
+    };
+
+    // 1. Přidáme novou zprávu na ZAČÁTEK pole (unshift)
+    // Díky tomu bude v poště vždy nahoře ta nejnovější
+    playerData.mail.unshift(newMessage);
+
+    // 2. Pokud je zpráv více než 10, necháme jen prvních 10
+    if (playerData.mail.length > 10) {
+        playerData.mail = playerData.mail.slice(0, 10);
+    }
+
+    saveGame();
+}
+
+
+// --- GENEROVÁNÍ BOT TÝMŮ ---
+function generateBotTeam(difficultyMultiplier) {
+    const formations = ['4-4-2', '4-3-3', '5-4-1'];
+    const botFormation = formations[Math.floor(Math.random() * formations.length)];
+    const botPlayers = [];
+
+    for (let i = 0; i < 11; i++) {
+        // Základní statistika roste s obtížností týmu (např. 1.0 je slabý, 2.5 je silný)
+        const baseStat = Math.floor(4 * difficultyMultiplier); 
+        
+        botPlayers.push({
+            id: 'bot_' + Math.random().toString(36).substr(2, 9),
+            name: `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`,
+            stars: Math.min(5, Math.max(1, Math.floor(difficultyMultiplier))),
+            stats: {
+                // Přidáme malý náhodný rozptyl, aby nebyli všichni hráči stejní
+                atk: baseStat + Math.floor(Math.random() * 4),
+                def: baseStat + Math.floor(Math.random() * 4),
+                spd: baseStat + Math.floor(Math.random() * 4),
+                str: baseStat + Math.floor(Math.random() * 4),
+                eng: baseStat + Math.floor(Math.random() * 4),
+                gk: baseStat + Math.floor(Math.random() * 4),
+                tek: baseStat + Math.floor(Math.random() * 4)
+            }
+        });
+    }
+
+    return { formation: botFormation, players: botPlayers };
+}
+
+// ZOBRAZENÍ ŠATNY SOUPEŘE:
+
+window.viewBotTeam = function(teamName) {
+    const mainContent = document.getElementById('main-content');
+    
+    // Najdeme data bota
+    const botTeam = playerData.league.find(t => t.name === teamName);
+    if (!botTeam || botTeam.isPlayer) return;
+
+    // Dočasně přepíšeme playerData.players botovými hráči, 
+    // aby funkce renderPlayerGroup správně vykreslila jeho tým
+    const originalPlayers = playerData.players;
+    playerData.players = botTeam.players;
+
+    const formations = {
+        '4-4-2': { gk: [0, 1], def: [1, 5], mid: [5, 9], att: [9, 11] },
+        '4-3-3': { gk: [0, 1], def: [1, 5], mid: [5, 8], att: [8, 11] },
+        '5-4-1': { gk: [0, 1], def: [1, 6], mid: [6, 10], att: [10, 11] }
+    };
+    const layout = formations[botTeam.formation];
+
+    mainContent.innerHTML = `
+        <div style="text-align: center; position: relative;">
+            <button onclick="renderMatches()" style="position: absolute; left: 0; top: 0; padding: 10px 20px; background: #4e342e; color: white; border: none; border-radius: 5px; cursor: pointer;">⬅ Zpět na Zápasy</button>
+            <h2 class="section-title">Skauting soupeře: ${botTeam.name}</h2>
+            
+            <div style="background-color: rgba(0, 0, 0, 0.85); color: #fdf5e6; padding: 15px; border-radius: 8px; border: 2px solid #ef4444; max-width: 500px; margin: 0 auto 20px auto;">
+                <h3 style="margin: 0; color: #fca5a5;">Odhalená formace: ${botTeam.formation}</h3>
+                <p style="margin: 5px 0 0 0; font-size: 0.9rem;">Přizpůsob svou formaci v Šatně, abys získal taktickou výhodu +10 %!</p>
+            </div>
+        </div>
+
+        <div class="pitch-section">
+            <h3 style="background-color: rgba(220, 38, 38, 0.85); color: white; padding: 5px 15px; border-radius: 5px; display: inline-block;">Útočníci</h3>
+            <div class="player-list">${renderPlayerGroup(layout.att[0], layout.att[1], 'att')}</div>
+        </div>
+        <div class="pitch-section">
+            <h3 style="background-color: rgba(220, 38, 38, 0.85); color: white; padding: 5px 15px; border-radius: 5px; display: inline-block;">Záložníci</h3>
+            <div class="player-list">${renderPlayerGroup(layout.mid[0], layout.mid[1], 'mid')}</div>
+        </div>
+        <div class="pitch-section">
+            <h3 style="background-color: rgba(220, 38, 38, 0.85); color: white; padding: 5px 15px; border-radius: 5px; display: inline-block;">Obránci</h3>
+            <div class="player-list">${renderPlayerGroup(layout.def[0], layout.def[1], 'def')}</div>
+        </div>
+        <div class="pitch-section">
+            <h3 style="background-color: rgba(220, 38, 38, 0.85); color: white; padding: 5px 15px; border-radius: 5px; display: inline-block;">Brankář</h3>
+            <div class="player-list">${renderPlayerGroup(layout.gk[0], layout.gk[1], 'gk')}</div>
+        </div>
+    `;
+
+    // Vrátíme zpět tvoje opravdové hráče do paměti! (VELMI DŮLEŽITÉ)
+    playerData.players = originalPlayers;
 }
