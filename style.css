@@ -216,6 +216,18 @@ body {
     padding-bottom: 5px;
 }
 
+/* Nadpisy řad hráčů na hřišti (Útočníci, Záložníci...) */
+.pitch-role-title {
+    background-color: rgba(78, 52, 46, 0.85);
+    color: #fdf5e6;
+    padding: 5px 15px;
+    border-radius: 5px;
+    display: inline-block;
+    margin-bottom: 10px;
+    border: 1px solid #a1887f;
+    margin-top: 0; /* Pro jistotu vynulujeme výchozí odsazení nadpisu */
+}
+
 .player-list {
     display: flex;
     flex-wrap: wrap;
@@ -237,6 +249,43 @@ body {
 .player-card:hover {
     transform: translateY(-3px);
     background-color: #fff;
+}
+
+/* --- ŠTÍTKY A KARTY HRÁČŮ --- */
+
+/* Cenovky na kartách */
+.price-tag {
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: bold;
+    border-radius: 4px;
+    margin: 5px 0;
+    padding: 2px;
+}
+.price-tag.buy {
+    color: #166534;
+    background-color: #dcfce7;
+}
+.price-tag.sell {
+    color: #b91c1c;
+    background-color: #fef2f2;
+}
+
+/* Karta reprezentující prázdné místo na střídačce */
+.player-card.empty-slot {
+    background-color: transparent;
+    border: 2px dashed #a1887f;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #8d6e63;
+    cursor: default;
+}
+.player-card.empty-slot:hover {
+    transform: none; /* Prázdná karta by neměla povyskočit při najetí myši */
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 /* Zvýraznění při kliknutí (když vybíráme hráče k výměně) */
@@ -291,6 +340,28 @@ body {
     border-color: #bbf7d0;
     color: #166534;
     font-weight: bold;
+}
+
+/* --- XP LIŠTA (Progress bar) --- */
+.xp-bar-container {
+    margin: 8px 0;
+    background-color: #d1d5db;
+    border-radius: 10px;
+    overflow: hidden;
+    height: 12px;
+    border: 1px solid #9ca3af;
+    position: relative;
+}
+
+.xp-bar-fill {
+    height: 100%;
+    background-color: #3b82f6; /* Klasická modrá barva XP */
+    transition: width 0.3s ease-in-out;
+}
+
+/* Modifikátor pro hráče na max levelu (Zlatá barva) */
+.xp-bar-fill.maxed {
+    background-color: #f59e0b; 
 }
 
 /* --- PŘIHLAŠOVACÍ OKNO --- */
@@ -730,4 +801,178 @@ body {
     max-width: 800px; 
     margin: 0 auto; 
     box-shadow: inset 0 0 20px rgba(0,0,0,1);
+}
+
+.max-level-badge {
+    color: #fcd34d;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px black;
+    margin-left: 5px; /* Drobná mezera od samotného čísla levelu */
+}
+
+/* --- UNIVERZÁLNÍ KOMPONENTY (Nové) --- */
+
+/* Informační panely (Trénink, Šatna, Kancelář) */
+.info-box {
+    background-color: rgba(0, 0, 0, 0.75);
+    color: #fdf5e6;
+    padding: 15px 30px;
+    border-radius: 8px;
+    border: 2px solid #a1887f;
+    max-width: 650px;
+    margin: 0 auto 20px auto;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    text-align: center;
+}
+
+/* Variace info panelů */
+.info-box.warning {
+    border-color: #ef4444;
+}
+.info-box.success {
+    border-color: #10b981;
+}
+
+/* Modifikátory textu v JS */
+.text-highlight-gold {
+    color: #fcd34d;
+    font-weight: bold;
+}
+.text-muted {
+    font-size: 0.85rem;
+    color: #9ca3af;
+}
+
+/* Flexibilní řádky pro statistiky (Trénink) */
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+/* Speciální tlačítka (např. plusko v tréninku) */
+.btn-small-add {
+    margin-left: 10px;
+    padding: 2px 8px;
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+}
+.btn-small-add:hover {
+    background: #059669;
+}
+
+/* --- INFORMAČNÍ PANELY --- */
+.info-panel {
+    background-color: rgba(0, 0, 0, 0.75);
+    color: #fdf5e6;
+    padding: 15px 25px;
+    border-radius: 8px;
+    border: 2px solid #f59e0b;
+    max-width: 600px;
+    margin: 0 auto 25px auto;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    text-align: left;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* --- POŠTA --- */
+.mail-container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: rgba(0,0,0,0.7);
+    border-radius: 10px;
+    padding: 20px;
+    border: 2px solid #8d6e63;
+}
+
+.mail-message {
+    background: #fdf5e6;
+    margin-bottom: 10px;
+    padding: 15px;
+    border-radius: 5px;
+    color: #4e342e;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-left: 5px solid #9ca3af; /* Výchozí šedá pro přečtené */
+    box-shadow: none; /* Výchozí stav bez stínu */
+}
+
+/* Zvýraznění nepřečtené zprávy */
+.mail-message.unread {
+    border-left-color: #d84315; /* Změníme levou čáru na oranžovou */
+    box-shadow: 0 4px 6px rgba(216, 67, 21, 0.3); /* Přidáme stín */
+}
+
+/* --- NOTIFIKAČNÍ BANNERY (Upozornění na poštu) --- */
+.notification-banner {
+    background: linear-gradient(135deg, #d97706, #b45309);
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-weight: bold;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    border: 2px solid #fcd34d;
+    cursor: pointer;
+    animation: pulse 2s infinite; /* Tady voláme animaci pulzování */
+}
+
+/* Modifikátor pro větší verzi banneru (do Podzemí) */
+.notification-banner.large {
+    padding: 30px;
+    max-width: 600px;
+    margin: 0 auto 20px auto;
+}
+
+/* Samotná animace pulzování */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+
+/* --- VELKÉ ODPOČTY ČASU --- */
+.huge-timer {
+    font-size: 2.5rem;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    color: #f59e0b; /* Výchozí oranžová (Zápasy, Podzemí) */
+    margin: 15px 0;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+/* Modifikátor pro červenou barvu (Kancelář) */
+.huge-timer.danger {
+    color: #d84315;
+}
+
+/* Červené testovací/přeskakovací tlačítko */
+.btn-test {
+    background-color: #ef4444 !important; /* !important zajistí, že přebije základní barvu btn-task */
+    border-color: #b91c1c !important;
+    color: white;
+    margin-top: 10px;
+}
+
+.btn-test:hover {
+    background-color: #dc2626 !important;
+}
+
+/* Široké akční tlačítko (použijeme v Podzemí nebo v Zápasech) */
+.btn-full-width {
+    width: 100%;
+    font-size: 1.2rem;
+    padding: 15px;
 }

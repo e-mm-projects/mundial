@@ -243,6 +243,16 @@ function formatTime(seconds) {
     return `${m}:${s}`; 
 }
 
+// Pomocná funkce pro vypsání levelu hráče (včetně MAX odznaku)
+function getPlayerLevelText(player) {
+    const maxLvl = player.maxLevel || (player.stars * 5);
+    if (player.level >= maxLvl) {
+        return `Lvl.${player.level} <span class="max-level-badge">[MAX]</span>`;
+    }
+    return `Lvl.${player.level}`;
+}
+
+
 // --- LEVELOVACÍ SYSTÉM (TRENÉR) ---
 function getRequiredXp() {
     return Math.floor(100 * Math.pow(playerData.level, 1.5));
@@ -296,16 +306,16 @@ function renderTraining() {
             const isMaxed = val >= player.statCap;
             const canUpgrade = player.unspentPoints > 0 && !isMaxed;
             
-            // Tlačítko PLUS
+            // Použití nové třídy btn-small-add
             const btnHtml = canUpgrade 
-                ? `<button onclick="trainPlayerStat('${player.id}', '${statKey}')" style="margin-left: 10px; padding: 2px 8px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; box-shadow: 1px 1px 3px rgba(0,0,0,0.3);">+</button>` 
+                ? `<button onclick="trainPlayerStat('${player.id}', '${statKey}')" class="btn-small-add">+</button>` 
                 : '';
             
-            // Nápis MAX, pokud narazil na strop ranku
             const maxHtml = isMaxed ? `<span style="color: #ef4444; font-size: 0.75rem; margin-left: 5px; font-weight: bold;">(MAX)</span>` : '';
 
+            // Použití nové třídy stat-row
             return `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; padding-bottom: 3px; border-bottom: 1px solid rgba(0,0,0,0.05);">
+                <div class="stat-row">
                     <span>${label}: <strong>${val}</strong> <span style="font-size:0.75rem; color:#6b7280;">/ ${player.statCap}</span>${maxHtml}</span>
                     ${btnHtml}
                 </div>
@@ -315,12 +325,12 @@ function renderTraining() {
         return `
             <div class="player-card" style="cursor: default; border-color: ${player.unspentPoints > 0 ? '#10b981' : '#a1887f'};">
                 <div class="player-name">${player.name}</div>
-                <div style="font-size: 0.85rem; color: #4b5563; text-align: center; margin-bottom: 2px;">[${player.rank}] Lvl.${player.level}</div>
+                <div style="font-size: 0.85rem; color: #4b5563; text-align: center; margin-bottom: 2px;">[${player.rank}] ${getPlayerLevelText(player)}</div>
                 <div class="player-stars">${starsHtml}</div>
                 
-                <div style="margin: 8px 0; background: #d1d5db; border-radius: 10px; overflow: hidden; height: 12px; border: 1px solid #9ca3af; position: relative;">
-                    <div style="background: ${player.level >= player.maxLevel ? '#f59e0b' : '#3b82f6'}; height: 100%; width: ${xpPercentage}%; transition: 0.3s;"></div>
-                </div>
+            <div class="xp-bar-container">
+                <div class="xp-bar-fill ${player.level >= player.maxLevel ? 'maxed' : ''}" style="width: ${xpPercentage}%;"></div>
+            </div>
                 
                 <div style="text-align: center; font-size: 0.85rem; margin-bottom: 12px; color: #4b5563;">
                     Volné body: <strong style="color: ${player.unspentPoints > 0 ? '#10b981' : '#6b7280'}; font-size: 1.1rem;">${player.unspentPoints}</strong>
@@ -431,7 +441,7 @@ function renderOffice() {
     const bonusPercentage = Math.round((currentMultiplier - 1) * 100); 
     
     const trainerInfoHtml = `
-        <div style="background-color: rgba(0, 0, 0, 0.75); color: #fdf5e6; padding: 15px 25px; border-radius: 8px; border: 2px solid #f59e0b; max-width: 600px; margin: 0 auto 25px auto; box-shadow: 0 4px 10px rgba(0,0,0,0.5); text-align: left; display: flex; align-items: center; justify-content: space-between;">
+    <div class="info-panel">
             <div>
                 <h3 style="margin: 0 0 5px 0; color: #fcd34d;">Úroveň manažera: ${playerData.level}</h3>
                 <p style="margin: 0; font-size: 0.9rem; color: #d1d5db;">Vyšší úroveň přináší prestiž a lepší vyjednávací pozici se sponzory.</p>
@@ -458,10 +468,10 @@ function renderOffice() {
             <div style="background-color: #fdf5e6; border: 3px solid #8d6e63; border-radius: 10px; padding: 25px; max-width: 500px; margin: 30px auto; text-align: center; box-shadow: 5px 5px 15px rgba(0,0,0,0.5);">
                 <h3 style="color: #1e3a8a; margin-top: 0; border-bottom: 2px solid #a1887f; padding-bottom: 10px;">Probíhá: ${playerData.activeTask.title}</h3>
                 <p style="font-style: italic; color: #5d4037; font-size: 1.1rem; margin: 20px 0; line-height: 1.5;">"${currentFlavorText}"</p>
-                <div class="timer" id="task-timer" style="font-size: 2.5rem; font-weight: bold; color: #d84315; margin: 20px 0; font-family: 'Courier New', monospace; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);">
-                    Počítám...
-                </div>
-                <button class="btn-task btn-skip" onclick="skipTask()" style="background-color: #ef4444; border-color: #b91c1c; margin-top: 10px;">[TEST] Přeskočit čas</button>
+            <div class="huge-timer danger" id="task-timer">
+                Počítám...
+            </div>
+                <button class="btn-task btn-test" onclick="skipTask()">[TEST] Přeskočit čas</button>
             </div>`;
         return;
     }
@@ -554,7 +564,7 @@ function renderStadium() {
             <div class="active-task-view" style="margin-bottom: 30px;">
                 <h2>Staví se: ${buildingsConfig[bId].name}</h2>
                 <div class="timer" id="upgrade-timer">Počítám...</div>
-                <button class="btn-task btn-skip" onclick="skipUpgrade()">[TEST] Dokončit stavbu</button>
+                <button class="btn-task btn-test" onclick="skipUpgrade()">[TEST] Dokončit stavbu</button>
             </div>
             <hr>
         `;
@@ -719,7 +729,7 @@ function generatePlayer(isStarter = false) {
         statCap: selectedRank.cap,
         stars: stars,
         level: 1,           
-        maxLevel: stars * 10, 
+        maxLevel: stars * 5, 
         xp: 0,
         unspentPoints: 0,
         
@@ -737,7 +747,7 @@ function generatePlayer(isStarter = false) {
 
 function addPlayerXp(player, xpAmount) {
     // Pojistka pro staré savy, kdyby hráč neměl nastavený maxLevel
-    if (!player.maxLevel) player.maxLevel = player.stars * 10;
+    if (!player.maxLevel) player.maxLevel = player.stars * 5;
     
     // 1. KONTROLA STROPU: Pokud je hráč na max levelu, už se dál nezlepšuje
     if (player.level >= player.maxLevel) {
@@ -755,7 +765,7 @@ function addPlayerXp(player, xpAmount) {
     while (player.xp >= xpNeeded && player.level < player.maxLevel) {
         player.xp -= xpNeeded;
         player.level++;
-        player.unspentPoints += 1; // PŘESNĚ 1 bod za každý level!
+        player.unspentPoints += 2; // PŘESNĚ 2 body za každý level!
         levelUp = true;
         xpNeeded = player.level * 100;
     }
@@ -779,36 +789,31 @@ const PVE_DUNGEONS = [
             {
                 name: 'FC JZD (Traktoristi)',
                 desc: 'Přijeli na zápas rovnou z pole. Mají obrovskou sílu, ale rychlost a techniku nechali v kabině.',
-                cost: 20, // Stojí 20 energie
-                botStats: { atk: 6, def: 6, spd: 2, str: 30, eng: 6, gk: 6, tek: 2 },
+                botStats: { atk: 3, def: 3, spd: 1, str: 20, eng: 3, gk: 3, tek: 1 }, // Sníženo ze 30 na 20
                 reward: { xp: 200, rank: 'Kopyto', minStars: 1, maxStars: 2 }
             },
             {
                 name: 'Hospoda u Zrzavého Psa',
                 desc: 'O poločase do sebe kopli dvě piva. Mají šílenou výdrž, ale z míče mají strach.',
-                cost: 20,
-                botStats: { atk: 5, def: 5, spd: 5, str: 5, eng: 35, gk: 5, tek: 1 },
+                botStats: { atk: 2, def: 2, spd: 2, str: 2, eng: 25, gk: 2, tek: 1 }, // Sníženo na 15 výdrž
                 reward: { xp: 300, rank: 'Kopyto', minStars: 1, maxStars: 2 }
             },
             {
                 name: 'Sokol "Stará Garda"',
                 desc: 'Věkový průměr 55 let. Moc toho nenaběhají, ale jejich obranný beton a zkušený brankář jsou legendární.',
-                cost: 25,
-                botStats: { atk: 3, def: 25, spd: 2, str: 10, eng: 4, gk: 25, tek: 10 },
+                botStats: { atk: 1, def: 25, spd: 1, str: 4, eng: 2, gk: 10, tek: 4 },
                 reward: { xp: 400, rank: 'Kopyto', minStars: 1, maxStars: 2 }
             },
             {
                 name: 'Řezníci z Masokombinátu',
                 desc: 'Hrají ostře a neberou si servítky. Z jejich útočníků jde strach.',
-                cost: 25,
-                botStats: { atk: 30, def: 10, spd: 12, str: 25, eng: 10, gk: 5, tek: 5 },
+                botStats: { atk: 30, def: 4, spd: 5, str: 8, eng: 4, gk: 3, tek: 2 },
                 reward: { xp: 500, rank: 'Kopyto', minStars: 1, maxStars: 2 }
             },
             {
                 name: 'Výběr Okresního Přeboru (BOSS)',
                 desc: 'To nejlepší (rozuměj nejhorší), co místní vesnice nabízí. Tým, který ti nedá nic zadarmo.',
-                cost: 30,
-                botStats: { atk: 18, def: 18, spd: 18, str: 18, eng: 18, gk: 18, tek: 18 },
+                botStats: { atk: 9, def: 9, spd: 9, str: 9, eng: 9, gk: 9, tek: 9 },
                 reward: { xp: 1000, rank: 'Slibný amatér', minStars: 1, maxStars: 1, isBoss: true }
             }
         ]
@@ -894,9 +899,9 @@ function renderPvE() {
         mainContent.innerHTML = `
             <div style="text-align: center;">
                 <h2 class="section-title">Fotbalové podzemí</h2>
-                <div onclick="document.querySelector('[data-target=\\'mail\\']').click()" style="background: linear-gradient(135deg, #d97706, #b45309); color: white; padding: 30px; border-radius: 10px; border: 2px solid #fcd34d; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor: pointer; animation: pulse 2s infinite;">
+                <div class="notification-banner large" onclick="document.querySelector('[data-target=\\'mail\\']').click()">
                     <h3 style="margin-top:0; font-size: 1.8rem;">📺 Záznam bitvy je připraven!</h3>
-                    <p style="font-size: 1.1rem; line-height: 1.5;">Zápas už se odehrál, ale výsledek je tajný. Běž do pošty, pusť si záznam a zjisti, jestli jsi postoupil na dalšího bosse!</p>
+                    <p style="font-size: 1.1rem; line-height: 1.5; font-weight: normal;">Zápas už se odehrál, ale výsledek je tajný. Běž do pošty, pusť si záznam a zjisti, jestli jsi postoupil na dalšího bosse!</p>
                     <button class="btn-task" style="background: #166534; border-color: #14532d; font-size: 1.2rem; margin-top: 15px; padding: 10px 30px;">Přejít do Pošty</button>
                 </div>
             </div>
@@ -940,21 +945,21 @@ function renderPvE() {
         actionSection = `
             <div style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
                 <p style="color: #9ca3af; margin: 0 0 10px 0;">Hráči odpočívají po těžkém utkání. Další pokus bude možný za:</p>
-                <div style="font-size: 2.5rem; font-family: 'Courier New', monospace; font-weight: bold; color: #f59e0b; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
-                    ⏳ <span id="pve-timer">Počítám...</span>
-                </div>
+            <div class="huge-timer" style="margin-top: 0;">
+                ⏳ <span id="pve-timer">Počítám...</span>
             </div>
-            <button class="btn-task btn-skip" style="width: 100%; margin-bottom: 15px; padding: 10px 15px; background-color: #ef4444; border-color: #b91c1c;" onclick="skipPvETime()">[TEST] Přeskočit čekání</button>
+            </div>
+            <button class="btn-task btn-test" onclick="skipPvETime()">[TEST] Přeskočit čekání</button>
             <button class="btn-task" style="width: 100%; font-size: 1.2rem; padding: 15px; background-color: #4b5563; border-color: #374151;" disabled>Odpočinek...</button>
         `;
     } else {
         const canFight = hasSpace;
         actionSection = `
-            <button class="btn-task" 
-                style="width: 100%; font-size: 1.2rem; padding: 15px; background-color: ${canFight ? '#b91c1c' : '#4b5563'}; border-color: ${canFight ? '#991b1b' : '#374151'}; box-shadow: 0 4px 6px rgba(0,0,0,0.3);" 
-                ${canFight ? `onclick="startPvEMatch(${dIndex}, ${sIndex})"` : 'disabled'}>
-                ⚔️ Vyzvat soupeře (Zdarma)
-            </button>
+        <button class="btn-task btn-full-width" 
+            style="background-color: ${canFight ? '#b91c1c' : '#4b5563'};" 
+            ${canFight ? `onclick="startPvEMatch(${dIndex}, ${sIndex})"` : 'disabled'}>
+            ⚔️ Vyzvat soupeře (Zdarma)
+        </button>
         `;
     }
 
@@ -1010,7 +1015,7 @@ function generateRewardPlayer(rankName, minStars, maxStars) {
         statCap: rankObj.cap,
         stars: stars,
         level: 1,           
-        maxLevel: stars * 10, 
+        maxLevel: stars * 5, 
         xp: 0,
         unspentPoints: 0,
         stats: {
@@ -1131,7 +1136,7 @@ function renderLockerRoom() {
     mainContent.innerHTML = `
         <div style="text-align: center;">
             <h2 class="section-title">Šatna a Sestava</h2>
-            <div style="background-color: rgba(0, 0, 0, 0.85); color: #fdf5e6; padding: 15px 30px; border-radius: 8px; border: 2px solid #a1887f; max-width: 650px; margin: 0 auto 20px auto; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+            <div class="info-box">
                 <div style="margin-bottom: 15px;">
                     <label for="formation-select" style="font-weight: bold; font-size: 1.1rem; margin-right: 10px;">Taktická formace:</label>
                     <select id="formation-select" onchange="changeFormation(this.value)" style="padding: 6px 10px; font-size: 1rem; border-radius: 5px; background-color: #fdf5e6; color: #4e342e; font-weight: bold; border: 2px solid #8d6e63; cursor: pointer;">
@@ -1146,19 +1151,19 @@ function renderLockerRoom() {
         </div>
 
         <div class="pitch-section">
-            <h3 style="background-color: rgba(78, 52, 46, 0.85); color: #fdf5e6; padding: 5px 15px; border-radius: 5px; display: inline-block; margin-bottom: 10px; border: 1px solid #a1887f;">Útočníci</h3>
+            <h3 class="pitch-role-title">Útočníci</h3>
             <div class="player-list">${renderPlayerGroup(layout.att[0], layout.att[1], 'att')}</div>
         </div>
         <div class="pitch-section">
-            <h3 style="background-color: rgba(78, 52, 46, 0.85); color: #fdf5e6; padding: 5px 15px; border-radius: 5px; display: inline-block; margin-bottom: 10px; border: 1px solid #a1887f;">Záložníci</h3>
+            <h3 class="pitch-role-title">Záložníci</h3>
             <div class="player-list">${renderPlayerGroup(layout.mid[0], layout.mid[1], 'mid')}</div>
         </div>
         <div class="pitch-section">
-            <h3 style="background-color: rgba(78, 52, 46, 0.85); color: #fdf5e6; padding: 5px 15px; border-radius: 5px; display: inline-block; margin-bottom: 10px; border: 1px solid #a1887f;">Obránci</h3>
+            <h3 class="pitch-role-title">Obránci</h3>
             <div class="player-list">${renderPlayerGroup(layout.def[0], layout.def[1], 'def')}</div>
         </div>
         <div class="pitch-section">
-            <h3 style="background-color: rgba(78, 52, 46, 0.85); color: #fdf5e6; padding: 5px 15px; border-radius: 5px; display: inline-block; margin-bottom: 10px; border: 1px solid #a1887f;">Brankář</h3>
+            <h3 class="pitch-role-title">Brankář</h3>
             <div class="player-list">${renderPlayerGroup(layout.gk[0], layout.gk[1], 'gk')}</div>
         </div>
         
@@ -1194,7 +1199,7 @@ function renderPlayerGroup(startIndex, endIndex, role) {
     for (let i = startIndex; i < endIndex; i++) {
         if (i >= playerData.players.length) {
             html += `
-                <div class="player-card" style="background-color: transparent; border: 2px dashed #a1887f; box-shadow: none; display: flex; align-items: center; justify-content: center; text-align: center; color: #8d6e63; cursor: default;">
+                <div class="player-card empty-slot">
                     <div style="font-weight: bold; font-size: 1.2rem;">Volné místo</div>
                 </div>
             `;
@@ -1212,12 +1217,10 @@ function renderPlayerGroup(startIndex, endIndex, role) {
         html += `
             <div class="player-card ${isSelected}" style="${isSellTarget}" onclick="handlePlayerClick(${i})">
                 <div class="player-name">${player.name}</div>
-                <div style="font-size: 0.85rem; color: #4b5563; text-align: center;">[${player.rank}] Lvl.${player.level}</div>
+                <div style="font-size: 0.85rem; color: #4b5563; text-align: center;">[${player.rank}] ${getPlayerLevelText(player)}</div>
                 <div class="player-stars">${starsHtml}</div>
                 
-                <div style="text-align: center; font-size: 0.9rem; font-weight: bold; color: #b91c1c; background-color: #fef2f2; border-radius: 4px; margin: 5px 0; padding: 2px;">
-                    Prodat za: ${sellPrice} 💰
-                </div>
+                <div class="price-tag sell">Prodat za: ${sellPrice} 💰</div>
 
                 <div class="player-stats">
                     <div class="stat-item ${checkHighlight('atk', role)}">Útok: <span>${player.stats.atk}</span></div>
@@ -1314,12 +1317,10 @@ function renderScouting() {
         return `
             <div class="player-card">
                 <div class="player-name">${player.name}</div>
-                <div style="font-size: 0.85rem; color: #4b5563; text-align: center;">[${player.rank}] Lvl.${player.level}</div>
+                <div style="font-size: 0.85rem; color: #4b5563; text-align: center;">[${player.rank}] ${getPlayerLevelText(player)}</div>
                 <div class="player-stars">${starsHtml}</div>
                 
-                <div style="text-align: center; font-size: 0.9rem; font-weight: bold; color: #166534; background-color: #dcfce7; border-radius: 4px; margin: 5px 0; padding: 2px;">
-                    Cena: ${price} 💰
-                </div>
+                <div class="price-tag buy">Cena: ${price} 💰</div>
 
                 <div class="player-stats">
                     <div class="stat-item">Útok: <span>${player.stats.atk}</span></div>
@@ -1338,7 +1339,7 @@ function renderScouting() {
     mainContent.innerHTML = `
         <div style="text-align: center;">
             <h2 class="section-title">Kancelář hlavního skauta</h2>
-            <div style="background-color: rgba(0, 0, 0, 0.75); color: #fdf5e6; padding: 15px 30px; border-radius: 8px; border: 2px solid #a1887f; max-width: 700px; margin: 0 auto 20px auto; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+            <div class="info-box" style="max-width: 700px;">
                 <p style="margin: 0; font-size: 1.1rem; font-style: italic;">
                     "Skautování nových hráčů bude trvat ještě <strong id="scout-timer" style="color: #f59e0b; font-family: monospace; font-size: 1.3rem;">Počítám...</strong><br>Zatím si musíte vybrat z toho, co jsem objevil, šéfe."
                 </p>
@@ -1431,7 +1432,7 @@ function renderMatches() {
     // KONTROLA BANNERU
     const hasUnreadMatch = playerData.mail.some(m => !m.read);
     const unreadBanner = hasUnreadMatch ? `
-        <div onclick="document.querySelector('[data-target=\\'mail\\']').click()" style="background: linear-gradient(135deg, #d97706, #b45309); color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); border: 2px solid #fcd34d; cursor: pointer; animation: pulse 2s infinite;">
+        <div class="notification-banner" onclick="document.querySelector('[data-target=\\'mail\\']').click()">
             📺 Máš v poště nezkouknutý záznam zápasu! Klikni sem a běž se podívat.
         </div>
     ` : '';
@@ -1450,9 +1451,9 @@ function renderMatches() {
                 <span style="color: #9ca3af; font-size: 1rem; margin: 0 10px;">VS</span> 
                 <span style="color: #ef4444;">${opponent.name}</span>
             </p>
-            <div style="font-size: 2.5rem; font-family: 'Courier New', monospace; font-weight: bold; color: #f59e0b; margin: 15px 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
-                <span id="match-timer">Počítám...</span>
-            </div>
+        <div class="huge-timer">
+            <span id="match-timer">Počítám...</span>
+        </div>
             <button class="btn-task btn-skip" style="margin-bottom: 15px; padding: 5px 15px; background-color: #ef4444; border-color: #b91c1c;" onclick="skipMatchTime()">[TEST] Odehrát hned</button>
             <p style="font-size: 0.9rem; color: #9ca3af; margin-bottom: 15px;">Aktivuj přípravu, dokud je čas. Zvýšíš tím šanci na výhru a zkušenosti hráčů.</p>
             ${prepareBtnHtml}
@@ -1814,19 +1815,19 @@ window.viewBotTeam = function(teamName) {
             </div>
         </div>
         <div class="pitch-section">
-            <h3 style="background-color: rgba(220, 38, 38, 0.85); color: white; padding: 5px 15px; border-radius: 5px; display: inline-block;">Útočníci</h3>
+            <h3 class="pitch-role-title">Útočníci</h3>
             <div class="player-list">${renderPlayerGroup(layout.att[0], layout.att[1], 'att')}</div>
         </div>
         <div class="pitch-section">
-            <h3 style="background-color: rgba(220, 38, 38, 0.85); color: white; padding: 5px 15px; border-radius: 5px; display: inline-block;">Záložníci</h3>
+            <h3 class="pitch-role-title">Záložníci</h3>
             <div class="player-list">${renderPlayerGroup(layout.mid[0], layout.mid[1], 'mid')}</div>
         </div>
         <div class="pitch-section">
-            <h3 style="background-color: rgba(220, 38, 38, 0.85); color: white; padding: 5px 15px; border-radius: 5px; display: inline-block;">Obránci</h3>
+            <h3 class="pitch-role-title">Obránci</h3>
             <div class="player-list">${renderPlayerGroup(layout.def[0], layout.def[1], 'def')}</div>
         </div>
         <div class="pitch-section">
-            <h3 style="background-color: rgba(220, 38, 38, 0.85); color: white; padding: 5px 15px; border-radius: 5px; display: inline-block;">Brankář</h3>
+            <h3 class="pitch-role-title">Brankář</h3>
             <div class="player-list">${renderPlayerGroup(layout.gk[0], layout.gk[1], 'gk')}</div>
         </div>
     `;
@@ -1875,16 +1876,19 @@ function renderMail() {
 
     mainContent.innerHTML = `
         <h2 class="section-title">Doručená pošta</h2>
-        <div style="max-width: 800px; margin: 0 auto; background: rgba(0,0,0,0.7); border-radius: 10px; padding: 20px; border: 2px solid #8d6e63;">
+        <div class="mail-container">
             ${playerData.mail.map((m, index) => {
-                // NOVÉ: Skrývání skóre pro nepřečtené zprávy
+                // Skrývání skóre pro nepřečtené zprávy
                 const scoreDisplay = m.read ? m.result : '❓ : ❓';
                 const scoreColor = m.read ? '#166534' : '#d84315';
                 const scoreText = m.read ? `Konečné skóre: ${scoreDisplay}` : `Skóre je tajné (Pusť si záznam!)`;
                 const btnText = m.read ? 'Znovu přehrát' : '▶ Přehrát zápas';
+                
+                // ZDE JE NOVINKA: Zjistíme, jestli máme přidat třídu pro nepřečtenou zprávu
+                const unreadClass = m.read ? '' : 'unread';
 
                 return `
-                <div style="background: #fdf5e6; margin-bottom: 10px; padding: 15px; border-radius: 5px; color: #4e342e; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid ${m.read ? '#9ca3af' : '#d84315'}; box-shadow: ${m.read ? 'none' : '0 4px 6px rgba(216, 67, 21, 0.3)'};">
+                <div class="mail-message ${unreadClass}">
                     <div>
                         <strong style="font-size: 1.1rem;">${m.subject}</strong> <span style="font-size: 0.8rem; color: #8d6e63;">(${m.date})</span>
                         <br><span style="color: ${scoreColor}; font-weight: bold;">${scoreText}</span>
