@@ -35,8 +35,8 @@ let tempSelectedAvatar = 'images/avatar1.jpg';
 
 window.selectAvatar = function(src) {
     tempSelectedAvatar = src;
-    document.querySelectorAll('.avatar-option').forEach(img => img.classList.remove('selected'));
-    document.querySelector(`.avatar-option[src="${src}"]`).classList.add('selected');
+    document.querySelectorAll('.avatar-img').forEach(img => img.classList.remove('selected'));
+    document.querySelector(`.avatar-img[src="${src}"]`).classList.add('selected');
 }
 
 window.registerManager = function() {
@@ -140,9 +140,20 @@ function initGame() {
         document.getElementById('login-screen').style.display = 'flex';
         
         const avatarSection = document.getElementById('avatar-section');
-        if (playerData.avatar && avatarSection) {
-            avatarSection.style.display = 'none';
+        const mainBtn = document.getElementById('main-login-btn');
+        const newClubBtn = document.getElementById('new-club-footer-btn');
+
+        // Pokud uživatel už má jméno v datech, jde o návrat (Login)
+        if (playerData.managerName) {
+            document.getElementById('manager-name-input').value = playerData.managerName;
+            avatarSection.style.display = 'none'; // Schováme avatara
+            mainBtn.textContent = 'Vstoupit do klubu';
+            newClubBtn.style.display = 'block'; // Nabídneme možnost nového klubu
         } else {
+            // Jde o úplně nového hráče
+            avatarSection.style.display = 'block';
+            mainBtn.textContent = 'Vytvořit klub a pustit se do hry';
+            newClubBtn.style.display = 'none'; // U nového hráče nedává smysl tlačítko "Nový klub"
             selectAvatar('images/avatar1.jpg'); 
         }
     } else {
