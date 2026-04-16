@@ -538,3 +538,196 @@ body {
     font-weight: bold;
     color: #92400e;
 }
+
+/* --- SKAUTING SOUPEŘE (PvE) --- */
+.scouting-card {
+    text-align: center;
+    max-width: 600px;
+    margin: 0 auto;
+    background: rgba(0,0,0,0.85);
+    border-radius: 10px;
+    padding: 25px;
+    border: 3px solid #fcd34d;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.7);
+}
+
+.scouting-title {
+    color: #fca5a5;
+    font-size: 1.8rem;
+    margin-bottom: 5px;
+    text-shadow: 1px 1px 3px black;
+}
+
+.scouting-desc {
+    color: #e5e7eb;
+    font-style: italic;
+    margin-bottom: 15px;
+    line-height: 1.5;
+    background: rgba(255,255,255,0.05);
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.scouting-note {
+    color: #9ca3af;
+    font-size: 0.95rem;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
+    line-height: 1.4;
+}
+
+.scouting-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    text-align: left;
+}
+
+.stat-box {
+    background: rgba(0,0,0,0.6);
+    padding: 10px 15px;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.stat-box.full-width {
+    grid-column: span 2;
+}
+
+.stat-label {
+    color: #f3f4f6;
+    font-weight: bold;
+}
+
+.stat-val {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+/* Specifické barvy pro jednotlivé atributy */
+.stat-atk { border-left: 4px solid #f87171; } .stat-atk .stat-val { color: #f87171; }
+.stat-def { border-left: 4px solid #60a5fa; } .stat-def .stat-val { color: #60a5fa; }
+.stat-spd { border-left: 4px solid #fcd34d; } .stat-spd .stat-val { color: #fcd34d; }
+.stat-str { border-left: 4px solid #fb923c; } .stat-str .stat-val { color: #fb923c; }
+.stat-eng { border-left: 4px solid #a78bfa; } .stat-eng .stat-val { color: #a78bfa; }
+.stat-gk  { border-left: 4px solid #34d399; } .stat-gk  .stat-val { color: #34d399; }
+.stat-tek { border-left: 4px solid #38bdf8; } .stat-tek .stat-val { color: #38bdf8; }
+
+
+/* --- ZÁZNAM UTKÁNÍ A MINIATURA HŘIŠTĚ --- */
+.match-report-header {
+    position: relative; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    margin-bottom: 20px; 
+    padding-top: 10px;
+}
+
+.match-report-board {
+    text-align: center; 
+    margin-bottom: 20px; 
+    background: rgba(0,0,0,0.6); 
+    padding: 20px; 
+    border-radius: 12px; 
+    border: 2px solid #8d6e63; 
+    box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+}
+
+.score-container {
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    max-width: 550px; 
+    margin: 0 auto 15px auto;
+}
+
+.team-name-home { font-size: 1.5rem; font-weight: bold; color: #60a5fa; flex: 1; text-align: right; text-shadow: 1px 1px 2px black; }
+.team-name-away { font-size: 1.5rem; font-weight: bold; color: #ef4444; flex: 1; text-align: left; text-shadow: 1px 1px 2px black; }
+.match-score { 
+    font-size: 3.5rem; 
+    font-family: 'Courier New', monospace; 
+    font-weight: bold; 
+    color: #fcd34d; 
+    margin: 0 20px; 
+    text-shadow: 3px 3px 6px black; 
+    background: rgba(0,0,0,0.5); 
+    padding: 5px 20px; 
+    border-radius: 8px; 
+}
+
+/* Samotné 1D hřiště */
+.pitch-1d {
+    position: relative; 
+    width: 100%; 
+    height: 50px; 
+    background: repeating-linear-gradient(90deg, #15803d, #15803d 10%, #166534 10%, #166534 20%); 
+    border: 3px solid rgba(255,255,255,0.8); 
+    border-radius: 6px; 
+    overflow: hidden; 
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.6);
+}
+
+/* Vodoznaky (texty na trávě) */
+.pitch-watermark {
+    position: absolute; 
+    top: 50%; 
+    color: rgba(255,255,255,0.15); 
+    font-weight: bold; 
+    pointer-events: none;
+}
+.wm-box-l { left: 7.5%; transform: translate(-50%, -50%) rotate(-90deg); font-size: 0.75rem; letter-spacing: 2px; }
+.wm-def-l { left: 25%; transform: translate(-50%, -50%); font-size: 0.9rem; letter-spacing: 2px; }
+.wm-mid   { left: 50%; transform: translate(-50%, -50%); font-size: 1.1rem; letter-spacing: 5px; white-space: nowrap; }
+.wm-def-r { left: 75%; transform: translate(-50%, -50%); font-size: 0.9rem; letter-spacing: 2px; }
+.wm-box-r { left: 92.5%; transform: translate(-50%, -50%) rotate(90deg); font-size: 0.75rem; letter-spacing: 2px; }
+
+/* Čáry na hřišti */
+.pitch-line-solid { position: absolute; border: 2px solid rgba(255,255,255,0.6); }
+.pitch-line-dashed { position: absolute; top: 0; bottom: 0; width: 2px; border-left: 2px dashed rgba(255,255,255,0.3); }
+
+/* Vápna a střed */
+.pitch-box-large-l { left: 0; top: 15%; bottom: 15%; width: 15%; border-left: none; }
+.pitch-box-small-l { left: 0; top: 35%; bottom: 35%; width: 5%; border-left: none; }
+.pitch-box-large-r { right: 0; top: 15%; bottom: 15%; width: 15%; border-right: none; }
+.pitch-box-small-r { right: 0; top: 35%; bottom: 35%; width: 5%; border-right: none; }
+.pitch-center-line { left: 50%; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.6); transform: translateX(-50%); }
+.pitch-center-circle { left: 50%; top: 50%; width: 20px; height: 20px; border-radius: 50%; transform: translate(-50%, -50%); }
+
+/* Míč */
+.pitch-ball {
+    position: absolute; 
+    top: 50%; 
+    transform: translate(-50%, -50%); 
+    font-size: 1.8rem; 
+    /* Parádní fyzika kopu */
+    transition: left 1.1s ease-in-out;
+    z-index: 10; 
+    filter: drop-shadow(3px 5px 4px rgba(0,0,0,0.8));
+}
+
+.pitch-labels {
+    display: flex; 
+    justify-content: space-between; 
+    font-size: 0.75rem; 
+    color: #9ca3af; 
+    margin-top: 8px; 
+    text-transform: uppercase; 
+    font-weight: bold; 
+    letter-spacing: 1px;
+}
+
+.replay-window-container {
+    background: #111827; 
+    padding: 20px; 
+    height: 400px; 
+    overflow-y: auto; 
+    border: 4px solid #374151; 
+    border-radius: 10px; 
+    max-width: 800px; 
+    margin: 0 auto; 
+    box-shadow: inset 0 0 20px rgba(0,0,0,1);
+}
