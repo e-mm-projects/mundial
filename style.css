@@ -122,12 +122,15 @@ body {
 }
 
 .building-card {
-    background-color: white;
-    border: 2px solid #cbd5e1;
-    border-radius: 8px;
+    /* Průhledná krémová barva (odpovídá tvým info-boxům, ale s 85% viditelností) */
+    background-color: rgba(253, 245, 230, 0.85); 
+    /* Krásně rozmaže pozadí stadionu pod kartičkou, aby text nerušily detaily nákresu */
+    backdrop-filter: blur(4px); 
+    border: 2px solid #8d6e63; /* Změněno ze šedé na hnědou, ať to ladí ke hře */
+    border-radius: 10px;
     padding: 15px;
     width: 280px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: 3px 3px 10px rgba(0,0,0,0.5);
     display: flex;
     flex-direction: column;
 }
@@ -156,16 +159,21 @@ body {
 }
 
 .building-desc {
-    font-size: 0.9rem;
-    color: #64748b;
+    font-size: 0.95rem;
+    color: #4e342e; /* Tmavší hnědá pro lepší čitelnost */
     margin-bottom: 15px;
-    flex-grow: 1; /* Roztáhne popis, aby tlačítka byla dole zarovnaná */
+    /* ZDE BYLO flex-grow: 1; - To jsme smazali, aby se nedělaly ty obří bílé díry */
 }
 
 .building-stats {
+    margin-top: auto; /* KOUZLO: Tohle přitlačí celou sekci s cenou vždycky úplně na dno karty! */
     font-size: 0.95rem;
     margin-bottom: 15px;
     line-height: 1.5;
+    background: rgba(0, 0, 0, 0.05); /* Jemně podbarvíme sekci pro upgrade */
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px dashed #a1887f;
 }
 
 .stat-cost { color: #dc2626; font-weight: bold; }
