@@ -596,6 +596,10 @@ function renderMatches() {
         playerData.league[myTeamIndex].name = `FC ${playerData.managerName}`;
     }
 
+    // --- Zjistíme divizi pro dynamický nadpis ---
+    const currentDiv = playerData.division || 10;
+    const divName = currentDiv === 10 ? "Amatérská Liga (10. Divize)" : currentDiv === 1 ? "První Liga (Elita)" : `${currentDiv}. Divize`;
+
     const sortedLeague = [...playerData.league].sort((a, b) => {
         if (b.points !== a.points) return b.points - a.points;
         return (b.gf - b.ga) - (a.gf - a.ga); 
@@ -610,7 +614,7 @@ function renderMatches() {
         : `<button class="btn-task" style="width: 100%; background-color: #166534; border-color: #14532d; padding: 15px; font-size: 1.1rem;" onclick="prepareForMatch()">Připravit se na zápas (+10% Síly)</button>`;
 
     // KONTROLA BANNERU
-    const hasUnreadMatch = playerData.mail.some(m => !m.read);
+    const hasUnreadMatch = playerData.mail.some(m => !m.read && !m.isPvE);
     const unreadBanner = hasUnreadMatch ? `
         <div class="notification-banner" onclick="document.querySelector('[data-target=\\'mail\\']').click()">
             📺 Máš v poště nezkouknutý záznam zápasu! Klikni sem a běž se podívat.
@@ -619,7 +623,7 @@ function renderMatches() {
 
     mainContent.innerHTML = `
         <div style="text-align: center;">
-            <h2 class="section-title">Amatérská Liga (10. Divize)</h2>
+            <h2 class="section-title">${divName}</h2>
         </div>
         
         ${unreadBanner}
@@ -634,7 +638,12 @@ function renderMatches() {
         <div class="huge-timer">
             <span id="match-timer">Počítám...</span>
         </div>
-            <button class="btn-task btn-skip" style="margin-bottom: 15px; padding: 5px 15px; background-color: #ef4444; border-color: #b91c1c;" onclick="skipMatchTime()">[TEST] Odehrát hned</button>
+            
+            <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 15px;">
+                <button class="btn-task btn-skip" style="flex: 1; padding: 10px; background-color: #ef4444; border-color: #b91c1c;" onclick="skipMatchTime()">[TEST] Odehrát hned</button>
+                <button class="btn-task btn-skip" style="flex: 1; padding: 10px; background-color: #7c2d12; border-color: #450a0a;" onclick="testSimulateFullSeason()">⏩ [TEST] Simulovat sezónu</button>
+            </div>
+
             <p style="font-size: 0.9rem; color: #9ca3af; margin-bottom: 15px;">Aktivuj přípravu, dokud je čas. Zvýšíš tím šanci na výhru a zkušenosti hráčů.</p>
             ${prepareBtnHtml}
         </div>

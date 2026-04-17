@@ -233,29 +233,48 @@ function updateTeamStats(t1, t2, g1, g2) {
     else { t1.p++; t2.v++; t2.points += 3; }
 }
 
-function generateBotTeam(difficultyMultiplier) {
+function generateBotTeam(division) {
     const formations = ['4-4-2', '4-3-3', '5-4-1'];
     const botFormation = formations[Math.floor(Math.random() * formations.length)];
     const botPlayers = [];
 
+    // Logika pro výběr ranků podle divize (přesně podle tvého zadání)
+    let possibleRankIndices = [];
+    if (division === 10) possibleRankIndices = [0]; // Jen Kopyta
+    else if (division === 9) possibleRankIndices = [0, 1]; // Kopyta + Slibní amatéři
+    else if (division === 8) possibleRankIndices = [1]; // Jen Slibní amatéři
+    else if (division === 7) possibleRankIndices = [1, 2]; // Slibní + Srdcaři
+    else if (division === 6) possibleRankIndices = [2]; // Jen Srdcaři
+    else if (division === 5) possibleRankIndices = [2, 3]; // Srdcaři + Ligoví borci
+    else if (division === 4) possibleRankIndices = [3]; // Jen Ligoví borci
+    else if (division === 3) possibleRankIndices = [3, 4]; // Borci + Reprezentanti
+    else if (division === 2) possibleRankIndices = [4]; // Jen Reprezentanti
+    else if (division === 1) possibleRankIndices = [4, 5]; // Reprezentanti + Legendy
+    else possibleRankIndices = [0];
+
     for (let i = 0; i < 11; i++) {
-        const baseStat = Math.floor(4 * difficultyMultiplier); 
+        // Vybereme náhodný rank z povolených pro tuto divizi
+        const rankIdx = possibleRankIndices[Math.floor(Math.random() * possibleRankIndices.length)];
+        const rankData = PLAYER_RANKS[rankIdx];
         
+        const minS = rankData.minStart || 1;
+        const maxS = rankData.maxStart || 10;
+
         botPlayers.push({
             id: 'bot_' + Math.random().toString(36).substr(2, 9),
             name: `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`,
-            rank: 'Bot',
+            rank: rankData.name,
             level: 1,
-            statCap: 99,
-            stars: Math.min(5, Math.max(1, Math.floor(difficultyMultiplier))),
+            statCap: rankData.cap,
+            stars: Math.floor(Math.random() * 3) + 1, // Boti mají 1-3 hvězdy
             stats: {
-                atk: baseStat + Math.floor(Math.random() * 4),
-                def: baseStat + Math.floor(Math.random() * 4),
-                spd: baseStat + Math.floor(Math.random() * 4),
-                str: baseStat + Math.floor(Math.random() * 4),
-                eng: baseStat + Math.floor(Math.random() * 4),
-                gk: baseStat + Math.floor(Math.random() * 4),
-                tek: baseStat + Math.floor(Math.random() * 4)
+                atk: Math.floor(Math.random() * (maxS - minS + 1)) + minS,
+                def: Math.floor(Math.random() * (maxS - minS + 1)) + minS,
+                spd: Math.floor(Math.random() * (maxS - minS + 1)) + minS,
+                str: Math.floor(Math.random() * (maxS - minS + 1)) + minS,
+                eng: Math.floor(Math.random() * (maxS - minS + 1)) + minS,
+                gk:  Math.floor(Math.random() * (maxS - minS + 1)) + minS,
+                tek: Math.floor(Math.random() * (maxS - minS + 1)) + minS
             }
         });
     }

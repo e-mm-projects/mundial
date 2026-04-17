@@ -74,33 +74,33 @@ function initGame() {
 
     if (!playerData.league || playerData.league.length === 0) {
         const myTeamName = playerData.managerName ? `FC ${playerData.managerName}` : "Tvůj Tým";
+        const currentDiv = playerData.division || 10;
+
+        // Mnohem větší seznam jmen rozdělený na "Vesnické" a "Městské" pro pocit postupu
+        const villageNames = ["Sokol Horní Lhota", "SK Prdelkovice", "FC Dřeváci", "Tatran Sedlčany", "Dynamo Vesnice", "AFK Bída", "Zoufalci United", "TJ Sokol Pěnčín", "Sokol Brozany", "FK Kolomaz", "SK Holomajzna", "Sokol Řeporyje"];
+        const proNames = ["Baník Ostrava (B)", "Slavoj Žižkov", "FK Admira", "SK Slavia (B)", "Meteor Praha", "Slavoj Vyšehrad", "Sokol Hostivice", "FK Jablonec (B)", "SK Kladno", "FK Teplice (B)", "FC Graffin Vlašim", "1.FK Příbram", "FK Viktoria Žižkov"];
         
-        const botsConfig = [
-            { name: "Sokol Horní Lhota", diff: 1.8 },
-            { name: "SK Prdelkovice", diff: 1.6 },
-            { name: "FC Dřeváci", diff: 1.5 },
-            { name: "Baník Ostrava (C)", diff: 2.2 },
-            { name: "Tatran Sedlčany", diff: 1.4 },
-            { name: "Slavoj Žižkov", diff: 1.9 },
-            { name: "Dynamo Vesnice", diff: 1.2 },
-            { name: "AFK Bída", diff: 1.1 },
-            { name: "Zoufalci United", diff: 1.0 }
-        ];
-        
+        // Pokud jsme v 10.-8. divizi, bereme vesnice, výše už profíky
+        const pool = currentDiv >= 8 ? villageNames : proNames;
+        const shuffledNames = pool.sort(() => 0.5 - Math.random());
+
         playerData.league = [];
         playerData.league.push({ name: myTeamName, z: 0, v: 0, r: 0, p: 0, gf: 0, ga: 0, points: 0, isPlayer: true });
         
-        botsConfig.forEach(bot => {
-            const teamData = generateBotTeam(bot.diff);
+        for(let i = 0; i < 9; i++) {
+            // Předáme aktuální divizi, aby se vygenerovaly správné ranky!
+            const teamData = generateBotTeam(currentDiv);
+            
             playerData.league.push({ 
-                name: bot.name, z: 0, v: 0, r: 0, p: 0, gf: 0, ga: 0, points: 0, isPlayer: false,
+                name: shuffledNames[i % shuffledNames.length], 
+                z: 0, v: 0, r: 0, p: 0, gf: 0, ga: 0, points: 0, isPlayer: false,
                 formation: teamData.formation,
                 players: teamData.players
             });
-        });
+        }
         
         playerData.seasonEndTime = Date.now() + (14 * 24 * 60 * 60 * 1000); 
-        playerData.nextMatchTime = Date.now() + (8 * 60 * 60 * 1000); 
+        playerData.nextMatchTime = getNextMatchSlot(); // Použijeme rovnou náš nový časovač
         playerData.isPrepared = false;
         
         saveGame();
@@ -523,26 +523,30 @@ function generatePlayer(isStarter = false) {
     const rankIndex = availableRanks[Math.floor(Math.random() * availableRanks.length)];
     const selectedRank = PLAYER_RANKS[rankIndex];
 
+    // Pokud náhodou u ranku chybí minStart/maxStart, dáme nějaký záchranný základ
+    const minStart = selectedRank.minStart || 1;
+    const maxStart = selectedRank.maxStart || 10;
+
     return {
         id: 'p_' + Math.random().toString(36).substr(2, 9),
         name: `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`,
         
         rank: selectedRank.name,
-        statCap: selectedRank.cap,
+        statCap: selectedRank.cap, // Tady zachováváme tvůj klíč cap z PLAYER_RANKS
         stars: stars,
         level: 1,           
-        maxLevel: stars * 5, 
+        maxLevel: stars === 0 ? 5 : stars * 5, // Přidáno ošetření pro 0 hvězdiček
         xp: 0,
         unspentPoints: 0,
         
         stats: {
-            atk: Math.min(selectedRank.cap, Math.floor(Math.random() * 10) + (rankIndex * 4) + 1),
-            def: Math.min(selectedRank.cap, Math.floor(Math.random() * 10) + (rankIndex * 4) + 1),
-            spd: Math.min(selectedRank.cap, Math.floor(Math.random() * 10) + (rankIndex * 4) + 1),
-            str: Math.min(selectedRank.cap, Math.floor(Math.random() * 10) + (rankIndex * 4) + 1),
-            eng: Math.min(selectedRank.cap, Math.floor(Math.random() * 10) + (rankIndex * 4) + 1),
-            gk:  Math.min(selectedRank.cap, Math.floor(Math.random() * 10) + (rankIndex * 4) + 1),
-            tek: Math.min(selectedRank.cap, Math.floor(Math.random() * 10) + (rankIndex * 4) + 1)
+            atk: Math.min(selectedRank.cap, Math.floor(Math.random() * (maxStart - minStart + 1)) + minStart),
+            def: Math.min(selectedRank.cap, Math.floor(Math.random() * (maxStart - minStart + 1)) + minStart),
+            spd: Math.min(selectedRank.cap, Math.floor(Math.random() * (maxStart - minStart + 1)) + minStart),
+            str: Math.min(selectedRank.cap, Math.floor(Math.random() * (maxStart - minStart + 1)) + minStart),
+            eng: Math.min(selectedRank.cap, Math.floor(Math.random() * (maxStart - minStart + 1)) + minStart),
+            gk:  Math.min(selectedRank.cap, Math.floor(Math.random() * (maxStart - minStart + 1)) + minStart),
+            tek: Math.min(selectedRank.cap, Math.floor(Math.random() * (maxStart - minStart + 1)) + minStart)
         }
     };
 }
@@ -876,6 +880,28 @@ window.skipMatchTime = function() {
     saveGame();
 }
 
+// Pomocná funkce pro výpočet dalšího fixního slotu (08:00, 16:00, 00:00)
+function getNextMatchSlot() {
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    let nextMatch = new Date(now);
+    nextMatch.setMinutes(0);
+    nextMatch.setSeconds(0);
+    nextMatch.setMilliseconds(0);
+
+    if (currentHour < 8) {
+        nextMatch.setHours(8);
+    } else if (currentHour < 16) {
+        nextMatch.setHours(16);
+    } else {
+        // Příští zápas je v 00:00 další den
+        nextMatch.setHours(24);
+    }
+    
+    return nextMatch.getTime();
+}
+
 window.processMatch = function() {
     const allTeams = [...playerData.league];
     const myTeam = allTeams.find(t => t.isPlayer);
@@ -886,9 +912,36 @@ window.processMatch = function() {
 
     if (!opponent) return;
 
+    // --- HISTORIE VZÁJEMNÝCH ZÁPASŮ (H2H) ---
+    // Pokud tým ještě historii nemá, vytvoříme ji
+    if (!opponent.h2h) opponent.h2h = { v: 0, r: 0, p: 0 };
+    
+    let h2hText = "";
+    const totalH2H = opponent.h2h.v + opponent.h2h.r + opponent.h2h.p;
+
+    // Zhodnocení naší dosavadní úspěšnosti v ročníku
+    if (totalH2H === 0) {
+        h2hText = `Tohle je naše první letošní setkání s týmem ${opponent.name}. Uvidíme, s čím na nás vyrukují!`;
+    } else if (opponent.h2h.v > opponent.h2h.p) {
+        h2hText = `Hráči si na soupeře věří. V této sezóně jsme s ním už úspěšně hráli (Letošní bilance: ${opponent.h2h.v} V, ${opponent.h2h.r} R, ${opponent.h2h.p} P).`;
+    } else if (opponent.h2h.v < opponent.h2h.p) {
+        h2hText = `Soupeř je letos naší noční můrou, máme mu co vracet! (Letošní bilance: ${opponent.h2h.v} V, ${opponent.h2h.r} R, ${opponent.h2h.p} P).`;
+    } else {
+        h2hText = `Letošní bilance s tímto soupeřem je naprosto vyrovnaná (${opponent.h2h.v} V, ${opponent.h2h.r} R, ${opponent.h2h.p} P). Bude to tvrdý boj!`;
+    }
+    // ------------------------------------------------
+
     const mySectors = calculateSectorStrength(playerData.players, playerData.formation, playerData.isPrepared);
     const botSectors = calculateSectorStrength(opponent.players, opponent.formation, false);
     const result = simulateMatch(mySectors, botSectors, playerData.formation, opponent.formation, playerData.players, opponent.players, opponent.name);
+
+    // Vložíme hlášku komentátora hned na první místo do logu před výkop!
+    result.log.unshift({ min: 0, text: `🎙️ KOMENTÁTOR: ${h2hText}`, score: "0:0", zone: 50, type: 'neutral' });
+
+    // Zaktualizujeme H2H bilanci pro PŘÍŠTÍ zápas
+    if (result.myGoals > result.botGoals) opponent.h2h.v++;
+    else if (result.myGoals === result.botGoals) opponent.h2h.r++;
+    else opponent.h2h.p++;
 
     updateTeamStats(myTeam, opponent, result.myGoals, result.botGoals);
     
@@ -934,17 +987,91 @@ window.processMatch = function() {
     );
 
     playerData.isPrepared = false;
-    playerData.nextMatchTime = Date.now() + (8 * 60 * 60 * 1000);
+    playerData.nextMatchTime = getNextMatchSlot();
     
     saveGame();
     checkLevelUp();
     updateTopBarUI();
     alert(`PÍÍÍSK! Zápas právě skončil. Záznam utkání dorazil do tvé pošty, běž se podívat, jak to dopadlo!`);
     
+// --- KONTROLA KONCE SEZÓNY (Změněno na 36 zápasů) ---
+    if (myTeam.z >= 36) {
+        const finalLeague = [...playerData.league].sort((a, b) => {
+            if (b.points !== a.points) return b.points - a.points;
+            return (b.gf - b.ga) - (a.gf - a.ga); 
+        });
+        
+        const myFinalRank = finalLeague.findIndex(t => t.isPlayer) + 1;
+        const oldDiv = playerData.division || 10;
+        let seasonReportText = "";
+        
+        if (myFinalRank <= 2 && oldDiv > 1) {
+            playerData.division = oldDiv - 1;
+            const promotionBonus = 5000 + ((10 - playerData.division) * 2000);
+            playerData.money += promotionBonus;
+            seasonReportText = `🏆 FANTAZIE! Tvůj tým skončil na krásném ${myFinalRank}. místě a slaví postup do ${playerData.division}. divize! \n\nVedení klubu je nadšeno a posílá postupový bonus ve výši ${promotionBonus} 💰!`;
+        } else if (oldDiv === 1 && myFinalRank === 1) {
+             const champBonus = 50000;
+             playerData.money += champBonus;
+             seasonReportText = `👑 JSI ABSOLUTNÍ MISTR! Ovládl jsi 1. divizi! \n\nZískáváš titul, slávu a odměnu ${champBonus} 💰. Obhájíš titul i v další sezóně?`;
+        } else {
+            const survivalBonus = 1000;
+            playerData.money += survivalBonus;
+            seasonReportText = `⚽ Konec sezóny. Skončil jsi na ${myFinalRank}. místě a setrváváš v ${oldDiv}. divizi.\n\nVedení děkuje za snahu a posílá prémii ${survivalBonus} 💰 pro posílení kádru do dalšího ročníku.`;
+        }
+
+        addMailMessage(
+            `Konec Sezóny - Závěrečné zhodnocení`, 
+            [{ min: '---', text: seasonReportText, score: "", zone: 50, type: 'neutral' }], 
+            `Konečné umístění: ${myFinalRank}. místo`, 
+            null
+        );
+
+        playerData.seasonLevel = (playerData.seasonLevel || 1) + 1;
+        playerData.league = []; // Smažeme starou ligu
+        saveGame();
+        initGame(); // Vygeneruje se nová, čistá liga s novými H2H statistikami
+        
+        alert(`SEZÓNA SKONČILA! Skončil jsi na ${myFinalRank}. místě. Přečti si poštu pro detaily. Začíná nová sezóna!`);
+    }
+    
     if (document.querySelector('.nav-btn.active')?.getAttribute('data-target') === 'match') renderMatches();
 }
 
-// --- BOTI A LIGA ---
+
+// simulace celé sezony //
+window.testSimulateFullSeason = function() {
+    if (!confirm("Chceš okamžitě dosimulovat zbytek sezóny? Hra všem náhodně přidělí body a proběhne vyhodnocení.")) return;
+
+    const myTeam = playerData.league.find(t => t.isPlayer);
+    const bots = playerData.league.filter(t => !t.isPlayer);
+    
+    // ZMĚNA: Sezóna má nyní 36 zápasů!
+    const remainingMatches = 36 - myTeam.z;
+
+    for (let i = 0; i < remainingMatches; i++) {
+        // 1. Simulace pro hráče
+        const opponent = bots[Math.floor(Math.random() * bots.length)];
+        const myG = Math.floor(Math.random() * 4);
+        const botG = Math.floor(Math.random() * 3);
+        updateTeamStats(myTeam, opponent, myG, botG);
+
+        // 2. Simulace pro ostatní boty v lize
+        for (let j = 0; j < bots.length; j += 2) {
+            const t1 = bots[j];
+            const t2 = bots[j+1];
+            if (t1 && t2 && t1 !== opponent && t2 !== opponent) {
+                updateTeamStats(t1, t2, Math.floor(Math.random() * 3), Math.floor(Math.random() * 3));
+            }
+        }
+    }
+
+    saveGame();
+    // Zavoláme normální zápas, který si všimne, že už máme odehráno a spustí oslavy!
+    processMatch(); 
+}
+
+// --- BOTI A LIGA --- ------------------------------
 window.viewBotTeam = function(teamName) {
     const mainContent = document.getElementById('main-content');
     const botTeam = playerData.league.find(t => t.name === teamName);

@@ -32,16 +32,16 @@ const defaultPlayerData = {
 };
 
 // --- TVORBA HRÁČŮ A RPG SYSTÉM ---
-const firstNames = ['Jan', 'Petr', 'Tomáš', 'Lukáš', 'Jakub', 'Martin', 'Michal', 'Jiří', 'Ondřej', 'David', 'Karel', 'Pavel', 'Tonda', 'Pepa', 'Vašek', 'Patrik', 'Mario', 'Radek', 'Aleš', 'Dodo'];
+const firstNames = ['Jan', 'Diego', 'Petr', 'Tomáš', 'Lukáš', 'Jakub', 'Martin', 'Michal', 'Jiří', 'Ondřej', 'David', 'Karel', 'Pavel', 'Tonda', 'Pepa', 'Vašek', 'Patrik', 'Mario', 'Radek', 'Aleš', 'Dodo'];
 const lastNames = ['Mišun', 'Svoboda', 'Novotný', 'Dvořák', 'Černý', 'Procházka', 'Kučera', 'Veselý', 'Horák', 'Němec', 'Pokorný', 'Stanovský', 'Vlasák', 'Machala', 'Pavelka', 'Suchán', 'Pala', 'Vašina', 'Mikala', 'Bakalík'];
 
 const PLAYER_RANKS = [
-    { name: 'Kopyto', cap: 15 },           
-    { name: 'Slibný amatér', cap: 25 },    
-    { name: 'Srdcař', cap: 45 },           
-    { name: 'Ligový borec', cap: 65 },     
-    { name: 'Reprezentant', cap: 85 },     
-    { name: 'Legenda', cap: 99 }           
+    { name: "Kopyto", cap: 15, minStart: 1, maxStart: 10 },
+    { name: "Slibný amatér", cap: 25, minStart: 10, maxStart: 20 },
+    { name: "Srdcař", cap: 45, minStart: 20, maxStart: 40 },
+    { name: "Ligový borec", cap: 65, minStart: 40, maxStart: 60 },
+    { name: "Reprezentant", cap: 85, minStart: 60, maxStart: 80 },
+    { name: "Legenda", cap: 99, minStart: 70, maxStart: 90 }
 ];
 
 
