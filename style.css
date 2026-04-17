@@ -364,15 +364,16 @@ body {
     background-color: #f59e0b; 
 }
 
-/* --- PŘIHLAŠOVACÍ OKNO --- */
-#login-screen {
+/* --- LOGIN OBRAZOVKA (Vylepšená) --- */
+.login-overlay {
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(0, 0, 0, 0.9); /* Tmavé průhledné pozadí */
-    display: flex;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.95);
+    z-index: 9999;
+    display: none; /* Zapíná JS přes flex */
     justify-content: center;
     align-items: center;
-    z-index: 9999; /* Zaručí, že okno bude vždy úplně nahoře */
 }
 
 .login-box {
@@ -381,29 +382,60 @@ body {
     border-radius: 10px;
     padding: 40px;
     text-align: center;
-    max-width: 500px;
-    box-shadow: 0 0 40px rgba(255, 255, 255, 0.2);
+    width: 550px;
+    max-width: 90%;
 }
 
-#manager-name-input {
-    width: 80%;
+.login-title {
+    color: #4e342e;
+    margin-top: 0;
+    font-size: 2.2rem;
+    margin-bottom: 25px;
+}
+
+/* Hlavní řádek: Jméno + Tlačítko */
+.login-input-group {
+    display: flex;
+    flex-wrap: wrap; /* Dovolí prvkům skočit pod sebe, když nezbývá místo */
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.login-input {
+    flex: 1;
+    min-width: 200px; /* Zabrání tomu, aby se pole smrsklo do neviditelna */
     padding: 12px;
-    font-size: 1.2rem;
-    margin: 15px 0;
+    font-size: 1.1rem;
     border: 2px solid #a1887f;
     border-radius: 5px;
-    text-align: center;
-    background-color: #fff;
+    font-family: 'Kalam', cursive;
 }
 
-.avatar-selection {
+.btn-login-main {
+    margin-top: 0;
+    padding: 10px 20px; /* Vrátili jsme padding, aby tlačítko nebylo moc spláclé */
+    white-space: normal; /* OPRAVA: Text se teď může hezky zalomit na dva řádky! */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+/* Sekce výběru avatara */
+.avatar-selection-container {
+    border-top: 2px dashed #d7ccc8;
+    margin-top: 20px;
+    padding-top: 15px;
+}
+
+.avatar-grid {
     display: flex;
     justify-content: center;
-    gap: 20px;
-    margin-top: 15px;
+    gap: 15px;
+    margin: 15px 0;
 }
 
-.avatar-option {
+.avatar-img {
     width: 90px;
     height: 90px;
     border-radius: 50%;
@@ -413,47 +445,15 @@ body {
     object-fit: cover;
 }
 
-.avatar-option:hover {
+.avatar-img:hover { transform: scale(1.1); }
+.avatar-img.selected {
+    border-color: #166534;
     transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(22, 101, 52, 0.5);
 }
 
-.avatar-option.selected {
-    border-color: #166534; /* Zelený rámeček pro vybraného */
-    transform: scale(1.1);
-    box-shadow: 0 0 15px rgba(22, 101, 52, 0.6);
-}
-
-/* --- PROFIL V HORNÍ LIŠTĚ --- */
-.manager-profile {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    background-color: rgba(255, 255, 255, 0.1);
-    padding: 5px 15px;
-    border-radius: 8px;
-}
-
-#topbar-avatar {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    border: 2px solid #fff;
-    object-fit: cover;
-    box-shadow: 0 0 5px rgba(0,0,0,0.5);
-}
-
-.manager-info {
-    display: flex;
-    flex-direction: column;
-    text-align: left;
-}
-
-#manager-name-display {
-    font-weight: bold;
-    font-size: 1.1rem;
-    color: #fff;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+.login-footer {
+    margin-top: 25px;
 }
 
 /* --- VYLEPŠENÍ SEKCE KANCELÁŘ --- */
