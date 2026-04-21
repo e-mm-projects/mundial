@@ -127,6 +127,10 @@ function initGame() {
             selectAvatar('images/avatar1.jpg'); 
         }
     } else {
+        // --- ZDE JE PŘIDANÝ KÓD ---
+        // Než se načte uživatelské rozhraní, hra zkontroluje, jestli jsi nechyběl u zápasů
+        checkOfflineProgress(); 
+        
         startGameUI();
     }
 }
@@ -483,59 +487,124 @@ window.onload = initGame;
 
 // Pomocná funkce pro výpočet ceny hráče
 function getPlayerPrice(player) {
-    // Pokud má hráč 0 hvězd, násobíme 0.5, jinak počtem hvězd (1 až 5)
-    const starMult = player.stars === 0 ? 0.5 : player.stars;
-    // Cena = Rank (statCap) * 10 * Hvězdy
-    return Math.floor(player.statCap * 30 * starMult);
+    // 1. Zjistíme index ranku (Kopyto = 0, Slibný amatér = 1 atd.)
+    const rankNames = ["Kopyto", "Slibný amatér", "Srdcař", "Ligový borec", "Reprezentant", "Legenda"];
+    let rankIndex = rankNames.indexOf(player.rank);
+    if (rankIndex === -1) rankIndex = 0; // Pojistka proti chybě
+
+    // 2. Matematika podle tvého zadání: Každý rank posouvá "úroveň ceny" o 3 body
+    const powerLevel = (rankIndex * 3) + player.stars;
+
+    // 3. Pevný ceník podle úrovně síly (0 až 20)
+    // Překryv funguje dokonale (např. Kopyto 3* = úroveň 3. Slibný amatér 0* = úroveň 3)
+    const priceTable = [
+        250,    // Úroveň 0: Kopyto 0*
+        450,    // Úroveň 1: Kopyto 1*
+        900,    // Úroveň 2: Kopyto 2*
+        1350,   // Úroveň 3: Kopyto 3* (a zároveň Slibný amatér 0*)
+        1800,   // Úroveň 4: Kopyto 4* (a zároveň Slibný amatér 1*)
+        2500,   // Úroveň 5: Kopyto 5* (a zároveň Slibný amatér 2*)
+        3500,   // Úroveň 6: Amatér 3* (a zároveň Srdcař 0*)
+        5000,   // Úroveň 7: Amatér 4* (a zároveň Srdcař 1*)
+        7500,   // Úroveň 8: Amatér 5* (a zároveň Srdcař 2*)
+        11000,  // Úroveň 9: Srdcař 3*
+        16000,  // Úroveň 10: Srdcař 4*
+        23000,  // Úroveň 11: Srdcař 5*
+        32000,  // Úroveň 12: Borec 3*
+        45000,  // Úroveň 13: Borec 4*
+        65000,  // Úroveň 14: Borec 5*
+        90000,  // Úroveň 15: Reprezentant 3*
+        125000, // Úroveň 16: Reprezentant 4*
+        175000, // Úroveň 17: Reprezentant 5*
+        250000, // Úroveň 18: Legenda 3*
+        350000, // Úroveň 19: Legenda 4*
+        500000  // Úroveň 20: Legenda 5*
+    ];
+
+    // Vrátíme cenu z tabulky. Pokud by byla úroveň mimo, dáme maximální cenu.
+    return priceTable[powerLevel] || 500000;
 }
 
 function generatePlayer(isStarter = false) {
     let stars = 0;
     
+    // --- GENERACE HVĚZD ---
     if (isStarter) {
         stars = Math.random() > 0.15 ? 0 : 1;
     } else {
-        // Zjistíme level budovy (pokud náhodou data ještě neexistují, je to 1)
         const scoutLevel = (playerData.buildings && playerData.buildings.scout) ? playerData.buildings.scout : 1;
-        
-        // Hod kostkou od 0.00 do 1.00. Každý level budovy přidá +0.005 štěstí!
         const roll = Math.random() + ((scoutLevel - 1) * 0.005); 
         
-        if (roll >= 0.98) stars = 5;       // 2 % (plus bonusy)
-        else if (roll >= 0.90) stars = 4;  // 8 %
-        else if (roll >= 0.75) stars = 3;  // 15 %
-        else if (roll >= 0.55) stars = 2;  // 20 %
-        else if (roll >= 0.15) stars = 1;  // 40 %
-        else stars = 0;                    // 15 %
+        if (roll >= 0.98) stars = 5;       
+        else if (roll >= 0.90) stars = 4;  
+        else if (roll >= 0.75) stars = 3;  
+        else if (roll >= 0.55) stars = 2;  
+        else if (roll >= 0.15) stars = 1;  
+        else stars = 0;                    
     }
 
+    // --- GENERACE RANKU (Podle tvé tabulky pravděpodobnosti) ---
     const currentDiv = playerData.division || 10; 
-    let availableRanks = [];
+    let rankIndex = 0;
+    
+    // Hod kostkou od 0 do 100 pro výpočet procent
+    const rand = Math.random() * 100; 
 
-    if (currentDiv === 10) availableRanks = [0];
-    else if (currentDiv >= 8) availableRanks = [0, 1];
-    else if (currentDiv >= 6) availableRanks = [1, 2];
-    else if (currentDiv >= 4) availableRanks = [1, 2, 3];
-    else if (currentDiv >= 2) availableRanks = [2, 3, 4];
-    else if (currentDiv === 1) availableRanks = [4, 5];
-    else availableRanks = [0];
+    // 0 = Kopyto, 1 = Amatér, 2 = Srdcař, 3 = Borec, 4 = Reprezentant, 5 = Legenda
+    if (currentDiv === 10) {
+        rankIndex = 0; // 100% Kopyto
+    } else if (currentDiv === 9) {
+        if (rand < 30) rankIndex = 1; // 30% Amatér
+        else rankIndex = 0; // 70% Kopyto
+    } else if (currentDiv === 8) {
+        if (rand < 20) rankIndex = 2; // 20% Srdcař
+        else if (rand < 70) rankIndex = 1; // 50% Amatér (20 + 50 = 70)
+        else rankIndex = 0; // 30% Kopyto
+    } else if (currentDiv === 7) {
+        if (rand < 20) rankIndex = 3; // 20% Borec
+        else if (rand < 60) rankIndex = 2; // 40% Srdcař
+        else rankIndex = 1; // 40% Amatér
+    } else if (currentDiv === 6) {
+        if (rand < 50) rankIndex = 3; // 50% Borec
+        else if (rand < 80) rankIndex = 2; // 30% Srdcař
+        else rankIndex = 1; // 20% Amatér
+    } else if (currentDiv === 5) {
+        if (rand < 15) rankIndex = 4; // 15% Reprezentant
+        else if (rand < 75) rankIndex = 3; // 60% Borec
+        else rankIndex = 2; // 25% Srdcař
+    } else if (currentDiv === 4) {
+        if (rand < 40) rankIndex = 4; // 40% Reprezentant
+        else if (rand < 80) rankIndex = 3; // 40% Borec
+        else rankIndex = 2; // 20% Srdcař
+    } else if (currentDiv === 3) {
+        if (rand < 10) rankIndex = 5; // 10% Legenda
+        else if (rand < 60) rankIndex = 4; // 50% Reprezentant
+        else rankIndex = 3; // 40% Borec
+    } else if (currentDiv === 2) {
+        if (rand < 20) rankIndex = 5; // 20% Legenda
+        else if (rand < 80) rankIndex = 4; // 60% Reprezentant
+        else rankIndex = 3; // 20% Borec
+    } else if (currentDiv === 1) {
+        if (rand < 25) rankIndex = 5; // 25% Legenda
+        else rankIndex = 4; // 75% Reprezentant
+    } else {
+        rankIndex = 0; // Záchranná pojistka
+    }
 
-    const rankIndex = availableRanks[Math.floor(Math.random() * availableRanks.length)];
     const selectedRank = PLAYER_RANKS[rankIndex];
-
-    // Pokud náhodou u ranku chybí minStart/maxStart, dáme nějaký záchranný základ
     const minStart = selectedRank.minStart || 1;
     const maxStart = selectedRank.maxStart || 10;
 
+    // --- VYTVOŘENÍ OBJEKTU HRÁČE ---
     return {
         id: 'p_' + Math.random().toString(36).substr(2, 9),
         name: `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`,
         
         rank: selectedRank.name,
-        statCap: selectedRank.cap, // Tady zachováváme tvůj klíč cap z PLAYER_RANKS
+        statCap: selectedRank.cap, 
         stars: stars,
         level: 1,           
-        maxLevel: stars === 0 ? 5 : stars * 5, // Přidáno ošetření pro 0 hvězdiček
+        maxLevel: stars === 0 ? 5 : stars * 5, 
         xp: 0,
         unspentPoints: 0,
         
@@ -954,9 +1023,16 @@ window.processMatch = function() {
         }
     }
 
+    // --- VÝPOČET ODMĚNY PENĚZ ---
+    const divIncomeMultipliers = {
+        10: 1, 9: 1.5, 8: 3, 7: 6, 6: 12, 5: 25, 4: 40, 3: 60, 2: 100, 1: 150
+    };
+    const currentDiv = playerData.division || 10;
+    const divMult = divIncomeMultipliers[currentDiv] || 1;
+
     const baseReward = 50 + (result.myGoals * 10);
-    const tribuneBonus = 1 + (playerData.buildings.tribune * 0.05); // 5% za každý level
-    let rewardMoney = Math.floor(baseReward * tribuneBonus);
+    const tribuneBonus = 1 + (playerData.buildings.tribune * 0.05); 
+    let rewardMoney = Math.floor(baseReward * tribuneBonus * divMult);
     let rewardXP = 20 + (result.myGoals > result.botGoals ? 30 : result.myGoals === result.botGoals ? 10 : 0);
     playerData.money += rewardMoney;
     playerData.xp += rewardXP;
@@ -1041,34 +1117,58 @@ window.processMatch = function() {
 
 // simulace celé sezony //
 window.testSimulateFullSeason = function() {
-    if (!confirm("Chceš okamžitě dosimulovat zbytek sezóny? Hra všem náhodně přidělí body a proběhne vyhodnocení.")) return;
+    if (!confirm("POZOR: Chceš okamžitě UKONČIT SEZÓNU podle aktuálního pořadí v tabulce? Dojde k vyhodnocení postupu/setrvání a vygenerování nové divize.")) return;
 
     const myTeam = playerData.league.find(t => t.isPlayer);
-    const bots = playerData.league.filter(t => !t.isPlayer);
     
-    // ZMĚNA: Sezóna má nyní 36 zápasů!
-    const remainingMatches = 36 - myTeam.z;
-
-    for (let i = 0; i < remainingMatches; i++) {
-        // 1. Simulace pro hráče
-        const opponent = bots[Math.floor(Math.random() * bots.length)];
-        const myG = Math.floor(Math.random() * 4);
-        const botG = Math.floor(Math.random() * 3);
-        updateTeamStats(myTeam, opponent, myG, botG);
-
-        // 2. Simulace pro ostatní boty v lize
-        for (let j = 0; j < bots.length; j += 2) {
-            const t1 = bots[j];
-            const t2 = bots[j+1];
-            if (t1 && t2 && t1 !== opponent && t2 !== opponent) {
-                updateTeamStats(t1, t2, Math.floor(Math.random() * 3), Math.floor(Math.random() * 3));
-            }
-        }
+    // 1. Seřadíme ligu podle aktuálního stavu (body, pak skóre)
+    const finalLeague = [...playerData.league].sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        return (b.gf - b.ga) - (a.gf - a.ga); 
+    });
+    
+    // 2. Zjistíme tvé aktuální umístění (1. až 10.)
+    const myFinalRank = finalLeague.findIndex(t => t.isPlayer) + 1;
+    const oldDiv = playerData.division || 10;
+    let seasonReportText = "";
+    
+    // 3. LOGIKA VYHODNOCENÍ (stejná jako v reálném konci sezóny)
+    // Postupují první dva (pokud nejsme v 1. divizi)
+    if (myFinalRank <= 2 && oldDiv > 1) {
+        playerData.division = oldDiv - 1;
+        // Použijeme tvé upravené násobitele pro bonus
+        const promotionBonus = 5000 + ((10 - playerData.division) * 2000);
+        playerData.money += promotionBonus;
+        seasonReportText = `[TESTOVACÍ UKONČENÍ] 🏆 Postoupil jsi z ${myFinalRank}. místa do ${playerData.division}. divize! Obdržel jsi bonus ${promotionBonus} 💰.`;
+    } else if (oldDiv === 1 && myFinalRank === 1) {
+         playerData.money += 50000;
+         seasonReportText = `[TESTOVACÍ UKONČENÍ] 👑 Ovládl jsi 1. divizi! Jako mistr získáváš 50 000 💰.`;
+    } else {
+        playerData.money += 1000;
+        seasonReportText = `[TESTOVACÍ UKONČENÍ] ⚽ Sezóna ukončena. Zůstáváš v ${oldDiv}. divizi (skončil jsi ${myFinalRank}.). Vedení posílá 1 000 💰.`;
     }
 
+    // 4. Zapíšeme výsledek do pošty, aby sis mohl ověřit texty
+    addMailMessage(
+        `Testovací report: Konec Sezóny`, 
+        [{ min: '---', text: seasonReportText, score: "", zone: 50, type: 'neutral' }], 
+        `Umístění: ${myFinalRank}. místo`, 
+        null
+    );
+
+    // 5. RESET LIGY A INICIALIZACE NOVÉ DIVIZE
+    playerData.seasonLevel = (playerData.seasonLevel || 1) + 1;
+    playerData.league = []; // Tímto vynutíme v initGame vygenerování nových týmů a hráčů
+    
     saveGame();
-    // Zavoláme normální zápas, který si všimne, že už máme odehráno a spustí oslavy!
-    processMatch(); 
+    initGame(); // Tato funkce se postará o vygenerování silnějších botů pro novou divizi
+    
+    alert(`TEST: Sezóna ukončena! Aktuální divize: ${playerData.division}. Podívej se do Skautingu na nové ranky a do Zápasů na nové soupeře.`);
+    
+    // Pokud jsi zrovna na záložce zápasů, hned ji překreslíme
+    if (document.querySelector('.nav-btn.active')?.getAttribute('data-target') === 'match') {
+        renderMatches();
+    }
 }
 
 // --- BOTI A LIGA --- ------------------------------
@@ -1256,3 +1356,163 @@ function addMailMessage(subject, log, result, rewards = null) {
     }
     saveGame();
     }
+
+// --- OFFLINE SIMULACE (Když hráč není ve hře) ---
+
+window.checkOfflineProgress = function() {
+    if (!playerData.league || playerData.league.length === 0) return;
+
+    let now = Date.now();
+    let matchesSimulated = 0;
+
+    // Pokud čas dalšího zápasu už byl, spustíme smyčku (Pojistka: max 100 zápasů naráz)
+    while (playerData.nextMatchTime <= now && matchesSimulated < 100) {
+        simulateOfflineMatch();
+        matchesSimulated++;
+        
+        // Posuneme čas o přesně 8 hodin dopředu na další zápas
+        playerData.nextMatchTime += (8 * 60 * 60 * 1000);
+
+        // Kontrola konce sezóny (36 zápasů)
+        const myTeam = playerData.league.find(t => t.isPlayer);
+        if (myTeam && myTeam.z >= 36) {
+            processSeasonEndOffline();
+        }
+    }
+
+    // Pokud byl hráč pryč víc jak měsíc, prostě přeskočíme zbylý čas do současnosti
+    if (playerData.nextMatchTime < now) {
+        playerData.nextMatchTime = getNextMatchSlot();
+    }
+
+    // Pokud se něco nasimulovalo, dáme hráči vědět
+    if (matchesSimulated > 0) {
+        saveGame();
+        alert(`Trenére, vítej zpět! Zatímco jsi tu nebyl, tým musel odehrát ${matchesSimulated} zápasů bez tvé taktické přípravy. Zkontroluj si poštu pro výsledky.`);
+        if (document.querySelector('.nav-btn.active')?.getAttribute('data-target') === 'match') {
+            renderMatches();
+        }
+    }
+}
+
+function simulateOfflineMatch() {
+    const allTeams = [...playerData.league];
+    const myTeam = allTeams.find(t => t.isPlayer);
+    const bots = allTeams.filter(t => !t.isPlayer);
+
+    const opponentIndex = myTeam.z % bots.length;
+    const opponent = bots[opponentIndex];
+    if (!opponent) return;
+
+    if (!opponent.h2h) opponent.h2h = { v: 0, r: 0, p: 0 };
+    let h2hText = "";
+    const totalH2H = opponent.h2h.v + opponent.h2h.r + opponent.h2h.p;
+    if (totalH2H === 0) h2hText = `Tohle je naše první letošní setkání...`;
+    else if (opponent.h2h.v > opponent.h2h.p) h2hText = `Hráči si na soupeře věří...`;
+    else if (opponent.h2h.v < opponent.h2h.p) h2hText = `Soupeř je letos naší noční můrou...`;
+    else h2hText = `Letošní bilance s tímto soupeřem je naprosto vyrovnaná...`;
+
+    // Offline zápas = Hráč NENÍ připraven (false)
+    const mySectors = calculateSectorStrength(playerData.players, playerData.formation, false); 
+    const botSectors = calculateSectorStrength(opponent.players, opponent.formation, false);
+    const result = simulateMatch(mySectors, botSectors, playerData.formation, opponent.formation, playerData.players, opponent.players, opponent.name);
+
+    result.log.unshift({ min: 0, text: `🎙️ KOMENTÁTOR: ${h2hText}`, score: "0:0", zone: 50, type: 'neutral' });
+
+    if (result.myGoals > result.botGoals) opponent.h2h.v++;
+    else if (result.myGoals === result.botGoals) opponent.h2h.r++;
+    else opponent.h2h.p++;
+
+    updateTeamStats(myTeam, opponent, result.myGoals, result.botGoals);
+    
+    const remainingBots = bots.filter(b => b.name !== opponent.name);
+    for (let i = 0; i < remainingBots.length; i += 2) {
+        const teamA = remainingBots[i];
+        const teamB = remainingBots[i+1];
+        if (teamA && teamB) updateTeamStats(teamA, teamB, Math.floor(Math.random() * 4), Math.floor(Math.random() * 4));
+    }
+
+    // --- VÝPOČET ODMĚNY PENĚZ ---
+    const divIncomeMultipliers = {
+        10: 1, 9: 1.5, 8: 3, 7: 6, 6: 12, 5: 25, 4: 40, 3: 60, 2: 100, 1: 150
+    };
+    const currentDiv = playerData.division || 10;
+    const divMult = divIncomeMultipliers[currentDiv] || 1;
+
+    const baseReward = 50 + (result.myGoals * 10);
+    const tribuneBonus = 1 + (playerData.buildings.tribune * 0.05); 
+    let rewardMoney = Math.floor(baseReward * tribuneBonus * divMult);
+    let rewardXP = 20 + (result.myGoals > result.botGoals ? 30 : result.myGoals === result.botGoals ? 10 : 0);
+    playerData.money += rewardMoney;
+    playerData.xp += rewardXP;
+
+    let basePXp = result.myGoals > result.botGoals ? 50 : (result.myGoals === result.botGoals ? 30 : 15);
+    const trainingBonus = 1 + (playerData.buildings.training * 0.05);
+    let pXpGained = Math.floor(basePXp * trainingBonus);
+    let levelUps = [];
+
+    playerData.players.slice(0, 11).forEach(p => {
+        if (addPlayerXp(p, pXpGained)) levelUps.push(p.name);
+    });
+
+    if (levelUps.length > 0) result.log.push({ min: '90+', text: `🌟 ZLEPŠENÍ: Hráči ${levelUps.join(', ')} postoupili na novou úroveň!`, score: `${result.myGoals}:${result.botGoals}` });
+
+    addMailMessage(
+        `Report: ${myTeam.name} vs ${opponent.name} (Zápas na pozadí)`, 
+        result.log, 
+        `${result.myGoals}:${result.botGoals}`, 
+        { money: rewardMoney, xp: rewardXP, pXp: pXpGained, homeTeam: myTeam.name, awayTeam: opponent.name }
+    );
+
+    playerData.isPrepared = false;
+}
+
+function processSeasonEndOffline() {
+    const finalLeague = [...playerData.league].sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        return (b.gf - b.ga) - (a.gf - a.ga); 
+    });
+    
+    const myFinalRank = finalLeague.findIndex(t => t.isPlayer) + 1;
+    const oldDiv = playerData.division || 10;
+    let seasonReportText = "";
+    
+    if (myFinalRank <= 2 && oldDiv > 1) {
+        playerData.division = oldDiv - 1;
+        const promotionBonus = 5000 + ((10 - playerData.division) * 2000);
+        playerData.money += promotionBonus;
+        seasonReportText = `🏆 FANTAZIE! Tvůj tým skončil na krásném ${myFinalRank}. místě a slaví postup do ${playerData.division}. divize!`;
+    } else if (oldDiv === 1 && myFinalRank === 1) {
+         playerData.money += 50000;
+         seasonReportText = `👑 JSI ABSOLUTNÍ MISTR! Ovládl jsi 1. divizi!`;
+    } else {
+        playerData.money += 1000;
+        seasonReportText = `⚽ Konec sezóny. Skončil jsi na ${myFinalRank}. místě a setrváváš v ${oldDiv}. divizi.`;
+    }
+
+    addMailMessage(`Konec Sezóny - Závěrečné zhodnocení`, [{ min: '---', text: seasonReportText, score: "", zone: 50, type: 'neutral' }], `Konečné umístění: ${myFinalRank}. místo`, null);
+
+    playerData.seasonLevel = (playerData.seasonLevel || 1) + 1;
+    
+    // Vygenerování nové ligy potichu
+    const myTeamName = playerData.managerName ? `FC ${playerData.managerName}` : "Tvůj Tým";
+    const currentDiv = playerData.division || 10;
+    const villageNames = ["Sokol Horní Lhota", "SK Prdelkovice", "FC Dřeváci", "Tatran Sedlčany", "Dynamo Vesnice", "AFK Bída", "Zoufalci United", "TJ Sokol Pěnčín", "Sokol Brozany", "FK Kolomaz", "SK Holomajzna", "Sokol Řeporyje"];
+    const proNames = ["Baník Ostrava (B)", "Slavoj Žižkov", "FK Admira", "SK Slavia (B)", "Meteor Praha", "Slavoj Vyšehrad", "Sokol Hostivice", "FK Jablonec (B)", "SK Kladno", "FK Teplice (B)", "FC Graffin Vlašim", "1.FK Příbram", "FK Viktoria Žižkov"];
+    const pool = currentDiv >= 8 ? villageNames : proNames;
+    const shuffledNames = pool.sort(() => 0.5 - Math.random());
+
+    playerData.league = [];
+    playerData.league.push({ name: myTeamName, z: 0, v: 0, r: 0, p: 0, gf: 0, ga: 0, points: 0, isPlayer: true });
+    
+    for(let i = 0; i < 9; i++) {
+        const teamData = generateBotTeam(currentDiv);
+        playerData.league.push({ 
+            name: shuffledNames[i % shuffledNames.length], 
+            z: 0, v: 0, r: 0, p: 0, gf: 0, ga: 0, points: 0, isPlayer: false,
+            formation: teamData.formation,
+            players: teamData.players
+        });
+    }
+    playerData.isPrepared = false;
+}

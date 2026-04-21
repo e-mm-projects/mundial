@@ -539,6 +539,24 @@ function renderScouting() {
     }
 
     let nextRefresh = playerData.lastScoutRefresh + scoutInterval;
+    const currentDiv = playerData.division || 10;
+    const scoutLevel = (playerData.buildings && playerData.buildings.scout) ? playerData.buildings.scout : 1;
+    
+    // Výpočet aktuální šance na 5 hvězd (Základ 2% + 0.5% za každý level)
+    const fiveStarChance = (2 + ((scoutLevel - 1) * 0.5)).toFixed(1);
+
+    // Dynamický text pro šance na ranky podle aktuální divize
+    let rankOddsHtml = "";
+    if (currentDiv === 10) rankOddsHtml = "<li>Kopyto: 100 %</li>";
+    else if (currentDiv === 9) rankOddsHtml = "<li>Slibný amatér: 30 %</li><li>Kopyto: 70 %</li>";
+    else if (currentDiv === 8) rankOddsHtml = "<li>Srdcař: 20 %</li><li>Slibný amatér: 50 %</li><li>Kopyto: 30 %</li>";
+    else if (currentDiv === 7) rankOddsHtml = "<li>Ligový borec: 20 %</li><li>Srdcař: 40 %</li><li>Slibný amatér: 40 %</li>";
+    else if (currentDiv === 6) rankOddsHtml = "<li>Ligový borec: 50 %</li><li>Srdcař: 30 %</li><li>Slibný amatér: 20 %</li>";
+    else if (currentDiv === 5) rankOddsHtml = "<li>Reprezentant: 15 %</li><li>Ligový borec: 60 %</li><li>Srdcař: 25 %</li>";
+    else if (currentDiv === 4) rankOddsHtml = "<li>Reprezentant: 40 %</li><li>Ligový borec: 40 %</li><li>Srdcař: 20 %</li>";
+    else if (currentDiv === 3) rankOddsHtml = "<li>Legenda: 10 %</li><li>Reprezentant: 50 %</li><li>Ligový borec: 40 %</li>";
+    else if (currentDiv === 2) rankOddsHtml = "<li>Legenda: 20 %</li><li>Reprezentant: 60 %</li><li>Ligový borec: 20 %</li>";
+    else if (currentDiv === 1) rankOddsHtml = "<li>Legenda: 25 %</li><li>Reprezentant: 75 %</li>";
 
     const playersHtml = playerData.scoutedPlayers.map((player, index) => {
         const starsHtml = player.stars > 0 ? '⭐'.repeat(player.stars) : '<span>&nbsp;</span>';
@@ -574,10 +592,36 @@ function renderScouting() {
                 <p style="margin: 0; font-size: 1.1rem; font-style: italic;">
                     "Skautování nových hráčů bude trvat ještě <strong id="scout-timer" style="color: #f59e0b; font-family: monospace; font-size: 1.3rem;">Počítám...</strong><br>Zatím si musíte vybrat z toho, co jsem objevil, šéfe."
                 </p>
-                <div style="margin-top: 10px; font-size: 0.85rem; color: #a1887f;">
-                    Úroveň kanceláře: ${playerData.buildings.scout} (Každý další level zrychlí skauty o 30 minut)
-                </div>
-                <button class="btn-task btn-skip" style="margin-top: 10px; padding: 5px 10px;" onclick="forceScoutRefresh()">[TEST] Vygenerovat hned</button>
+                
+                <details style="margin-top: 15px; text-align: left; background: rgba(0,0,0,0.4); border: 1px solid #8d6e63; border-radius: 5px; padding: 10px;">
+                    <summary style="cursor: pointer; color: #fcd34d; font-weight: bold; list-style: none;">
+                        📊 Zobrazit pravděpodobnosti skautingu (Rozbalit) ▾
+                    </summary>
+                    <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.9rem; color: #e5e7eb;">
+                        <div style="flex: 1;">
+                            <strong style="color: #60a5fa;">Dostupné ranky (${currentDiv}. Divize):</strong>
+                            <ul style="margin: 5px 0; padding-left: 20px;">
+                                ${rankOddsHtml}
+                            </ul>
+                        </div>
+                        <div style="flex: 1;">
+                            <strong style="color: #60a5fa;">Šance na talent (Hvězdy):</strong>
+                            <ul style="margin: 5px 0; padding-left: 20px;">
+                                <li>5 ⭐: ${fiveStarChance} %</li>
+                                <li>4 ⭐: 8.0 %</li>
+                                <li>3 ⭐: 15.0 %</li>
+                                <li>2 ⭐: 20.0 %</li>
+                                <li>1 ⭐: 40.0 %</li>
+                                <li>0 ⭐: Zbytek</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div style="font-size: 0.8rem; color: #9ca3af; margin-top: 10px; font-style: italic;">
+                        * Vylepšováním budovy Kanceláře skauta (aktuálně Lvl. ${scoutLevel}) se ti postupně zvyšuje šance na objevení 5hvězdičkových talentů. Postupem do vyšších lig se zase odemykají lepší ranky.
+                    </div>
+                </details>
+
+                <button class="btn-task btn-skip" style="margin-top: 15px; padding: 5px 10px;" onclick="forceScoutRefresh()">[TEST] Vygenerovat hned</button>
             </div>
         </div>
         <div class="player-list">
