@@ -206,7 +206,7 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
                 gameState = 'away_box'; 
                 matchLog.push({ min: minute, text: `Paráda! ${pMyAtt.name} obešel posledního obránce a proniká do vápna!`, score: `${myGoals}:${botGoals}`, zone: 90, type: 'chance' });
             } else {
-                if (Math.random() < 0.35) {
+                if (Math.random() < 0.40) {
                     gameState = 'home_mid';
                     matchLog.push({ min: minute, text: `Obrana soupeře odvrací hrozbu! ${pBotDef.name} poslal dlouhý odkop až na naši polovinu.`, score: `${myGoals}:${botGoals}`, zone: 35, type: 'neutral' });
                 } else {
@@ -233,7 +233,7 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
                 gameState = 'home_box'; 
                 matchLog.push({ min: minute, text: `Kritický moment! ${pBotAtt.name} se prodral přes naši obranu do vápna!`, score: `${myGoals}:${botGoals}`, zone: 10, type: 'danger' });
             } else {
-                if (Math.random() < 0.35) {
+                if (Math.random() < 0.40) {
                     gameState = 'away_mid';
                     matchLog.push({ min: minute, text: `Skvělý zákrok! ${pMyDef.name} čistě zastavil akci a okamžitě odkopává míč na polovinu soupeře!`, score: `${myGoals}:${botGoals}`, zone: 65, type: 'neutral' });
                 } else {
@@ -247,7 +247,7 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
             const pMyAtt = getActivePlayer(myPlayers, formations[myFormation].att);
             const pBotGk = getActivePlayer(botPlayers, formations[botFormation].gk);
 
-            // --- NOVINKA: PENALTA PRO NÁS (10 % šance, 80 % gól) ---
+            // --- PENALTA PRO NÁS (10 % šance, 80 % gól) ---
             if (Math.random() < 0.10) {
                 matchLog.push({ min: minute, text: `🚨 PENALTA! Náš hráč byl tvrdě poslán k zemi ve vápně! K míči se staví ${pMyAtt.name}.`, score: `${myGoals}:${botGoals}`, zone: 92, type: 'chance' });
                 if (Math.random() < 0.80) {
@@ -256,7 +256,7 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
                     matchLog.push({ min: minute, text: `GÓÓÓL! ${pMyAtt.name} suverénně proměňuje penaltu, brankář skočil na druhou stranu!`, score: `${myGoals}:${botGoals}`, zone: 95, type: 'goal' });
                 } else {
                     gameState = 'home_mid';
-                    matchLog.push({ min: minute, text: `Zahozená penalta! Gólman ${pBotGk.name} vytáhl reflexivní zákrok a vyráží!`, score: `${myGoals}:${botGoals}`, zone: 15, type: 'danger' });
+                    matchLog.push({ min: minute, text: `Zahozená penalta! Gólman ${pBotGk.name} vytáhl skvělý zákrok a odkopává míč směrem k nám!`, score: `${myGoals}:${botGoals}`, zone: 35, type: 'danger' });
                 }
                 continue;
             }
@@ -276,7 +276,7 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
             const pBotAtt = getActivePlayer(botPlayers, formations[botFormation].att);
             const pMyGk = getActivePlayer(myPlayers, formations[myFormation].gk);
 
-            // --- NOVINKA: PENALTA PRO SOUPEŘE ---
+            // ---  PENALTA PRO SOUPEŘE ---
             if (Math.random() < 0.10) {
                 matchLog.push({ min: minute, text: `🚨 PENALTA! Faul v našem vápně, rozhodčí nekompromisně ukazuje na značku! Kope ${pBotAtt.name}.`, score: `${myGoals}:${botGoals}`, zone: 8, type: 'danger' });
                 if (Math.random() < 0.80) {
@@ -285,7 +285,7 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
                     matchLog.push({ min: minute, text: `Gól. ${pBotAtt.name} z penalty nezaváhal a prostřelil našeho brankáře.`, score: `${myGoals}:${botGoals}`, zone: 5, type: 'bad-goal' });
                 } else {
                     gameState = 'away_mid';
-                    matchLog.push({ min: minute, text: `NESKUTEČNÉ! Náš brankář ${pMyGk.name} penaltu chytá a otáčí hru!`, score: `${myGoals}:${botGoals}`, zone: 65, type: 'goal' });
+                    matchLog.push({ min: minute, text: `NESKUTEČNÉ! Náš brankář ${pMyGk.name} penaltu chytá a otáčí hru dlouhým výkopem!`, score: `${myGoals}:${botGoals}`, zone: 65, type: 'goal' });
                 }
                 continue;
             }
