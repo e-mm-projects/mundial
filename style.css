@@ -1116,28 +1116,43 @@ body {
         margin-bottom: 10px;
     }
 
-    /* 5. Sidebar/Menu dole - OPRAVA SPODNÍ LIŠTY */
+/* 5. Pravá mobilní spodní lišta (přilepená trvale dole) */
     #sidebar {
+        position: fixed;     /* Přilepí element na jedno místo na displeji */
+        bottom: 0;           /* Úplně dolů */
+        left: 0;             /* Od levého okraje */
+        width: 100%;         /* Přes celou šířku obrazovky */
+        height: auto;        /* Zruší případnou pevnou výšku z desktopu */
+        
         display: flex;
-        flex-direction: row; /* Tlačítka vedle sebe */
-        width: 100%;
-        overflow-x: auto; /* Zapne horizontální posuvník */
-        -webkit-overflow-scrolling: touch; /* Plynulé scrollování na iPhonech */
-        order: 4; /* Udrží menu úplně dole */
+        flex-direction: row; 
+        overflow-x: auto;    /* Zapne horizontální posuvník pro listování prstem */
+        -webkit-overflow-scrolling: touch;
+        
         padding: 10px 5px;
-        background: rgba(0,0,0,0.2); /* Jemné odlišení pozadí */
-        gap: 10px; /* Mezery mezi tlačítky */
-    }
-    
-    /* Zabráníme mačkání tlačítek, aby šlo menu posouvat prstem */
-    .nav-btn {
-        flex: 0 0 auto; 
-        white-space: nowrap; /* Text tlačítka se nezalomí na dva řádky */
-        margin: 0; 
-        padding: 10px 15px;
+        background: #2e4c16; /* Tmavě zelená, ať má lišta hezký základ */
+        border-top: 2px solid #8d6e63; /* Linka pro oddělení od hry */
+        z-index: 1000;       /* Zaručí, že bude vždy úplně nahoře nad ostatním obsahem */
+        box-shadow: 0 -4px 10px rgba(0,0,0,0.4); /* Stín směrem nahoru */
+        gap: 10px;
     }
 
+    /* Vzhled samotných tlačítek ve spodní liště */
+    .nav-btn {
+        flex: 0 0 auto; 
+        white-space: nowrap; /* Zabrání zalomení textu na dva řádky */
+        margin: 0;
+        padding: 12px 15px;
+        font-size: 0.95rem;
+    }
+
+    /* Aktivní tlačítko se jemně nadzvedne */
     .nav-btn.active {
-        transform: translateY(-3px); /* Aktivní tlačítko jen jemně povyskočí nahoru */
+        transform: translateY(-3px); 
+    }
+
+    /* DŮLEŽITÉ: Uděláme místo dole na stránce, aby lišta nepřekrývala spodní texty */
+    #main-content {
+        padding-bottom: 80px !important; 
     }
 }
