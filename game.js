@@ -752,10 +752,17 @@ function generatePlayer(isStarter = false) {
 }
 
 function addPlayerXp(player, xpAmount) {
+    // 1. ABSOLUTNÍ POJISTKA: Hráči bez hvězd (0 hvězd) nemohou získat XP
+    if (player.stars === 0) {
+        player.xp = 0;
+        player.maxLevel = 1; // Nastavíme maxLevel na 1, ať to UI chápe jako "MAX"
+        return false;
+    }
+
     // Pojistka pro staré savy, kdyby hráč neměl nastavený maxLevel
     if (!player.maxLevel) player.maxLevel = player.stars * 5;
     
-    // 1. KONTROLA STROPU: Pokud je hráč na max levelu, už se dál nezlepšuje
+    // 2. KONTROLA STROPU: Pokud je hráč na max levelu, už se dál nezlepšuje
     if (player.level >= player.maxLevel) {
         player.xp = 0; // Pro jistotu vynulujeme XP bar
         return false;
@@ -771,12 +778,12 @@ function addPlayerXp(player, xpAmount) {
     while (player.xp >= xpNeeded && player.level < player.maxLevel) {
         player.xp -= xpNeeded;
         player.level++;
-        player.unspentPoints += 2; // PŘESNĚ 2 body za každý level!
+        player.unspentPoints += 2; // ZDE ZŮSTÁVÁ TVÉ PRAVIDLO: PŘESNĚ 2 body!
         levelUp = true;
         xpNeeded = player.level * 100;
     }
     
-    // 2. KONTROLA PO PŘIDÁNÍ: Pokud právě dosáhl stropu
+    // 3. KONTROLA PO PŘIDÁNÍ: Pokud právě dosáhl stropu
     if (player.level >= player.maxLevel) {
         player.level = player.maxLevel;
         player.xp = 0; // Ukončíme postup v progress baru
