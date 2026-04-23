@@ -459,7 +459,7 @@ function generateBotTeam(division) {
         const rankData = PLAYER_RANKS[rankIdx];
         
         const minS = rankData.minStart || 1;
-        const maxS = rankData.maxStart || 10;
+        const maxS = rankData.cap;
 
         botPlayers.push({
             id: 'bot_' + Math.random().toString(36).substr(2, 9),

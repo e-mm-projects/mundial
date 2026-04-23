@@ -659,7 +659,7 @@ function getPlayerPrice(player) {
 function generatePlayer(isStarter = false) {
     let stars = 0;
     
-    // --- GENERACE HVĚZD ---
+    // --- GENERACE HVĚZD --- //
     if (isStarter) {
         stars = Math.random() > 0.15 ? 0 : 1;
     } else {
@@ -735,7 +735,7 @@ function generatePlayer(isStarter = false) {
         statCap: selectedRank.cap, 
         stars: stars,
         level: 1,           
-        maxLevel: stars === 0 ? 5 : stars * 5, 
+        maxLevel: stars === 0 ? 1 : stars * 5, // Bez hvězd je strop vždy 1
         xp: 0,
         unspentPoints: 0,
         
