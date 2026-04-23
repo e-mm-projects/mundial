@@ -777,35 +777,42 @@ function renderMatches() {
     updateTimerUI('match-timer', playerData.nextMatchTime);
 }
 
-// --- POŠTA ---
+// --- POŠTA (Seznam zpráv) ---
 function renderMail() {
     const mainContent = document.getElementById('main-content');
     
-    if (playerData.mail.length === 0) {
-        mainContent.innerHTML = `<h2 class="section-title">Pošta</h2><p style="text-align:center; color: white;">Schránka je zatím prázdná.</p>`;
+    if (!playerData.mail || playerData.mail.length === 0) {
+        mainContent.innerHTML = `
+            <div style="text-align: center;">
+                <h2 class="section-title">Pošta</h2>
+                <p style="color: white; margin-top: 20px;">Schránka je zatím prázdná, trenére.</p>
+            </div>`;
         return;
     }
 
     mainContent.innerHTML = `
-        <h2 class="section-title">Doručená pošta</h2>
+        <div style="text-align: center;">
+            <h2 class="section-title">Doručená pošta</h2>
+        </div>
         <div class="mail-container">
             ${playerData.mail.map((m, index) => {
-                // Skrývání skóre pro nepřečtené zprávy
                 const scoreDisplay = m.read ? m.result : '❓ : ❓';
                 const scoreColor = m.read ? '#166534' : '#d84315';
                 const scoreText = m.read ? `Konečné skóre: ${scoreDisplay}` : `Skóre je tajné (Pusť si záznam!)`;
                 const btnText = m.read ? 'Znovu přehrát' : '▶ Přehrát zápas';
-                
-                // ZDE JE NOVINKA: Zjistíme, jestli máme přidat třídu pro nepřečtenou zprávu
                 const unreadClass = m.read ? '' : 'unread';
 
                 return `
                 <div class="mail-message ${unreadClass}">
                     <div>
-                        <strong style="font-size: 1.1rem;">${m.subject}</strong> <span style="font-size: 0.8rem; color: #8d6e63;">(${m.date})</span>
+                        <strong style="font-size: 1.1rem;">${m.subject}</strong> 
+                        <span style="font-size: 0.8rem; color: #8d6e63;">(${m.date})</span>
                         <br><span style="color: ${scoreColor}; font-weight: bold;">${scoreText}</span>
                     </div>
-                    <button class="btn-task" onclick="openMatchReport(${index})" style="padding: 5px 15px; background-color: ${m.read ? '#4b5563' : '#166534'}; border-color: ${m.read ? '#374151' : '#14532d'};">${btnText}</button>
+                    <button class="btn-task" onclick="openMatchReport(${index})" 
+                        style="padding: 5px 15px; background-color: ${m.read ? '#4b5563' : '#166534'}; border-color: ${m.read ? '#374151' : '#14532d'};">
+                        ${btnText}
+                    </button>
                 </div>
                 `;
             }).join('')}
@@ -813,7 +820,7 @@ function renderMail() {
     `;
 }
 
-// Pomocná funkce pro vykreslení JEDNÉ řádky akce
+// Pomocná funkce pro vykreslení JEDNÉ řádky akce v záznamu
 function renderReplayAction(action) {
     const replayWindow = document.getElementById('replay-window');
     const scoreBoard = document.getElementById('match-score-board');
@@ -842,54 +849,43 @@ function renderReplayAction(action) {
     replayWindow.scrollTop = replayWindow.scrollHeight;
 }
 
+// --- KLUBOVÝ FANSHOP ---
 function renderShop() {
     const mainContent = document.getElementById('main-content');
     
-    // Pokud je nabídka prázdná (např. při prvním spuštění nebo chybě), zobrazíme info
     if (!playerData.dailyShopItems || playerData.dailyShopItems.length === 0) {
         mainContent.innerHTML = `
             <div style="text-align: center;">
                 <h2 class="section-title">Klubový Fanshop</h2>
                 <div class="info-box" style="margin: 30px auto; max-width: 500px;">
-                    <p style="font-style: italic;">"Dneska už máme vyprodáno, trenére. Skladníci zapomněli objednat zboží. Stavte se zítra, nebo zkuste zboží vyložit ručně."</p>
+                    <p style="font-style: italic;">"Dneska už máme vyprodáno, trenére. Stavte se zítra."</p>
                     <button class="btn-task btn-skip" style="margin-top: 15px;" onclick="refreshDailyShop(true); renderShop();"> 
-                        📦 [TEST] Obnovit nabídku zboží 
+                        📦 [TEST] Obnovit nabídku 
                     </button>
                 </div>
             </div>`;
         return;
     }
 
-    // Vygenerujeme kartičky pro předměty
     const itemsHtml = playerData.dailyShopItems.map((item, index) => {
-        // Kontrola, zda si hráč může předmět dovolit
         const canAfford = playerData.money >= item.currentPrice;
-        
         return `
             <div class="player-card" style="border-color: #f59e0b; min-height: 320px; display: flex; flex-direction: column; justify-content: space-between; background: #fffdfa;">
                 <div>
                     <div class="player-name" style="color: #b45309; border-bottom: 1px solid #fed7aa; padding-bottom: 5px;">${item.name}</div>
-                    <div style="font-size: 0.75rem; color: #9a3412; text-align: center; margin: 8px 0; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
-                        Kategorie: ${item.role === 'att' ? 'Útok' : item.role === 'mid' ? 'Záloha' : item.role === 'def' ? 'Obrana' : 'Brankář'}
-                    </div>
-                    <p style="font-size: 0.9rem; color: #4b5563; line-height: 1.4; font-style: italic; padding: 0 10px; text-align: center;">
+                    <p style="font-size: 0.9rem; color: #4b5563; line-height: 1.4; font-style: italic; padding: 10px; text-align: center;">
                         "${item.desc}"
                     </p>
                 </div>
-                
                 <div style="background: #fef3c7; padding: 8px; border-radius: 5px; margin: 10px; font-size: 0.85rem; text-align: center; border: 1px solid #fde68a;">
                     ⏳ Vydrží: <strong>${item.duration} zápasů</strong>
                 </div>
-
                 <div style="padding: 10px;">
                     <div class="price-tag buy" style="margin-bottom: 10px; font-size: 1.1rem;">Cena: ${item.currentPrice} 💰</div>
-                    <button class="btn-upgrade" style="width: 100%; padding: 10px;" 
-                        onclick="buyItem(${index})" 
-                        ${!canAfford ? 'disabled' : ''}>
+                    <button class="btn-upgrade" style="width: 100%; padding: 10px;" onclick="buyItem(${index})" ${!canAfford ? 'disabled' : ''}>
                         ${canAfford ? 'Koupit předmět' : 'Nedostatek peněz'}
                     </button>
-
-                    <button class="btn-task btn-test" style="width: 100%; padding: 5px; font-size: 0.8rem;" onclick="buyItem(${index}, true)">
+                    <button class="btn-task btn-test" style="width: 100%; padding: 5px; font-size: 0.8rem; margin-top: 5px;" onclick="buyItem(${index}, true)">
                         [TEST] Koupit ZDARMA
                     </button>
                 </div>
@@ -897,43 +893,31 @@ function renderShop() {
         `;
     }).join('');
 
-    // Vložíme vše do hlavního kontejneru
     mainContent.innerHTML = `
         <div style="text-align: center;">
             <h2 class="section-title">Klubový Fanshop</h2>
-            <p style="color: #fdf5e6; text-shadow: 1px 1px 2px black; margin-bottom: 25px;">
-                Speciální vybavení a doplňky stravy. Pozor, každý předmět má omezenou trvanlivost!
-            </p>
         </div>
-        
         <div class="player-list" style="justify-content: center; gap: 25px;">
             ${itemsHtml}
-        </div>
-
-        <div style="text-align: center; margin-top: 40px; opacity: 0.6;">
-            <button class="btn-task btn-skip" style="font-size: 0.8rem; padding: 5px 15px;" onclick="refreshDailyShop(true); renderShop();">
-                [TEST] Nová denní nabídka
-            </button>
         </div>
     `;
 }
 
+// --- DETAIL ZÁPASU (Záznam utkání) ---
 window.openMatchReport = function(index) {
     const msg = playerData.mail[index];
     msg.read = true; 
     saveGame();
-
     window.currentMatchMsg = msg; 
 
     const mainContent = document.getElementById('main-content');
     const homeTeam = msg.rewards?.homeTeam || "Domácí";
     const awayTeam = msg.rewards?.awayTeam || "Hosté";
-
-    // --- VÝPOČET A VYKRESLENÍ HODNOCENÍ TÝMŮ ---
+    
     const myR = msg.rewards?.myRating;
     const botR = msg.rewards?.botRating;
 
-    // Krásně čistá šablona díky CSS třídám
+    // Pomocná funkce pro panel
     const createRatingPanel = (teamName, rating, isHome) => `
         <div class="rating-panel ${isHome ? 'home' : 'away'}">
             <h4 class="rating-panel-title">${teamName}</h4>
@@ -945,67 +929,64 @@ window.openMatchReport = function(index) {
     `;
 
     mainContent.innerHTML = `
-        <div class="match-report-header">
-            <button onclick="renderMail()" style="position: absolute; left: 0; padding: 10px 20px; background: #4e342e; color: white; border: none; border-radius: 5px; cursor: pointer;">⬅ Zpět</button>
-            <h2 class="section-title" style="margin: 0;">Záznam utkání</h2>
-            <button id="skip-replay-btn" onclick="finishMatchReplay()" style="position: absolute; right: 0; padding: 10px 20px; background: #d84315; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; box-shadow: 2px 2px 5px rgba(0,0,0,0.3);">⏩ Přeskočit</button>
+        <div class="match-report-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+            <button onclick="renderMail()" style="padding: 10px 20px; background: #4e342e; color: white; border: 2px solid #3e2723; border-radius: 5px; cursor: pointer; font-weight: bold; flex-shrink: 0; font-family: inherit;">⬅ Zpět</button>
+            
+            <div style="flex: 1; display: flex; justify-content: center; min-width: 250px;">
+                <h2 class="section-title" style="margin: 0 !important;">Záznam utkání</h2>
+            </div>
+            
+            <button id="skip-replay-btn" onclick="finishMatchReplay()" style="padding: 10px 20px; background: #d84315; color: white; border: 2px solid #9a3412; border-radius: 5px; cursor: pointer; font-weight: bold; flex-shrink: 0; font-family: inherit;">⏩ Přeskočit</button>
         </div>
 
-        <div class="match-report-board">
-            <div class="score-container">
-                <div class="team-name-home">${homeTeam}</div>
-                <div id="match-score-board" class="match-score">0:0</div>
-                <div class="team-name-away">${awayTeam}</div>
+        <div style="display: flex; flex-direction: column;">
+            <div class="match-report-board">
+                <div class="score-container">
+                    <div class="team-name-home">${homeTeam}</div>
+                    <div id="match-score-board" class="match-score">0:0</div>
+                    <div class="team-name-away">${awayTeam}</div>
+                </div>
+                
+                <div class="pitch-1d">
+                    <div class="pitch-watermark wm-box-l">VÁPNO</div>
+                    <div class="pitch-watermark wm-def-l">OBRANA</div>
+                    <div class="pitch-watermark wm-mid">ZÁLOHA</div>
+                    <div class="pitch-watermark wm-def-r">OBRANA</div>
+                    <div class="pitch-watermark wm-box-r">VÁPNO</div>
+                    <div class="pitch-line-solid pitch-box-large-l"></div>
+                    <div class="pitch-line-solid pitch-box-small-l"></div>
+                    <div class="pitch-line-dashed" style="left: 35%;"></div>
+                    <div class="pitch-center-line"></div>
+                    <div class="pitch-line-solid pitch-center-circle"></div>
+                    <div class="pitch-line-dashed" style="left: 65%;"></div>
+                    <div class="pitch-line-solid pitch-box-large-r"></div>
+                    <div class="pitch-line-solid pitch-box-small-r"></div>
+                    <div id="visual-ball" class="pitch-ball">⚽</div>
+                </div>
+                <div class="pitch-labels">
+                    <span>Tvůj brankář</span>
+                    <span>Střed hřiště</span>
+                    <span>Brankář soupeře</span>
+                </div>
             </div>
-            
-            <div class="pitch-1d">
-                <div class="pitch-watermark wm-box-l">VÁPNO</div>
-                <div class="pitch-watermark wm-def-l">OBRANA</div>
-                <div class="pitch-watermark wm-mid">ZÁLOHA</div>
-                <div class="pitch-watermark wm-def-r">OBRANA</div>
-                <div class="pitch-watermark wm-box-r">VÁPNO</div>
-                <div class="pitch-line-solid pitch-box-large-l"></div>
-                <div class="pitch-line-solid pitch-box-small-l"></div>
-                <div class="pitch-line-dashed" style="left: 35%;"></div>
-                <div class="pitch-center-line"></div>
-                <div class="pitch-line-solid pitch-center-circle"></div>
-                <div class="pitch-line-dashed" style="left: 65%;"></div>
-                <div class="pitch-line-solid pitch-box-large-r"></div>
-                <div class="pitch-line-solid pitch-box-small-r"></div>
-                <div id="visual-ball" class="pitch-ball">⚽</div>
-            </div>
-            <div class="pitch-labels">
-                <span>Tvůj brankář</span>
-                <span>Střed hřiště</span>
-                <span>Brankář soupeře</span>
-            </div>
-        </div>
 
-        <div class="match-report-layout" style="display: flex; justify-content: center; gap: 20px; align-items: stretch; margin-top: 20px;">
-            ${myR ? createRatingPanel(homeTeam, myR, true) : '<div style="width: 220px;"></div>'}
-            
-            <div id="replay-window" class="replay-window-container" style="flex: 1; max-width: 800px; margin: 0;"></div>
-            
-            ${botR ? createRatingPanel(awayTeam, botR, false) : '<div style="width: 220px;"></div>'}
+            <div class="match-report-layout">
+                ${myR ? createRatingPanel(homeTeam, myR, true) : '<div style="width: 220px; border: 1px dashed #444; color: #666; display: flex; align-items: center; justify-content: center; border-radius: 10px;">Data nedostupná</div>'}
+                
+                <div id="replay-window" class="replay-window-container" style="flex: 1; max-width: 800px; height: 350px; background: #111827; padding: 20px; border: 4px solid #374151; border-radius: 10px; overflow-y: auto;">
+                    </div>
+                
+                ${botR ? createRatingPanel(awayTeam, botR, false) : '<div style="width: 220px; border: 1px dashed #444; color: #666; display: flex; align-items: center; justify-content: center; border-radius: 10px;">Data nedostupná</div>'}
+            </div>
         </div>
     `;
 
     let step = 0;
-    
     if (window.matchReplayInterval) clearInterval(window.matchReplayInterval);
-
     window.matchReplayInterval = setInterval(() => {
         const replayWindow = document.getElementById('replay-window');
-        if (!replayWindow) { 
-            clearInterval(window.matchReplayInterval);
-            return;
-        }
-
-        if (step < msg.content.length) {
-            renderReplayAction(msg.content[step]);
-            step++;
-        } else {
-            finishMatchReplay(); 
-        }
+        if (!replayWindow) { clearInterval(window.matchReplayInterval); return; }
+        if (step < msg.content.length) { renderReplayAction(msg.content[step]); step++; } 
+        else { finishMatchReplay(); }
     }, 2500); 
 }

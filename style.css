@@ -2,7 +2,7 @@
 body {
     margin: 0;
     /* Použijeme nový komiksový font */
-    font-family: 'Kalam', cursive; 
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     display: flex;
     flex-direction: column;
     height: 100vh;
@@ -47,7 +47,7 @@ body {
 .nav-btn {
     padding: 15px;
     font-size: 1.3rem;
-    font-family: 'Kalam', cursive;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     font-weight: bold;
     color: #3e2723;
     /* Světlé dřevo */
@@ -200,7 +200,7 @@ body {
 }
 
 .locker-room-controls select {
-    font-family: 'Kalam', cursive;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     font-size: 1.2rem;
     padding: 5px 10px;
     background-color: #fdf5e6;
@@ -416,7 +416,7 @@ body {
     font-size: 1.1rem;
     border: 2px solid #a1887f;
     border-radius: 5px;
-    font-family: 'Kalam', cursive;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
 .btn-login-main {
@@ -714,6 +714,14 @@ body {
     border-radius: 12px; 
     border: 2px solid #8d6e63; 
     box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+}
+
+.match-report-layout {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    align-items: flex-start;
+    margin-top: 20px;
 }
 
 .score-container {
@@ -1032,110 +1040,85 @@ body {
    RESPONZIVITA - MOBILNÍ VERZE (Obrazovky pod 768px)
    ============================================================ */
 @media (max-width: 768px) {
-    /* 1. Celkové rozložení - Menu se přesune dolů */
-    #container {
-        flex-direction: column; /* Věci pod sebou */
-        padding: 10px;
-        gap: 10px;
-    }
-
-    /* 2. Horní lišta - Zmenšení textu a stacking */
+    /* 1. Úprava hlavičky - přehledný grid */
     #top-bar {
         height: auto;
-        flex-wrap: wrap; /* Suroviny se zalomí na víc řádků */
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* Dva sloupce pro suroviny */
         padding: 10px;
-        font-size: 0.9rem;
-        justify-content: center;
-        gap: 10px;
+        gap: 5px;
+        line-height: 1.4;
     }
 
     .manager-profile {
-        width: 100%;
+        grid-column: span 2; /* Jméno a avatar přes celou šířku */
         justify-content: center;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        padding-bottom: 8px;
         margin-bottom: 5px;
     }
 
     .resource {
-        margin-left: 10px;
-        padding-left: 10px;
-        border-left: 1px solid rgba(255,255,255,0.2);
+        margin: 0;
+        padding: 5px;
+        font-size: 0.85rem;
+        text-align: center;
+        border: none;
+        background: rgba(0,0,0,0.2);
+        border-radius: 4px;
     }
 
-    /* 3. Navigace (Sidebar) - Horizontální menu s posuvníkem */
-    #sidebar {
+    .resource:last-child {
+        grid-column: span 2; /* Čas do konce sezóny přes celou šířku */
+        background: rgba(245, 158, 11, 0.15);
+    }
+
+    /* 2. Záznam utkání - Oprava překrývání tlačítek */
+    .match-report-header {
+        flex-direction: column; /* Tlačítka nad/pod sebe nebo vedle sebe bez absolutní pozice */
+        gap: 10px;
+        padding-bottom: 15px;
+    }
+
+    .match-report-header button {
+        position: static !important; /* Zrušíme to překrývání */
         width: 100%;
-        flex-direction: row; /* Tlačítka vedle sebe */
-        overflow-x: auto; /* Možnost scrollovat do stran */
-        padding-bottom: 10px;
-        -webkit-overflow-scrolling: touch;
-        order: 2; /* Přesune menu pod hlavní obsah */
+        margin: 0;
     }
 
-    .nav-btn {
-        flex: 0 0 auto; /* Tlačítka se nezmenší */
-        padding: 10px 15px;
-        font-size: 0.9rem;
-        border-radius: 8px;
+    .section-title {
+        margin: 10px 0 !important;
+        font-size: 1.4rem;
+        width: 100%;
+        text-align: center;
     }
 
-    .nav-btn.active {
-        transform: translateY(-5px); /* Na mobilu se vysune nahoru místo doprava */
+    /* 3. Replay okno - pevná výška pro cca 5 akcí */
+    .replay-window-container {
+        height: 250px !important; /* Pevná výška, aby se nemuselo rolovat celou stránkou */
+        margin: 15px 0 !important;
+        order: 2; /* Pořadí: 2. (pod hřištěm) */
     }
 
-    /* 4. Hlavní obsah - Maximální využití místa */
-    #main-content {
-        padding: 15px;
-        order: 1; /* Obsah bude nad menu */
-        border-width: 3px;
+    .match-report-board {
+        order: 1; /* Pořadí: 1. (hřiště nahoře) */
     }
 
-    #main-content h1 { font-size: 1.8rem; }
-    #main-content h2 { font-size: 1.5rem; }
-
-    /* 5. Kartičky (Stadion, Úkoly, Hráči) - Jeden sloupec */
-    .stadium-grid, .office-container, .player-list {
+    /* 4. Ratingové tabulky - až pod komentáři */
+    .match-report-layout {
         display: flex;
         flex-direction: column;
-        align-items: center;
-        width: 100%;
-    }
-
-    .building-card, .task-card, .player-card {
-        width: 100% !important; /* Karty budou na celou šířku mobilu */
-        max-width: 350px;
-    }
-
-    /* 6. Záznam utkání a hřiště */
-    .match-report-board {
-        padding: 10px;
-    }
-
-    .match-score {
-        font-size: 2rem;
-        margin: 0 10px;
-    }
-
-    .team-name-home, .team-name-away {
-        font-size: 1rem;
-    }
-
-    /* Skrytí vodoznaků na malém hřišti, aby nepřekážely */
-    .pitch-watermark { display: none; }
-
-    /* 7. Ratingové tabulky v poště - Pod sebou místo vedle sebe */
-    .match-report-layout {
-        flex-direction: column !important;
-        align-items: center !important;
+        order: 3; /* Pořadí: 3. (úplně dole) */
     }
 
     .rating-panel {
         width: 100% !important;
-        max-width: 300px;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
     }
 
-    .replay-window-container {
-        width: 100% !important;
-        height: 300px;
+    /* 5. Sidebar/Menu dole */
+    #sidebar {
+        order: 4;
+        padding: 5px 0;
     }
 }
