@@ -1040,18 +1040,30 @@ body {
    RESPONZIVITA - MOBILNÍ VERZE (Obrazovky pod 768px)
    ============================================================ */
 @media (max-width: 768px) {
-    /* 1. Úprava hlavičky - přehledný grid */
+    /* 1. Hlavní kontejner a prostor pro spodní lištu */
+    #container {
+        flex-direction: column;
+        padding: 5px;
+        gap: 5px;
+    }
+
+    #main-content {
+        padding-bottom: 80px !important; /* Dělá místo pro fixní lištu dole */
+        border-width: 2px;
+    }
+
+    /* 2. Úprava hlavičky - přehledný grid */
     #top-bar {
         height: auto;
         display: grid;
-        grid-template-columns: 1fr 1fr; /* Dva sloupce pro suroviny */
+        grid-template-columns: 1fr 1fr;
         padding: 10px;
         gap: 5px;
         line-height: 1.4;
     }
 
     .manager-profile {
-        grid-column: span 2; /* Jméno a avatar přes celou šířku */
+        grid-column: span 2;
         justify-content: center;
         border-bottom: 1px solid rgba(255,255,255,0.1);
         padding-bottom: 8px;
@@ -1069,90 +1081,101 @@ body {
     }
 
     .resource:last-child {
-        grid-column: span 2; /* Čas do konce sezóny přes celou šířku */
+        grid-column: span 2;
         background: rgba(245, 158, 11, 0.15);
     }
 
-    /* 2. Záznam utkání - Oprava překrývání tlačítek */
-    .match-report-header {
-        flex-direction: column; /* Tlačítka nad/pod sebe nebo vedle sebe bez absolutní pozice */
-        gap: 10px;
-        padding-bottom: 15px;
-    }
-
-    .match-report-header button {
-        position: static !important; /* Zrušíme to překrývání */
-        width: 100%;
-        margin: 0;
-    }
-
-    .section-title {
-        margin: 10px 0 !important;
-        font-size: 1.4rem;
-        width: 100%;
-        text-align: center;
-    }
-
-    /* 3. Replay okno - pevná výška pro cca 5 akcí */
-    .replay-window-container {
-        height: 250px !important; /* Pevná výška, aby se nemuselo rolovat celou stránkou */
-        margin: 15px 0 !important;
-        order: 2; /* Pořadí: 2. (pod hřištěm) */
-    }
-
-    .match-report-board {
-        order: 1; /* Pořadí: 1. (hřiště nahoře) */
-    }
-
-    /* 4. Ratingové tabulky - až pod komentáři */
-    .match-report-layout {
-        display: flex;
-        flex-direction: column;
-        order: 3; /* Pořadí: 3. (úplně dole) */
-    }
-
-    .rating-panel {
-        width: 100% !important;
-        margin-bottom: 10px;
-    }
-
-/* 5. Pravá mobilní spodní lišta (přilepená trvale dole) */
+    /* 3. Pravá mobilní spodní lišta (přilepená trvale dole) */
     #sidebar {
-        position: fixed;     /* Přilepí element na jedno místo na displeji */
-        bottom: 0;           /* Úplně dolů */
-        left: 0;             /* Od levého okraje */
-        width: 100%;         /* Přes celou šířku obrazovky */
-        height: auto;        /* Zruší případnou pevnou výšku z desktopu */
-        
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: auto;
         display: flex;
         flex-direction: row; 
-        overflow-x: auto;    /* Zapne horizontální posuvník pro listování prstem */
+        overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        
         padding: 10px 5px;
-        background: #2e4c16; /* Tmavě zelená, ať má lišta hezký základ */
-        border-top: 2px solid #8d6e63; /* Linka pro oddělení od hry */
-        z-index: 1000;       /* Zaručí, že bude vždy úplně nahoře nad ostatním obsahem */
-        box-shadow: 0 -4px 10px rgba(0,0,0,0.4); /* Stín směrem nahoru */
+        background: #2e4c16;
+        border-top: 2px solid #8d6e63;
+        z-index: 1000;
+        box-shadow: 0 -4px 10px rgba(0,0,0,0.4);
         gap: 10px;
     }
 
-    /* Vzhled samotných tlačítek ve spodní liště */
     .nav-btn {
         flex: 0 0 auto; 
-        white-space: nowrap; /* Zabrání zalomení textu na dva řádky */
+        white-space: nowrap;
         margin: 0;
         padding: 12px 15px;
         font-size: 0.95rem;
     }
 
-    /* Aktivní tlačítko se jemně nadzvedne */
     .nav-btn.active {
         transform: translateY(-3px); 
     }
+    /* sekce 4 sloužila pro stadion, šatnu a trénink - poskládání vedle sebe. Není ale nutná, protože styly jsou již nadefinovány v základu */
 
-    /* DŮLEŽITÉ: Uděláme místo dole na stránce, aby lišta nepřekrývala spodní texty */
-    #main-content {
-        padding-bottom: 80px !important; 
+    /* 5. Záznam utkání v Poště - Hlavička a názvy týmů */
+    .match-report-header {
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+    
+    .match-report-header button {
+        width: 100% !important;
+        margin: 0 !important;
+    }
+    
+    .match-report-header .section-title {
+        width: 100% !important;
+        font-size: 1.4rem !important;
+        box-sizing: border-box;
+    }
+
+    .score-container {
+        width: 100% !important;
+        padding: 0 5px !important;
+        box-sizing: border-box;
+    }
+    
+    .team-name-home, .team-name-away {
+        font-size: 0.9rem !important;
+        max-width: 35% !important;
+        word-wrap: break-word !important;
+        line-height: 1.2 !important;
+    }
+
+    .pitch-watermark { 
+        display: none; /* Skryje obří vodoznaky, ať je vidět míč */
+    }
+
+    /* 6. Záznam utkání v Poště - Přeskládání tabulek a komentáře */
+    .match-report-layout {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+    }
+
+    #replay-window {
+        order: 1 !important;
+        height: 180px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        margin-bottom: 15px !important;
+    }
+
+    .rating-panel.home {
+        order: 2 !important;
+        width: 100% !important;
+        max-width: 350px !important;
+        margin-bottom: 10px !important;
+    }
+    
+    .rating-panel.away {
+        order: 3 !important;
+        width: 100% !important;
+        max-width: 350px !important;
     }
 }
