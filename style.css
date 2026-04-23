@@ -1116,9 +1116,28 @@ body {
         margin-bottom: 10px;
     }
 
-    /* 5. Sidebar/Menu dole */
+    /* 5. Sidebar/Menu dole - OPRAVA SPODNÍ LIŠTY */
     #sidebar {
-        order: 4;
-        padding: 5px 0;
+        display: flex;
+        flex-direction: row; /* Tlačítka vedle sebe */
+        width: 100%;
+        overflow-x: auto; /* Zapne horizontální posuvník */
+        -webkit-overflow-scrolling: touch; /* Plynulé scrollování na iPhonech */
+        order: 4; /* Udrží menu úplně dole */
+        padding: 10px 5px;
+        background: rgba(0,0,0,0.2); /* Jemné odlišení pozadí */
+        gap: 10px; /* Mezery mezi tlačítky */
+    }
+    
+    /* Zabráníme mačkání tlačítek, aby šlo menu posouvat prstem */
+    .nav-btn {
+        flex: 0 0 auto; 
+        white-space: nowrap; /* Text tlačítka se nezalomí na dva řádky */
+        margin: 0; 
+        padding: 10px 15px;
+    }
+
+    .nav-btn.active {
+        transform: translateY(-3px); /* Aktivní tlačítko jen jemně povyskočí nahoru */
     }
 }

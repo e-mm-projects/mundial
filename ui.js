@@ -797,13 +797,32 @@ function renderMail() {
         <div class="mail-container">
             ${playerData.mail.map((m, index) => {
                 const scoreDisplay = m.read ? m.result : '❓ : ❓';
-                const scoreColor = m.read ? '#166534' : '#d84315';
                 const scoreText = m.read ? `Konečné skóre: ${scoreDisplay}` : `Skóre je tajné (Pusť si záznam!)`;
                 const btnText = m.read ? 'Znovu přehrát' : '▶ Přehrát zápas';
                 const unreadClass = m.read ? '' : 'unread';
 
+                // --- VÝPOČET BAREV (Změněno pouze toto) ---
+                let borderColor = '#9a9f05'; // Výchozí pro nepřečtené (Oranžová)
+                let scoreColor = '#9a9f05';  // Výchozí pro nepřečtené (Oranžová)
+
+                if (m.read) {
+                    if (m.result && m.result.includes(':')) {
+                        const [myGoals, botGoals] = m.result.split(':').map(Number);
+                        if (myGoals > botGoals) {
+                            borderColor = '#10b981'; // Zelená výhra
+                            scoreColor = '#166534';
+                        } else if (myGoals < botGoals) {
+                            borderColor = '#ef4444'; // Červená prohra
+                            scoreColor = '#b91c1c';
+                        } else {
+                            borderColor = '#6b7280'; // Šedá remíza
+                            scoreColor = '#4b5563';
+                        }
+                    }
+                }
+
                 return `
-                <div class="mail-message ${unreadClass}">
+                <div class="mail-message ${unreadClass}" style="border-left-color: ${borderColor};">
                     <div>
                         <strong style="font-size: 1.1rem;">${m.subject}</strong> 
                         <span style="font-size: 0.8rem; color: #8d6e63;">(${m.date})</span>

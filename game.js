@@ -1397,14 +1397,15 @@ window.finishMatchReplay = function() {
     replayWindow.scrollTop = replayWindow.scrollHeight;
 }
 
-function addMailMessage(subject, log, result, rewards = null) {
+function addMailMessage(subject, log, result, rewards = null, customDate = null) {
     const newMessage = {
         id: Date.now(),
         subject: subject,
         content: log,
         result: result, 
         rewards: rewards, 
-        date: new Date().toLocaleString('cs-CZ'), 
+        // Pokud hra pošle vlastní čas, použije se. Jinak se vezme aktuální:
+        date: customDate ? customDate : new Date().toLocaleString('cs-CZ'), 
         read: false
     };
 
@@ -1413,7 +1414,7 @@ function addMailMessage(subject, log, result, rewards = null) {
         playerData.mail = playerData.mail.slice(0, 10);
     }
     saveGame();
-    }
+}
 
 // --- OFFLINE SIMULACE (Když hráč není ve hře) ---
 
@@ -1425,7 +1426,7 @@ window.checkOfflineProgress = function() {
 
     // Pokud čas dalšího zápasu už byl, spustíme smyčku (Pojistka: max 100 zápasů naráz)
     while (playerData.nextMatchTime <= now && matchesSimulated < 100) {
-        simulateOfflineMatch();
+        simulateOfflineMatch(playerData.nextMatchTime);
         matchesSimulated++;
         
         // Posuneme čas o přesně 8 hodin dopředu na další zápas
@@ -1516,10 +1517,11 @@ function simulateOfflineMatch() {
     if (levelUps.length > 0) result.log.push({ min: '90+', text: `🌟 ZLEPŠENÍ: Hráči ${levelUps.join(', ')} postoupili na novou úroveň!`, score: `${result.myGoals}:${result.botGoals}` });
 
     addMailMessage(
-        `Report: ${myTeam.name} vs ${opponent.name} (Zápas na pozadí)`, 
+        `Report: ${myTeam.name} vs ${opponent.name}`, 
         result.log, 
         `${result.myGoals}:${result.botGoals}`, 
-        { money: rewardMoney, xp: rewardXP, pXp: pXpGained, homeTeam: myTeam.name, awayTeam: opponent.name }
+        { money: rewardMoney, xp: rewardXP, pXp: pXpGained, homeTeam: myTeam.name, awayTeam: opponent.name, myRating: result.myPower, botRating: result.botPower },
+        new Date(matchTime).toLocaleString('cs-CZ') // Správný historický čas
     );
 
     playerData.isPrepared = false;
@@ -1556,7 +1558,7 @@ function processSeasonEndOffline() {
     // Vygenerování nové ligy potichu
     const myTeamName = playerData.managerName ? `FC ${playerData.managerName}` : "Tvůj Tým";
     const currentDiv = playerData.division || 10;
-    const villageNames = ["Sokol Horní Lhota", "SK Prdelkovice", "FC Dřeváci", "Tatran Sedlčany", "Dynamo Vesnice", "AFK Bída", "Zoufalci United", "TJ Sokol Pěnčín", "Sokol Brozany", "FK Kolomaz", "SK Holomajzna", "Sokol Řeporyje"];
+    const villageNames = ["Sokol Horní Lhota", "SK Prdelkovice", "FC Horní Nětčice", "FC Dřeváci", "FC Dolní Nětčice", "Mrlínek", "Hlinsko pod Hostýnem", "Tatran Sedlčany", "Dynamo Vesnice", "AFK Bída", "Zoufalci United", "TJ Sokol Pěnčín", "Sokol Brozany", "FK Kolomaz", "SK Holomajzna", "Sokol Řeporyje"];
     const proNames = ["Baník Ostrava (B)", "Slavoj Žižkov", "FK Admira", "SK Slavia (B)", "Meteor Praha", "Slavoj Vyšehrad", "Sokol Hostivice", "FK Jablonec (B)", "SK Kladno", "FK Teplice (B)", "FC Graffin Vlašim", "1.FK Příbram", "FK Viktoria Žižkov"];
     const pool = currentDiv >= 8 ? villageNames : proNames;
     const shuffledNames = pool.sort(() => 0.5 - Math.random());
