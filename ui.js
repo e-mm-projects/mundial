@@ -472,6 +472,51 @@ function renderLockerRoom() {
             <div class="player-list">${renderPlayerGroup(11, 16, 'bench')}</div>
         </div>
     `;
+
+    // --- PŘIDÁME TÝMOVÝ TREZOR NA KONEC ŠATNY ---
+    const renderInventorySlot = (role, label, limit) => {
+        const items = playerData.inventory[role];
+        let slotsHtml = '';
+        
+        for (let i = 0; i < limit; i++) {
+            const item = items[i];
+            if (item) {
+                slotsHtml += `
+                    <div class="player-card" style="border-style: solid; border-color: #8d6e63; background: #fffbeb; width: 180px;">
+                        <div style="font-weight: bold; color: #b45309; font-size: 0.9rem;">${item.name}</div>
+                        <div style="font-size: 0.75rem; margin: 5px 0;">⏳ Zbývá: ${item.duration} záp.</div>
+                        <button class="btn-task" style="background: #ef4444; border:none; padding: 3px 8px; font-size: 0.7rem;" onclick="discardItem('${role}', ${item.instanceId})">🗑️ Vyhodit</button>
+                    </div>
+                `;
+            } else {
+                slotsHtml += `
+                    <div class="player-card empty-slot" style="width: 180px; min-height: 80px; border-style: dashed; opacity: 0.5;">
+                        <div style="font-size: 0.7rem;">Volný slot</div>
+                    </div>
+                `;
+            }
+        }
+        return `
+            <div style="margin-bottom: 15px;">
+                <h4 style="color: #fdf5e6; margin: 0 0 5px 0; font-size: 0.9rem;">${label} (${items.length}/${limit})</h4>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">${slotsHtml}</div>
+            </div>
+        `;
+    };
+
+    mainContent.innerHTML += `
+        <details style="margin-top: 30px; background: rgba(0,0,0,0.5); border: 2px solid #f59e0b; border-radius: 8px; padding: 15px;">
+            <summary style="color: #fcd34d; font-size: 1.2rem; font-weight: bold; cursor: pointer; text-align: center; list-style: none; padding: 5px;">
+                📦 Týmový trezor (Bonusové předměty) ▾
+            </summary>
+            <div style="margin-top: 20px;">
+                ${renderInventorySlot('att', 'Útočné bonusy', 2)}
+                ${renderInventorySlot('mid', 'Záložní bonusy', 2)}
+                ${renderInventorySlot('def', 'Obranné bonusy', 2)}
+                ${renderInventorySlot('gk', 'Brankářské vybavení', 1)}
+            </div>
+        </details>
+    `;
 }
 
 function renderPlayerGroup(startIndex, endIndex, role) {
@@ -795,4 +840,172 @@ function renderReplayAction(action) {
         </div>
     `;
     replayWindow.scrollTop = replayWindow.scrollHeight;
+}
+
+function renderShop() {
+    const mainContent = document.getElementById('main-content');
+    
+    // Pokud je nabídka prázdná (např. při prvním spuštění nebo chybě), zobrazíme info
+    if (!playerData.dailyShopItems || playerData.dailyShopItems.length === 0) {
+        mainContent.innerHTML = `
+            <div style="text-align: center;">
+                <h2 class="section-title">Klubový Fanshop</h2>
+                <div class="info-box" style="margin: 30px auto; max-width: 500px;">
+                    <p style="font-style: italic;">"Dneska už máme vyprodáno, trenére. Skladníci zapomněli objednat zboží. Stavte se zítra, nebo zkuste zboží vyložit ručně."</p>
+                    <button class="btn-task btn-skip" style="margin-top: 15px;" onclick="refreshDailyShop(true); renderShop();"> 
+                        📦 [TEST] Obnovit nabídku zboží 
+                    </button>
+                </div>
+            </div>`;
+        return;
+    }
+
+    // Vygenerujeme kartičky pro předměty
+    const itemsHtml = playerData.dailyShopItems.map((item, index) => {
+        // Kontrola, zda si hráč může předmět dovolit
+        const canAfford = playerData.money >= item.currentPrice;
+        
+        return `
+            <div class="player-card" style="border-color: #f59e0b; min-height: 320px; display: flex; flex-direction: column; justify-content: space-between; background: #fffdfa;">
+                <div>
+                    <div class="player-name" style="color: #b45309; border-bottom: 1px solid #fed7aa; padding-bottom: 5px;">${item.name}</div>
+                    <div style="font-size: 0.75rem; color: #9a3412; text-align: center; margin: 8px 0; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
+                        Kategorie: ${item.role === 'att' ? 'Útok' : item.role === 'mid' ? 'Záloha' : item.role === 'def' ? 'Obrana' : 'Brankář'}
+                    </div>
+                    <p style="font-size: 0.9rem; color: #4b5563; line-height: 1.4; font-style: italic; padding: 0 10px; text-align: center;">
+                        "${item.desc}"
+                    </p>
+                </div>
+                
+                <div style="background: #fef3c7; padding: 8px; border-radius: 5px; margin: 10px; font-size: 0.85rem; text-align: center; border: 1px solid #fde68a;">
+                    ⏳ Vydrží: <strong>${item.duration} zápasů</strong>
+                </div>
+
+                <div style="padding: 10px;">
+                    <div class="price-tag buy" style="margin-bottom: 10px; font-size: 1.1rem;">Cena: ${item.currentPrice} 💰</div>
+                    <button class="btn-upgrade" style="width: 100%; padding: 10px;" 
+                        onclick="buyItem(${index})" 
+                        ${!canAfford ? 'disabled' : ''}>
+                        ${canAfford ? 'Koupit předmět' : 'Nedostatek peněz'}
+                    </button>
+
+                    <button class="btn-task btn-test" style="width: 100%; padding: 5px; font-size: 0.8rem;" onclick="buyItem(${index}, true)">
+                        [TEST] Koupit ZDARMA
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Vložíme vše do hlavního kontejneru
+    mainContent.innerHTML = `
+        <div style="text-align: center;">
+            <h2 class="section-title">Klubový Fanshop</h2>
+            <p style="color: #fdf5e6; text-shadow: 1px 1px 2px black; margin-bottom: 25px;">
+                Speciální vybavení a doplňky stravy. Pozor, každý předmět má omezenou trvanlivost!
+            </p>
+        </div>
+        
+        <div class="player-list" style="justify-content: center; gap: 25px;">
+            ${itemsHtml}
+        </div>
+
+        <div style="text-align: center; margin-top: 40px; opacity: 0.6;">
+            <button class="btn-task btn-skip" style="font-size: 0.8rem; padding: 5px 15px;" onclick="refreshDailyShop(true); renderShop();">
+                [TEST] Nová denní nabídka
+            </button>
+        </div>
+    `;
+}
+
+window.openMatchReport = function(index) {
+    const msg = playerData.mail[index];
+    msg.read = true; 
+    saveGame();
+
+    window.currentMatchMsg = msg; 
+
+    const mainContent = document.getElementById('main-content');
+    const homeTeam = msg.rewards?.homeTeam || "Domácí";
+    const awayTeam = msg.rewards?.awayTeam || "Hosté";
+
+    // --- VÝPOČET A VYKRESLENÍ HODNOCENÍ TÝMŮ ---
+    const myR = msg.rewards?.myRating;
+    const botR = msg.rewards?.botRating;
+
+    // Krásně čistá šablona díky CSS třídám
+    const createRatingPanel = (teamName, rating, isHome) => `
+        <div class="rating-panel ${isHome ? 'home' : 'away'}">
+            <h4 class="rating-panel-title">${teamName}</h4>
+            <div class="rating-row"><span>⚔️ Útok:</span> <strong>${rating.att}</strong></div>
+            <div class="rating-row"><span>🧭 Záloha:</span> <strong>${rating.mid}</strong></div>
+            <div class="rating-row"><span>🛡️ Obrana:</span> <strong>${rating.def}</strong></div>
+            <div class="rating-row last"><span>🧤 Brankář:</span> <strong>${rating.gk}</strong></div>
+        </div>
+    `;
+
+    mainContent.innerHTML = `
+        <div class="match-report-header">
+            <button onclick="renderMail()" style="position: absolute; left: 0; padding: 10px 20px; background: #4e342e; color: white; border: none; border-radius: 5px; cursor: pointer;">⬅ Zpět</button>
+            <h2 class="section-title" style="margin: 0;">Záznam utkání</h2>
+            <button id="skip-replay-btn" onclick="finishMatchReplay()" style="position: absolute; right: 0; padding: 10px 20px; background: #d84315; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; box-shadow: 2px 2px 5px rgba(0,0,0,0.3);">⏩ Přeskočit</button>
+        </div>
+
+        <div class="match-report-board">
+            <div class="score-container">
+                <div class="team-name-home">${homeTeam}</div>
+                <div id="match-score-board" class="match-score">0:0</div>
+                <div class="team-name-away">${awayTeam}</div>
+            </div>
+            
+            <div class="pitch-1d">
+                <div class="pitch-watermark wm-box-l">VÁPNO</div>
+                <div class="pitch-watermark wm-def-l">OBRANA</div>
+                <div class="pitch-watermark wm-mid">ZÁLOHA</div>
+                <div class="pitch-watermark wm-def-r">OBRANA</div>
+                <div class="pitch-watermark wm-box-r">VÁPNO</div>
+                <div class="pitch-line-solid pitch-box-large-l"></div>
+                <div class="pitch-line-solid pitch-box-small-l"></div>
+                <div class="pitch-line-dashed" style="left: 35%;"></div>
+                <div class="pitch-center-line"></div>
+                <div class="pitch-line-solid pitch-center-circle"></div>
+                <div class="pitch-line-dashed" style="left: 65%;"></div>
+                <div class="pitch-line-solid pitch-box-large-r"></div>
+                <div class="pitch-line-solid pitch-box-small-r"></div>
+                <div id="visual-ball" class="pitch-ball">⚽</div>
+            </div>
+            <div class="pitch-labels">
+                <span>Tvůj brankář</span>
+                <span>Střed hřiště</span>
+                <span>Brankář soupeře</span>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: center; gap: 20px; align-items: stretch; margin-top: 20px;">
+            ${myR ? createRatingPanel(homeTeam, myR, true) : '<div style="width: 220px;"></div>'}
+            
+            <div id="replay-window" class="replay-window-container" style="flex: 1; max-width: 800px; margin: 0;"></div>
+            
+            ${botR ? createRatingPanel(awayTeam, botR, false) : '<div style="width: 220px;"></div>'}
+        </div>
+    `;
+
+    let step = 0;
+    
+    if (window.matchReplayInterval) clearInterval(window.matchReplayInterval);
+
+    window.matchReplayInterval = setInterval(() => {
+        const replayWindow = document.getElementById('replay-window');
+        if (!replayWindow) { 
+            clearInterval(window.matchReplayInterval);
+            return;
+        }
+
+        if (step < msg.content.length) {
+            renderReplayAction(msg.content[step]);
+            step++;
+        } else {
+            finishMatchReplay(); 
+        }
+    }, 2500); 
 }

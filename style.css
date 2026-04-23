@@ -984,3 +984,46 @@ body {
     font-size: 1.2rem;
     padding: 15px;
 }
+
+/* --- HODNOCENÍ TÝMŮ V ZÁZNAMU UTKÁNÍ --- */
+.rating-panel {
+    width: 220px;
+    background: rgba(0,0,0,0.6);
+    border: 2px solid #8d6e63;
+    border-radius: 10px;
+    padding: 20px 15px;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+}
+
+.rating-panel-title {
+    margin: 0 0 20px 0;
+    border-bottom: 1px dashed #6b7280;
+    padding-bottom: 10px;
+    text-align: center;
+    font-size: 1.1rem;
+    text-shadow: 1px 1px 2px black;
+}
+
+.rating-panel.home .rating-panel-title { color: #60a5fa; } /* Modrá pro domácí */
+.rating-panel.away .rating-panel-title { color: #ef4444; } /* Červená pro hosty */
+
+.rating-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+}
+
+.rating-row.last {
+    margin-bottom: 0;
+}
+
+.rating-row span {
+    color: #d1d5db; /* Tvá oblíbená světle šedá */
+}
+
+.rating-row strong {
+    color: white;
+}

@@ -29,6 +29,130 @@ window.registerManager = function() {
     startGameUI();
 }
 
+// Pomocná funkce pro odečet výdrže předmětů po zápase
+function degradeInventory() {
+    const categories = ['att', 'mid', 'def', 'gk'];
+    categories.forEach(cat => {
+        // Odečteme 1 z duration
+        playerData.inventory[cat].forEach(item => item.duration--);
+        // Vyfiltrujeme ty, které mají výdrž 0 a dáme vědět hráči (do pošty by to byl spam, uděláme alert nebo to necháme tiše zmizet - zatím to tiše smažeme)
+        playerData.inventory[cat] = playerData.inventory[cat].filter(item => item.duration > 0);
+    });
+}
+
+// --- VÝPOČET ZÁKLADNÍ SÍLY TÝMU PRO ZOBRAZENÍ (0.0 - 10.0) ---
+function calculateBaseTeamRating(players, formation) {
+    const formations = {
+        '4-4-2': { gk: [0, 1], def: [1, 5], mid: [5, 9], att: [9, 11] },
+        '4-3-3': { gk: [0, 1], def: [1, 5], mid: [5, 8], att: [8, 11] },
+        '5-4-1': { gk: [0, 1], def: [1, 6], mid: [6, 10], att: [10, 11] }
+    };
+    const layout = formations[formation] || formations['4-4-2'];
+    
+    let ratings = { att: 0, mid: 0, def: 0, gk: 0 };
+    let counts = { att: 0, mid: 0, def: 0, gk: 0 };
+
+    players.slice(0, 11).forEach((p, index) => {
+        if (index >= layout.gk[0] && index < layout.gk[1]) {
+            ratings.gk += (p.stats.gk + p.stats.tek + p.stats.def + p.stats.spd) / 4;
+            counts.gk++;
+        } else if (index >= layout.def[0] && index < layout.def[1]) {
+            ratings.def += (p.stats.def + p.stats.str + p.stats.spd + p.stats.eng) / 4;
+            counts.def++;
+        } else if (index >= layout.mid[0] && index < layout.mid[1]) {
+            ratings.mid += (p.stats.tek + p.stats.atk + p.stats.def + p.stats.spd + p.stats.eng) / 5;
+            counts.mid++;
+        } else if (index >= layout.att[0] && index < layout.att[1]) {
+            ratings.att += (p.stats.atk + p.stats.spd + p.stats.tek + p.stats.eng) / 4;
+            counts.att++;
+        }
+    });
+
+    // Převedení průměrů na stupnici 0.0 až 10.0 (Max stat je 99)
+    for (let key in ratings) {
+        if (counts[key] > 0) {
+            ratings[key] = Math.min(10.0, (ratings[key] / counts[key] / 9.9)).toFixed(1);
+        } else {
+            ratings[key] = "0.0";
+        }
+    }
+    return ratings;
+}
+
+// --- LOGIKA OBCHODU S PŘEDMĚTY ---
+
+window.refreshDailyShop = function(force = false) {
+    const now = Date.now();
+    const oneDay = 24 * 60 * 60 * 1000;
+
+    // Obnovíme jen pokud uplynul den, nebo pokud je to vynucené (tlačítkem/startem hry)
+    if (force || (now - playerData.lastItemShopRefresh > oneDay)) {
+        const shuffled = [...ITEM_CATALOG].sort(() => 0.5 - Math.random());
+        const selected = shuffled.slice(0, 2); // Vybereme 2 náhodné
+
+        const divMults = { 10: 1, 9: 1.5, 8: 3, 7: 6, 6: 12, 5: 25, 4: 40, 3: 60, 2: 100, 1: 150 };
+        const currentDiv = playerData.division || 10;
+        const mult = divMults[currentDiv] || 1;
+
+        playerData.dailyShopItems = selected.map(item => ({
+            ...item,
+            currentPrice: Math.floor(600 * mult) // 10x odměna za 1:0
+        }));
+
+        playerData.lastItemShopRefresh = now;
+        saveGame();
+    }
+}
+
+window.buyItem = function(index, forceFree = false) {
+    const item = playerData.dailyShopItems[index];
+    if (!item) return;
+
+    // Pokud neklikáme na ZDARMA tlačítko, zkontrolujeme peníze
+    if (!forceFree && playerData.money < item.currentPrice) {
+        alert("Na tento předmět nemáš dost peněz!");
+        return;
+    }
+
+    // Kontrola kapacity trezoru (Att: 2, Mid: 2, Def: 2, Gk: 1)
+    const limits = { att: 2, mid: 2, def: 2, gk: 1 };
+    const currentCount = playerData.inventory[item.role].length;
+
+    if (currentCount >= limits[item.role]) {
+        alert(`Trezor pro kategorii ${item.role.toUpperCase()} je plný! Musíš nejdříve nějaký předmět vyhodit v Šatně.`);
+        return;
+    }
+
+    // Pokud platíme poctivě, odečteme peníze
+    if (!forceFree) {
+        playerData.money -= item.currentPrice;
+    }
+    
+    // Přidáme předmět do inventáře (kopii s unikátním ID pro mazání)
+    playerData.inventory[item.role].push({
+        ...item,
+        instanceId: Date.now() + Math.random()
+    });
+
+    // Po nákupu předmět z nabídky zmizí
+    playerData.dailyShopItems.splice(index, 1);
+
+    saveGame();
+    updateTopBarUI();
+    renderShop(); // Překreslíme obchod
+    
+    if (forceFree) alert(`[TEST] Získal jsi ${item.name} ZDARMA! Najdeš ho v Šatně.`);
+    else alert(`Koupil jsi ${item.name}! Najdeš ho v Týmovém trezoru v Šatně.`);
+}
+
+window.discardItem = function(role, instanceId) {
+    if (confirm("Opravdu chceš tento předmět vyhodit do koše? Nedostaneš za něj nic zpět.")) {
+        playerData.inventory[role] = playerData.inventory[role].filter(i => i.instanceId !== instanceId);
+        saveGame();
+        renderLockerRoom(); // Překreslíme šatnu
+    }
+}
+
 // --- INICIALIZACE A HERNÍ SMYČKA ---
 function initGame() {
     let savedData = localStorage.getItem('footballManagerData');
@@ -42,6 +166,11 @@ function initGame() {
         if (playerData.activeTask !== null && playerData.activeTask.endTime === undefined) {
             playerData.activeTask = null;
         }
+        if(!playerData.inventory) {
+            playerData.inventory = { att: [], mid: [], def: [], gk: [] };
+        }
+        if(!playerData.dailyShopItems) playerData.dailyShopItems = [];
+        if(!playerData.lastItemShopRefresh) playerData.lastItemShopRefresh = 0;
         if(!playerData.scoutedPlayers) playerData.scoutedPlayers = [];
         if(!playerData.lastScoutRefresh) playerData.lastScoutRefresh = 0;
         if(!playerData.officeTasks) playerData.officeTasks = [];
@@ -129,7 +258,8 @@ function initGame() {
     } else {
         // --- ZDE JE PŘIDANÝ KÓD ---
         // Než se načte uživatelské rozhraní, hra zkontroluje, jestli jsi nechyběl u zápasů
-        checkOfflineProgress(); 
+        checkOfflineProgress();
+        refreshDailyShop(); 
         
         startGameUI();
     }
@@ -355,6 +485,7 @@ function setupNavigation() {
             else if (target === 'mail') renderMail();
             else if (target === 'pve') renderPvE();
             else if (target === 'training') renderTraining();
+            else if (target === 'shop') renderShop();
             else {
                 mainContent.innerHTML = `<div class="under-construction"><h2>🚧 ${this.getAttribute('data-name')} 🚧</h2></div>`;
             }
@@ -796,6 +927,7 @@ window.startPvEMatch = function(dIndex, sIndex) {
         result.log.push({ min: 'Konec', text: `Soupeř byl tentokrát příliš silný. Odpočiň si, uprav taktiku a zkus to za hodinu znovu!`, score: `${result.myGoals}:${result.botGoals}`, zone: 50, type: 'bad-goal' });
     }
 
+    
     addMailMessage(
         mailSubject, 
         result.log, 
@@ -1002,7 +1134,7 @@ window.processMatch = function() {
 
     const mySectors = calculateSectorStrength(playerData.players, playerData.formation, playerData.isPrepared);
     const botSectors = calculateSectorStrength(opponent.players, opponent.formation, false);
-    const result = simulateMatch(mySectors, botSectors, playerData.formation, opponent.formation, playerData.players, opponent.players, opponent.name);
+    const result = simulateMatch(mySectors, botSectors, playerData.formation, opponent.formation, playerData.players, opponent.players, opponent.name, playerData.inventory);
 
     // Vložíme hlášku komentátora hned na první místo do logu před výkop!
     result.log.unshift({ min: 0, text: `🎙️ KOMENTÁTOR: ${h2hText}`, score: "0:0", zone: 50, type: 'neutral' });
@@ -1055,16 +1187,21 @@ window.processMatch = function() {
         result.log.push({ min: '90+', text: `🌟 ZLEPŠENÍ: Hráči ${levelUps.join(', ')} postoupili na novou úroveň!`, score: `${result.myGoals}:${result.botGoals}` });
     }
 
+    const myBaseRating = calculateBaseTeamRating(playerData.players, playerData.formation);
+    const botBaseRating = calculateBaseTeamRating(opponent.players, opponent.formation);
+
     addMailMessage(
         `Report: ${myTeam.name} vs ${opponent.name}`, 
         result.log, 
         `${result.myGoals}:${result.botGoals}`, 
-        { money: rewardMoney, xp: rewardXP, pXp: pXpGained, homeTeam: myTeam.name, awayTeam: opponent.name }
+        // Vložení myRating a botRating do odměn:
+        { money: rewardMoney, xp: rewardXP, pXp: pXpGained, homeTeam: myTeam.name, awayTeam: opponent.name, myRating: myBaseRating, botRating: botBaseRating }
     );
 
     playerData.isPrepared = false;
     playerData.nextMatchTime = getNextMatchSlot();
-    
+
+    degradeInventory(); // odečte se výdrž z předmětů v inventáři
     saveGame();
     checkLevelUp();
     updateTopBarUI();
@@ -1132,23 +1269,26 @@ window.testSimulateFullSeason = function() {
     const oldDiv = playerData.division || 10;
     let seasonReportText = "";
     
-    // 3. LOGIKA VYHODNOCENÍ (stejná jako v reálném konci sezóny)
-    // Postupují první dva (pokud nejsme v 1. divizi)
+    // 3. LOGIKA VYHODNOCENÍ
     if (myFinalRank <= 2 && oldDiv > 1) {
         playerData.division = oldDiv - 1;
-        // Použijeme tvé upravené násobitele pro bonus
         const promotionBonus = 5000 + ((10 - playerData.division) * 2000);
         playerData.money += promotionBonus;
         seasonReportText = `[TESTOVACÍ UKONČENÍ] 🏆 Postoupil jsi z ${myFinalRank}. místa do ${playerData.division}. divize! Obdržel jsi bonus ${promotionBonus} 💰.`;
     } else if (oldDiv === 1 && myFinalRank === 1) {
          playerData.money += 50000;
          seasonReportText = `[TESTOVACÍ UKONČENÍ] 👑 Ovládl jsi 1. divizi! Jako mistr získáváš 50 000 💰.`;
+    } else if (myFinalRank >= 9 && oldDiv < 10) {
+        // --- NOVINKA: SESTUP ---
+        playerData.division = oldDiv + 1;
+        playerData.money += 500; // Drobná cena útěchy
+        seasonReportText = `[TESTOVACÍ UKONČENÍ] 📉 Bohužel, skončil jsi na ${myFinalRank}. místě a sestupuješ do ${playerData.division}. divize. Vedení ti dává 500 💰 na nutné opravy kádru.`;
     } else {
         playerData.money += 1000;
         seasonReportText = `[TESTOVACÍ UKONČENÍ] ⚽ Sezóna ukončena. Zůstáváš v ${oldDiv}. divizi (skončil jsi ${myFinalRank}.). Vedení posílá 1 000 💰.`;
     }
 
-    // 4. Zapíšeme výsledek do pošty, aby sis mohl ověřit texty
+    // 4. Zapíšeme výsledek do pošty
     addMailMessage(
         `Testovací report: Konec Sezóny`, 
         [{ min: '---', text: seasonReportText, score: "", zone: 50, type: 'neutral' }], 
@@ -1158,14 +1298,13 @@ window.testSimulateFullSeason = function() {
 
     // 5. RESET LIGY A INICIALIZACE NOVÉ DIVIZE
     playerData.seasonLevel = (playerData.seasonLevel || 1) + 1;
-    playerData.league = []; // Tímto vynutíme v initGame vygenerování nových týmů a hráčů
+    playerData.league = []; // Tímto vynutíme vygenerování nových týmů
     
     saveGame();
-    initGame(); // Tato funkce se postará o vygenerování silnějších botů pro novou divizi
+    initGame(); 
     
     alert(`TEST: Sezóna ukončena! Aktuální divize: ${playerData.division}. Podívej se do Skautingu na nové ranky a do Zápasů na nové soupeře.`);
     
-    // Pokud jsi zrovna na záložce zápasů, hned ji překreslíme
     if (document.querySelector('.nav-btn.active')?.getAttribute('data-target') === 'match') {
         renderMatches();
     }
@@ -1215,87 +1354,6 @@ window.viewBotTeam = function(teamName) {
     `;
 
     playerData.players = originalPlayers;
-}
-
-window.openMatchReport = function(index) {
-    const msg = playerData.mail[index];
-    msg.read = true; 
-    saveGame();
-
-    window.currentMatchMsg = msg; 
-
-    const mainContent = document.getElementById('main-content');
-    const homeTeam = msg.rewards?.homeTeam || "Domácí";
-    const awayTeam = msg.rewards?.awayTeam || "Hosté";
-
-    mainContent.innerHTML = `
-        <div class="match-report-header">
-            <button onclick="renderMail()" style="position: absolute; left: 0; padding: 10px 20px; background: #4e342e; color: white; border: none; border-radius: 5px; cursor: pointer;">⬅ Zpět</button>
-            <h2 class="section-title" style="margin: 0;">Záznam utkání</h2>
-            <button id="skip-replay-btn" onclick="finishMatchReplay()" style="position: absolute; right: 0; padding: 10px 20px; background: #d84315; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; box-shadow: 2px 2px 5px rgba(0,0,0,0.3);">⏩ Přeskočit</button>
-        </div>
-
-        <div class="match-report-board">
-            
-            <div class="score-container">
-                <div class="team-name-home">${homeTeam}</div>
-                <div id="match-score-board" class="match-score">0:0</div>
-                <div class="team-name-away">${awayTeam}</div>
-            </div>
-            
-            <div class="pitch-1d">
-                <div class="pitch-watermark wm-box-l">VÁPNO</div>
-                <div class="pitch-watermark wm-def-l">OBRANA</div>
-                <div class="pitch-watermark wm-mid">ZÁLOHA</div>
-                <div class="pitch-watermark wm-def-r">OBRANA</div>
-                <div class="pitch-watermark wm-box-r">VÁPNO</div>
-
-                <div class="pitch-line-solid pitch-box-large-l"></div>
-                <div class="pitch-line-solid pitch-box-small-l"></div>
-                
-                <div class="pitch-line-dashed" style="left: 35%;"></div>
-
-                <div class="pitch-center-line"></div>
-                <div class="pitch-line-solid pitch-center-circle"></div>
-
-                <div class="pitch-line-dashed" style="left: 65%;"></div>
-                
-                <div class="pitch-line-solid pitch-box-large-r"></div>
-                <div class="pitch-line-solid pitch-box-small-r"></div>
-
-                <div id="visual-ball" class="pitch-ball">⚽</div>
-            </div>
-
-            <div class="pitch-labels">
-                <span>Tvůj brankář</span>
-                <span>Střed hřiště</span>
-                <span>Brankář soupeře</span>
-            </div>
-
-        </div>
-
-        <div id="replay-window" class="replay-window-container">
-            </div>
-    `;
-
-    let step = 0;
-    
-    if (window.matchReplayInterval) clearInterval(window.matchReplayInterval);
-
-    window.matchReplayInterval = setInterval(() => {
-        const replayWindow = document.getElementById('replay-window');
-        if (!replayWindow) { 
-            clearInterval(window.matchReplayInterval);
-            return;
-        }
-
-        if (step < msg.content.length) {
-            renderReplayAction(msg.content[step]);
-            step++;
-        } else {
-            finishMatchReplay(); 
-        }
-    }, 2500); 
 }
 
 // Funkce pro okamžité dokončení záznamu
@@ -1415,7 +1473,7 @@ function simulateOfflineMatch() {
     // Offline zápas = Hráč NENÍ připraven (false)
     const mySectors = calculateSectorStrength(playerData.players, playerData.formation, false); 
     const botSectors = calculateSectorStrength(opponent.players, opponent.formation, false);
-    const result = simulateMatch(mySectors, botSectors, playerData.formation, opponent.formation, playerData.players, opponent.players, opponent.name);
+    const result = simulateMatch(mySectors, botSectors, playerData.formation, opponent.formation, playerData.players, opponent.players, opponent.name, playerData.inventory);
 
     result.log.unshift({ min: 0, text: `🎙️ KOMENTÁTOR: ${h2hText}`, score: "0:0", zone: 50, type: 'neutral' });
 
@@ -1465,6 +1523,7 @@ function simulateOfflineMatch() {
     );
 
     playerData.isPrepared = false;
+    degradeInventory();
 }
 
 function processSeasonEndOffline() {

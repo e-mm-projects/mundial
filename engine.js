@@ -49,7 +49,7 @@ function calculateSectorStrength(players, formation, isPrepared = false) {
     return sectors;
 }
 
-function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlayers, botPlayers, opponentName) {
+function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlayers, botPlayers, opponentName, myInventory = {att:[], mid:[], def:[], gk:[]}) {
     let myGoals = 0;
     let botGoals = 0;
     let matchLog = [];
@@ -60,13 +60,10 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
         '5-4-1': { gk: [0, 1], def: [1, 6], mid: [6, 10], att: [10, 11] }
     };
 
-    // --- NOVINKA: EVIDENCA ČERVENÝCH KARET ---
     const redCardedIds = [];
 
-    // Chytřejší funkce pro náhodný výběr hráče (vynechá ty s červenou)
     const getActivePlayer = (players, range) => {
-        let p;
-        let attempts = 0;
+        let p; let attempts = 0;
         do {
             p = players[Math.floor(Math.random() * (range[1] - range[0])) + range[0]];
             attempts++;
@@ -77,7 +74,17 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
     let myFinalSectors = { ...mySectors };
     let botFinalSectors = { ...botSectors };
 
-    // Taktická výhoda na startu
+    // --- APLIKACE PŘEDMĚTŮ Z TREZORU ---
+    const activeTags = [];
+    Object.values(myInventory).forEach(cat => {
+        cat.forEach(item => {
+            if (item.type === 'stat' && myFinalSectors[item.role] !== undefined) {
+                myFinalSectors[item.role] = Math.floor(myFinalSectors[item.role] * item.value);
+            }
+            if (item.tag) activeTags.push(item.tag);
+        });
+    });
+
     if ((myFormation === '5-4-1' && botFormation === '4-3-3') ||
         (myFormation === '4-3-3' && botFormation === '4-4-2') ||
         (myFormation === '4-4-2' && botFormation === '5-4-1')) {
@@ -89,37 +96,81 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
     }
 
     matchLog.push({ min: 0, text: `Rozhodčí píská do píšťalky a zápas právě začíná. Výkop ze středového kruhu!`, score: "0:0", zone: 50, type: 'neutral' });
-
+    
     let gameState = 'center'; 
+    let half = 1;
+    let playsInHalf = 0;
 
-    for (let i = 1; i <= 22; i++) {
-        let minute = Math.floor(i * 4 - Math.random() * 2);
-        if (minute > 90) minute = 90; 
-
-        if (i === 11) {
-            matchLog.push({ min: 45, text: `Rozhodčí ukončil první půli a po přestávce zahajuje druhý poločas.`, score: `${myGoals}:${botGoals}`, zone: 50, type: 'neutral' });
-            gameState = 'center';
-            continue; 
+    // --- HLAVNÍ SMYČKA ZÁPASU S DOHRÁVÁNÍM AKCÍ ---
+    while (true) {
+        let isBox = (gameState === 'away_box' || gameState === 'home_box');
+        
+        // Kontrola konce poločasu / zápasu
+        if (half === 1) {
+            // Po 10 akcích první půle končí. Ale POKUD JSME VE VÁPNĚ, hrajeme dál!
+            if (playsInHalf >= 10 && !isBox) {
+                matchLog.push({ min: 45, text: `Rozhodčí ukončil první půli a po přestávce zahajuje druhý poločas.`, score: `${myGoals}:${botGoals}`, zone: 50, type: 'neutral' });
+                gameState = 'center';
+                half = 2;
+                playsInHalf = 0;
+                continue; // Začni odznova pro druhý poločas
+            }
+        } else if (half === 2) {
+            // Po 11 akcích druhé půle zápas končí (pokud není míč ve vápně)
+            if (playsInHalf >= 11 && !isBox) {
+                break; // Konec celého zápasu
+            }
         }
 
-        let myMidPower = myFinalSectors.mid * (0.5 + Math.random() * 0.5);
-        let botMidPower = botFinalSectors.mid * (0.5 + Math.random() * 0.5);
-        let myAttPower = myFinalSectors.att * (0.5 + Math.random() * 0.5);
-        let botAttPower = botFinalSectors.att * (0.5 + Math.random() * 0.5);
-        let myDefPower = myFinalSectors.def * (0.5 + Math.random() * 0.5);
-        let botDefPower = botFinalSectors.def * (0.5 + Math.random() * 0.5);
-        let myGkPower = myFinalSectors.gk * (0.5 + Math.random() * 0.5);
-        let botGkPower = botFinalSectors.gk * (0.5 + Math.random() * 0.5);
+        // Pojistka proti nekonečné smyčce (kdyby se akce v prodloužení zbláznila)
+        if (playsInHalf > 15) {
+            if (half === 1) { half = 2; playsInHalf = 0; gameState = 'center'; continue; }
+            else break;
+        }
+
+        playsInHalf++;
+
+        // Inteligentní výpočet minuty (zvládá i nastavení času 45+ a 90+)
+        let minute;
+        if (half === 1) {
+            if (playsInHalf <= 10) {
+                let m = Math.floor(playsInHalf * 4.5 - Math.random() * 2);
+                minute = m > 45 ? 45 : m;
+            } else {
+                minute = "45+'"; // Prodloužení první půle!
+            }
+        } else {
+            if (playsInHalf <= 11) {
+                let m = 45 + Math.floor(playsInHalf * 4 - Math.random() * 2);
+                minute = m > 90 ? 90 : m;
+            } else {
+                minute = "90+'"; // Prodloužení druhé půle!
+            }
+        }
+
+        let myMidP = myFinalSectors.mid * (0.5 + Math.random() * 0.5);
+        let botMidP = botFinalSectors.mid * (0.5 + Math.random() * 0.5);
+        let myAttP = myFinalSectors.att * (0.5 + Math.random() * 0.5);
+        let botAttP = botFinalSectors.att * (0.5 + Math.random() * 0.5);
+        let myDefP = myFinalSectors.def * (0.5 + Math.random() * 0.5);
+        let botDefP = botFinalSectors.def * (0.5 + Math.random() * 0.5);
+        let myGkP = myFinalSectors.gk * (0.5 + Math.random() * 0.5);
+        let botGkP = botFinalSectors.gk * (0.5 + Math.random() * 0.5);
 
         // 1. ZÓNA: STŘED HŘIŠTĚ
         if (gameState === 'center') {
             const pMyMid = getActivePlayer(myPlayers, formations[myFormation].mid);
             const pBotMid = getActivePlayer(botPlayers, formations[botFormation].mid);
             
-            if (myMidPower > botMidPower) {
-                if (Math.random() < 0.30) {
+            if (myMidP > botMidP) {
+                let thruChance = (activeTags.includes('super_vision') || activeTags.includes('vision_boost') || activeTags.includes('remote_ball')) ? 0.60 : 0.30;
+                
+                if (Math.random() < thruChance) {
+                    let logText = thruChance > 0.30 
+                        ? `Záložník ${pMyMid.name} fantasticky přečetl hru a poslal milimetrový pas středem pole přímo na útočníky!` 
+                        : `Fantastický přehled! ${pMyMid.name} poslal prudký pas středem pole přímo na útočníky!`;
                     gameState = 'away_def'; 
-                    matchLog.push({ min: minute, text: `Fantastický přehled! ${pMyMid.name} poslal prudký pas středem pole přímo na útočníky!`, score: `${myGoals}:${botGoals}`, zone: 80, type: 'chance' });
+                    matchLog.push({ min: minute, text: logText, score: `${myGoals}:${botGoals}`, zone: 80, type: 'chance' });
                 } else {
                     gameState = 'away_mid'; 
                     matchLog.push({ min: minute, text: `Naše záloha vyhrála souboj ve středu hřiště. ${pMyMid.name} kontroluje míč.`, score: `${myGoals}:${botGoals}`, zone: 65, type: 'mid' });
@@ -139,19 +190,22 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
             const pMyMid = getActivePlayer(myPlayers, formations[myFormation].mid);
             const pBotMid = getActivePlayer(botPlayers, formations[botFormation].mid);
 
-            // ČERVENÁ KARTA (Soupeř)
             if (Math.random() < 0.02 && !redCardedIds.includes(pBotMid.id)) {
                 redCardedIds.push(pBotMid.id);
-                botFinalSectors.mid *= 0.75; // Ztrácí 25 % síly zálohy
-                matchLog.push({ min: minute, text: `🟥 ČERVENÁ KARTA! Záložník soupeře ${pBotMid.name} předvedl likvidační faul na ${pMyMid.name} a je vyloučen! Získáváme standardku.`, score: `${myGoals}:${botGoals}`, zone: 75, type: 'goal' });
+                botFinalSectors.mid *= 0.75; 
+                matchLog.push({ min: minute, text: `ČERVENÁ KARTA! Záložník soupeře ${pBotMid.name} předvedl likvidační faul na ${pMyMid.name} a je vyloučen!`, score: `${myGoals}:${botGoals}`, zone: 75, type: 'goal' });
                 gameState = 'away_def';
                 continue;
             }
 
-            if (myMidPower > botMidPower) { 
-                if (Math.random() < 0.30) { 
+            if (myMidP > botMidP) { 
+                let bypassChance = activeTags.includes('bypass_def') ? 0.60 : 0.30;
+                if (Math.random() < bypassChance) { 
+                    let logText = bypassChance > 0.30 
+                        ? `${pMyMid.name} naprosto zmátl obranu nečekaným pohybem a my jdeme sami na bránu!` 
+                        : `To byla nahrávka! ${pMyMid.name} vyslal kolmici za obranu a jdeme sami na bránu!`;
                     gameState = 'away_box'; 
-                    matchLog.push({ min: minute, text: `To byla nahrávka! ${pMyMid.name} vyslal kolmici za obranu a jdeme sami na bránu!`, score: `${myGoals}:${botGoals}`, zone: 85, type: 'chance' });
+                    matchLog.push({ min: minute, text: logText, score: `${myGoals}:${botGoals}`, zone: 85, type: 'chance' });
                 } else {
                     gameState = 'away_def'; 
                     matchLog.push({ min: minute, text: `Tlačíme se dopředu. ${pMyMid.name} posílá míč před vápno soupeře.`, score: `${myGoals}:${botGoals}`, zone: 80, type: 'chance' });
@@ -166,16 +220,15 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
             const pMyMid = getActivePlayer(myPlayers, formations[myFormation].mid);
             const pBotMid = getActivePlayer(botPlayers, formations[botFormation].mid);
 
-            // ČERVENÁ KARTA (Náš hráč)
             if (Math.random() < 0.02 && !redCardedIds.includes(pMyMid.id)) {
                 redCardedIds.push(pMyMid.id);
                 myFinalSectors.mid *= 0.75;
-                matchLog.push({ min: minute, text: `🟥 ČERVENÁ KARTA! Náš ${pMyMid.name} úplně zbytečně zajel do protihráče a jde do sprch! Dohráváme v oslabení.`, score: `${myGoals}:${botGoals}`, zone: 25, type: 'bad-goal' });
+                matchLog.push({ min: minute, text: `ČERVENÁ KARTA! Náš ${pMyMid.name} zbytečně zajel do protihráče a jde do sprch! Dohráváme v oslabení.`, score: `${myGoals}:${botGoals}`, zone: 25, type: 'bad-goal' });
                 gameState = 'home_def';
                 continue;
             }
 
-            if (myMidPower > botMidPower) { 
+            if (myMidP > botMidP) { 
                 gameState = 'center'; 
                 matchLog.push({ min: minute, text: `Vybojovali jsme míč zpět! ${pMyMid.name} vrací klid do naší rozehrávky.`, score: `${myGoals}:${botGoals}`, zone: 50, type: 'neutral' });
             } else {
@@ -193,22 +246,27 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
             const pMyAtt = getActivePlayer(myPlayers, formations[myFormation].att);
             const pBotDef = getActivePlayer(botPlayers, formations[botFormation].def);
 
-            // ČERVENÁ KARTA (Obránce soupeře)
             if (Math.random() < 0.03 && !redCardedIds.includes(pBotDef.id)) {
                 redCardedIds.push(pBotDef.id);
                 botFinalSectors.def *= 0.75; 
-                matchLog.push({ min: minute, text: `🟥 ČERVENÁ KARTA! Soupeřův obránce ${pBotDef.name} hasil chybu loktem do tváře. Červená a obrovský tlak pro nás!`, score: `${myGoals}:${botGoals}`, zone: 85, type: 'goal' });
-                gameState = 'away_box';
+                matchLog.push({ min: minute, text: `ČERVENÁ KARTA! Soupeřův obránce ${pBotDef.name} hasil chybu loktem do tváře. Obrovský tlak pro nás!`, score: `${myGoals}:${botGoals}`, zone: 65, type: 'goal' });
+                gameState = 'away_mid';
                 continue;
             }
 
-            if (myAttPower > botDefPower) { 
+            if (activeTags.includes('stealth_box') && Math.random() < 0.25) {
+                gameState = 'away_box'; 
+                matchLog.push({ min: minute, text: `Obránci zaspali! ${pMyAtt.name} se jim doslova zjevil za zády a postupuje sám na gólmana!`, score: `${myGoals}:${botGoals}`, zone: 90, type: 'chance' });
+                continue;
+            }
+
+            if (myAttP > botDefP) { 
                 gameState = 'away_box'; 
                 matchLog.push({ min: minute, text: `Paráda! ${pMyAtt.name} obešel posledního obránce a proniká do vápna!`, score: `${myGoals}:${botGoals}`, zone: 90, type: 'chance' });
             } else {
                 if (Math.random() < 0.40) {
                     gameState = 'home_mid';
-                    matchLog.push({ min: minute, text: `Obrana soupeře odvrací hrozbu! ${pBotDef.name} poslal dlouhý odkop až na naši polovinu.`, score: `${myGoals}:${botGoals}`, zone: 35, type: 'neutral' });
+                    matchLog.push({ min: minute, text: `Obrana soupeře odvrací hrozbu! ${pBotDef.name} poslal odkop na naši polovinu.`, score: `${myGoals}:${botGoals}`, zone: 35, type: 'neutral' });
                 } else {
                     gameState = 'away_mid'; 
                     matchLog.push({ min: minute, text: `Obránce ${pBotDef.name} nám odebral míč a rozehrává na své záložníky.`, score: `${myGoals}:${botGoals}`, zone: 65, type: 'neutral' });
@@ -220,22 +278,36 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
             const pBotAtt = getActivePlayer(botPlayers, formations[botFormation].att);
             const pMyDef = getActivePlayer(myPlayers, formations[myFormation].def);
 
-            // ČERVENÁ KARTA (Můj obránce)
-            if (Math.random() < 0.03 && !redCardedIds.includes(pMyDef.id)) {
-                redCardedIds.push(pMyDef.id);
-                myFinalSectors.def *= 0.75;
-                matchLog.push({ min: minute, text: `🟥 ČERVENÁ KARTA! Náš obránce ${pMyDef.name} zatahuje za záchrannou brzdu jako poslední hráč! Rozhodčí bez milosti tasí červenou.`, score: `${myGoals}:${botGoals}`, zone: 15, type: 'bad-goal' });
-                gameState = 'home_box';
+            if (activeTags.includes('long_clear') && Math.random() < 0.35) {
+                gameState = 'away_mid';
+                matchLog.push({ min: minute, text: `Obrana se s tím nemazala! ${pMyDef.name} napálil míč přes celé hřiště až na kopačky našim záložníkům!`, score: `${myGoals}:${botGoals}`, zone: 65, type: 'mid' });
+                continue;
+            }
+            
+            if (activeTags.includes('injury_maker') && Math.random() < 0.25 && !redCardedIds.includes(pBotAtt.id)) {
+                redCardedIds.push(pBotAtt.id);
+                botFinalSectors.att *= 0.60;
+                gameState = 'center';
+                matchLog.push({ min: minute, text: `Tvrdý zákrok! ${pMyDef.name} zajel do útočníka soupeře tak razantně, že ho musí vystřídat. Útok soupeře je citelně oslaben.`, score: `${myGoals}:${botGoals}`, zone: 35, type: 'neutral' });
                 continue;
             }
 
-            if (botAttPower > myDefPower) { 
+            let rcChance = activeTags.includes('agressive_def') ? 0.08 : 0.03;
+            if (Math.random() < rcChance && !redCardedIds.includes(pMyDef.id)) {
+                redCardedIds.push(pMyDef.id);
+                myFinalSectors.def *= 0.75;
+                matchLog.push({ min: minute, text: `ČERVENÁ KARTA! Náš obránce ${pMyDef.name} zatahuje za záchrannou brzdu! Rozhodčí bez milosti tasí červenou.`, score: `${myGoals}:${botGoals}`, zone: 35, type: 'bad-goal' });
+                gameState = 'home_mid';
+                continue;
+            }
+
+            if (botAttP > myDefP) { 
                 gameState = 'home_box'; 
                 matchLog.push({ min: minute, text: `Kritický moment! ${pBotAtt.name} se prodral přes naši obranu do vápna!`, score: `${myGoals}:${botGoals}`, zone: 10, type: 'danger' });
             } else {
                 if (Math.random() < 0.40) {
                     gameState = 'away_mid';
-                    matchLog.push({ min: minute, text: `Skvělý zákrok! ${pMyDef.name} čistě zastavil akci a okamžitě odkopává míč na polovinu soupeře!`, score: `${myGoals}:${botGoals}`, zone: 65, type: 'neutral' });
+                    matchLog.push({ min: minute, text: `Skvělý zákrok! ${pMyDef.name} čistě zastavil akci a okamžitě odkopává míč na polovinu soupeře!`, score: `${myGoals}:${botGoals}`, zone: 65, type: 'chance' });
                 } else {
                     gameState = 'home_mid'; 
                     matchLog.push({ min: minute, text: `Naše obrana v čele s ${pMyDef.name} útok zastavila a rozehrává do zálohy.`, score: `${myGoals}:${botGoals}`, zone: 35, type: 'neutral' });
@@ -247,28 +319,41 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
             const pMyAtt = getActivePlayer(myPlayers, formations[myFormation].att);
             const pBotGk = getActivePlayer(botPlayers, formations[botFormation].gk);
 
-            // --- PENALTA PRO NÁS (10 % šance, 80 % gól) ---
-            if (Math.random() < 0.10) {
-                matchLog.push({ min: minute, text: `🚨 PENALTA! Náš hráč byl tvrdě poslán k zemi ve vápně! K míči se staví ${pMyAtt.name}.`, score: `${myGoals}:${botGoals}`, zone: 92, type: 'chance' });
+            if (activeTags.includes('hand_of_god') && Math.random() < 0.25) {
+                myGoals++; gameState = 'center';
+                matchLog.push({ min: minute, text: `Gól! ${pMyAtt.name} ve skrumáži evidentně usměrnil míč do sítě rukou. Soupeř zuří, ale gól platí!`, score: `${myGoals}:${botGoals}`, zone: 98, type: 'goal' });
+                matchLog.push({ min: minute, text: `Zápas pokračuje rozehrávkou ze středového kruhu.`, score: `${myGoals}:${botGoals}`, zone: 50, type: 'neutral' });
+                continue;
+            }
+
+            if (activeTags.includes('volley_master') && Math.random() < 0.25) {
+                myGoals++; gameState = 'center';
+                matchLog.push({ min: minute, text: `Nádhera! ${pMyAtt.name} pálí z první a vymetl všechny pavouky v šibenici! Brankář neměl šanci.`, score: `${myGoals}:${botGoals}`, zone: 98, type: 'goal' });
+                matchLog.push({ min: minute, text: `Zápas pokračuje rozehrávkou ze středového kruhu.`, score: `${myGoals}:${botGoals}`, zone: 50, type: 'neutral' });
+                continue;
+            }
+
+            let pChance = (activeTags.includes('penalty_boost') || activeTags.includes('penalty_master')) ? 0.40 : 0.10;
+            if (Math.random() < pChance) {
+                matchLog.push({ min: minute, text: `PENALTA! Náš hráč skončil na zemi a rozhodčí ukazuje na značku! K míči se staví ${pMyAtt.name}.`, score: `${myGoals}:${botGoals}`, zone: 92, type: 'chance' });
                 if (Math.random() < 0.80) {
-                    myGoals++;
-                    gameState = 'center';
-                    matchLog.push({ min: minute, text: `GÓÓÓL! ${pMyAtt.name} suverénně proměňuje penaltu, brankář skočil na druhou stranu!`, score: `${myGoals}:${botGoals}`, zone: 95, type: 'goal' });
+                    myGoals++; gameState = 'center';
+                    matchLog.push({ min: minute, text: `GÓÓÓL! ${pMyAtt.name} suverénně proměňuje penaltu!`, score: `${myGoals}:${botGoals}`, zone: 95, type: 'goal' });
+                    matchLog.push({ min: minute, text: `Zápas pokračuje rozehrávkou ze středového kruhu.`, score: `${myGoals}:${botGoals}`, zone: 50, type: 'neutral' });
                 } else {
                     gameState = 'home_mid';
-                    matchLog.push({ min: minute, text: `Zahozená penalta! Gólman ${pBotGk.name} vytáhl skvělý zákrok a odkopává míč směrem k nám!`, score: `${myGoals}:${botGoals}`, zone: 35, type: 'danger' });
+                    matchLog.push({ min: minute, text: `Zahozená penalta! Gólman ${pBotGk.name} vytáhl skvělý zákrok!`, score: `${myGoals}:${botGoals}`, zone: 35, type: 'danger' });
                 }
                 continue;
             }
 
-            if ((myAttPower * 1.15) > botGkPower) {
-                myGoals++;
-                gameState = 'center';
+            if ((myAttP * 1.15) > botGkP) {
+                myGoals++; gameState = 'center';
                 matchLog.push({ min: minute, text: `GÓÓÓL! ${pMyAtt.name} poslal míč neomylně k tyči!`, score: `${myGoals}:${botGoals}`, zone: 95, type: 'goal' });
                 matchLog.push({ min: minute, text: `Zápas pokračuje rozehrávkou ze středového kruhu.`, score: `${myGoals}:${botGoals}`, zone: 50, type: 'neutral' });
             } else {
                 gameState = 'home_mid'; 
-                matchLog.push({ min: minute, text: `Škoda! Brankář ${pBotGk.name} vytáhl skvělý zákrok a okamžitě vykopává do pole.`, score: `${myGoals}:${botGoals}`, zone: 35, type: 'chance' });
+                matchLog.push({ min: minute, text: `Škoda! Brankář ${pBotGk.name} vytáhl skvělý zákrok a okamžitě vykopává do pole.`, score: `${myGoals}:${botGoals}`, zone: 35, type: 'danger' });
             }
         }
         // 7. ZÓNA: MOJE VÁPNO
@@ -276,13 +361,24 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
             const pBotAtt = getActivePlayer(botPlayers, formations[botFormation].att);
             const pMyGk = getActivePlayer(myPlayers, formations[myFormation].gk);
 
-            // ---  PENALTA PRO SOUPEŘE ---
+            if (activeTags.includes('thou_shall_not_pass') && Math.random() < 0.25) {
+                gameState = 'away_mid';
+                matchLog.push({ min: minute, text: `Výborná obranná práce! Soupeř už napřahoval k ráně, ale míč se zastavil o nepropustný blok.`, score: `${myGoals}:${botGoals}`, zone: 65, type: 'chance' });
+                continue;
+            }
+
+            if ((activeTags.includes('octopus_gk') || activeTags.includes('hockey_gk')) && Math.random() < 0.25) {
+                gameState = 'home_def';
+                matchLog.push({ min: minute, text: `Neskutečný reflex! Náš brankář vytáhl zázračný zákrok a drží náš tým nad vodou.`, score: `${myGoals}:${botGoals}`, zone: 15, type: 'chance' });
+                continue;
+            }
+
             if (Math.random() < 0.10) {
-                matchLog.push({ min: minute, text: `🚨 PENALTA! Faul v našem vápně, rozhodčí nekompromisně ukazuje na značku! Kope ${pBotAtt.name}.`, score: `${myGoals}:${botGoals}`, zone: 8, type: 'danger' });
+                matchLog.push({ min: minute, text: `PENALTA! Faul v našem vápně, rozhodčí ukazuje na značku! Kope ${pBotAtt.name}.`, score: `${myGoals}:${botGoals}`, zone: 8, type: 'danger' });
                 if (Math.random() < 0.80) {
-                    botGoals++;
-                    gameState = 'center';
-                    matchLog.push({ min: minute, text: `Gól. ${pBotAtt.name} z penalty nezaváhal a prostřelil našeho brankáře.`, score: `${myGoals}:${botGoals}`, zone: 5, type: 'bad-goal' });
+                    botGoals++; gameState = 'center';
+                    matchLog.push({ min: minute, text: `Gól. ${pBotAtt.name} z penalty nezaváhal.`, score: `${myGoals}:${botGoals}`, zone: 5, type: 'bad-goal' });
+                    matchLog.push({ min: minute, text: `Musíme znovu rozehrát ze středu hřiště.`, score: `${myGoals}:${botGoals}`, zone: 50, type: 'neutral' });
                 } else {
                     gameState = 'away_mid';
                     matchLog.push({ min: minute, text: `NESKUTEČNÉ! Náš brankář ${pMyGk.name} penaltu chytá a otáčí hru dlouhým výkopem!`, score: `${myGoals}:${botGoals}`, zone: 65, type: 'goal' });
@@ -290,18 +386,17 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
                 continue;
             }
 
-            if ((botAttPower * 1.15) > myGkPower) {
-                botGoals++;
-                gameState = 'center'; 
+            if ((botAttP * 1.15) > myGkP) {
+                botGoals++; gameState = 'center'; 
                 matchLog.push({ min: minute, text: `Gól pro ${opponentName}. ${pBotAtt.name} zakončil nekompromisně.`, score: `${myGoals}:${botGoals}`, zone: 5, type: 'bad-goal' });
                 matchLog.push({ min: minute, text: `Musíme znovu rozehrát ze středu hřiště.`, score: `${myGoals}:${botGoals}`, zone: 50, type: 'neutral' });
             } else {
                 gameState = 'away_mid'; 
-                matchLog.push({ min: minute, text: `Neskutečný zákrok! Náš brankář ${pMyGk.name} drží tým a dalekým výkopem otáčí hru!`, score: `${myGoals}:${botGoals}`, zone: 65, type: 'danger' });
+                matchLog.push({ min: minute, text: `Neskutečný zákrok! Náš brankář ${pMyGk.name} drží tým a dalekým výkopem otáčí hru!`, score: `${myGoals}:${botGoals}`, zone: 65, type: 'chance' });
             }
         }
     }
-    return { myGoals, botGoals, log: matchLog };
+    return { myGoals, botGoals, log: matchLog, myPower: myFinalSectors, botPower: botFinalSectors };
 }
 
 function updateTeamStats(t1, t2, g1, g2) {
