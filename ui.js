@@ -981,7 +981,7 @@ window.openMatchReport = function(index) {
             </div>
         </div>
 
-        <div style="display: flex; justify-content: center; gap: 20px; align-items: stretch; margin-top: 20px;">
+        <div class="match-report-layout" style="display: flex; justify-content: center; gap: 20px; align-items: stretch; margin-top: 20px;">
             ${myR ? createRatingPanel(homeTeam, myR, true) : '<div style="width: 220px;"></div>'}
             
             <div id="replay-window" class="replay-window-container" style="flex: 1; max-width: 800px; margin: 0;"></div>

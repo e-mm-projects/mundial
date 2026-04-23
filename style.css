@@ -1027,3 +1027,115 @@ body {
 .rating-row strong {
     color: white;
 }
+
+/* ============================================================
+   RESPONZIVITA - MOBILNÍ VERZE (Obrazovky pod 768px)
+   ============================================================ */
+@media (max-width: 768px) {
+    /* 1. Celkové rozložení - Menu se přesune dolů */
+    #container {
+        flex-direction: column; /* Věci pod sebou */
+        padding: 10px;
+        gap: 10px;
+    }
+
+    /* 2. Horní lišta - Zmenšení textu a stacking */
+    #top-bar {
+        height: auto;
+        flex-wrap: wrap; /* Suroviny se zalomí na víc řádků */
+        padding: 10px;
+        font-size: 0.9rem;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .manager-profile {
+        width: 100%;
+        justify-content: center;
+        margin-bottom: 5px;
+    }
+
+    .resource {
+        margin-left: 10px;
+        padding-left: 10px;
+        border-left: 1px solid rgba(255,255,255,0.2);
+    }
+
+    /* 3. Navigace (Sidebar) - Horizontální menu s posuvníkem */
+    #sidebar {
+        width: 100%;
+        flex-direction: row; /* Tlačítka vedle sebe */
+        overflow-x: auto; /* Možnost scrollovat do stran */
+        padding-bottom: 10px;
+        -webkit-overflow-scrolling: touch;
+        order: 2; /* Přesune menu pod hlavní obsah */
+    }
+
+    .nav-btn {
+        flex: 0 0 auto; /* Tlačítka se nezmenší */
+        padding: 10px 15px;
+        font-size: 0.9rem;
+        border-radius: 8px;
+    }
+
+    .nav-btn.active {
+        transform: translateY(-5px); /* Na mobilu se vysune nahoru místo doprava */
+    }
+
+    /* 4. Hlavní obsah - Maximální využití místa */
+    #main-content {
+        padding: 15px;
+        order: 1; /* Obsah bude nad menu */
+        border-width: 3px;
+    }
+
+    #main-content h1 { font-size: 1.8rem; }
+    #main-content h2 { font-size: 1.5rem; }
+
+    /* 5. Kartičky (Stadion, Úkoly, Hráči) - Jeden sloupec */
+    .stadium-grid, .office-container, .player-list {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+    }
+
+    .building-card, .task-card, .player-card {
+        width: 100% !important; /* Karty budou na celou šířku mobilu */
+        max-width: 350px;
+    }
+
+    /* 6. Záznam utkání a hřiště */
+    .match-report-board {
+        padding: 10px;
+    }
+
+    .match-score {
+        font-size: 2rem;
+        margin: 0 10px;
+    }
+
+    .team-name-home, .team-name-away {
+        font-size: 1rem;
+    }
+
+    /* Skrytí vodoznaků na malém hřišti, aby nepřekážely */
+    .pitch-watermark { display: none; }
+
+    /* 7. Ratingové tabulky v poště - Pod sebou místo vedle sebe */
+    .match-report-layout {
+        flex-direction: column !important;
+        align-items: center !important;
+    }
+
+    .rating-panel {
+        width: 100% !important;
+        max-width: 300px;
+        margin-bottom: 15px;
+    }
+
+    .replay-window-container {
+        width: 100% !important;
+        height: 300px;
+    }
+}
