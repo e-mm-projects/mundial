@@ -6,13 +6,14 @@ function renderTraining() {
     // Mají volné body = jdou do první sekce
     const trainablePlayers = playerData.players.filter(p => p.unspentPoints > 0);
     
-    // Nemají body a zároveň ještě nedosáhli maxima = sbírají praxi
-    const practicePlayers = playerData.players.filter(p => p.unspentPoints === 0 && p.level < p.maxLevel);
+    // Nemají body, mají hvězdy a ještě nedosáhli maxima = sbírají praxi
+    // POZN: (p.stars > 0) zaručí, že sem nikdy nepropadne Kopyto ze starého savu
+    const practicePlayers = playerData.players.filter(p => p.unspentPoints === 0 && p.level < p.maxLevel && p.stars > 0);
     
-    // Nemají body a už jsou na svém levelovém stropu = veteráni
-    const maxedPlayers = playerData.players.filter(p => p.unspentPoints === 0 && p.level >= p.maxLevel);
+    // Nemají body a jsou na stropu NEBO nemají vůbec žádné hvězdy = veteráni a kopyta
+    const maxedPlayers = playerData.players.filter(p => p.unspentPoints === 0 && (p.level >= p.maxLevel || p.stars === 0));
 
-    // Pomocná funkce pro vykreslení karty v tréninku (zůstává beze změny)
+    // Pomocná funkce pro vykreslení karty v tréninku
     const createTrainingCard = (player) => {
         const starsHtml = player.stars > 0 ? '⭐'.repeat(player.stars) : '<span>&nbsp;</span>';
         
@@ -21,6 +22,11 @@ function renderTraining() {
             const requiredXp = player.level * 100;
             xpPercentage = Math.floor((player.xp / requiredXp) * 100);
         }
+
+        // Pokud hráč nemá hvězdy, schováme XP bar a ukážeme červený text
+        const xpBarHtml = player.stars > 0 
+            ? `<div class="xp-bar-container"><div class="xp-bar-fill ${player.level >= player.maxLevel ? 'maxed' : ''}" style="width: ${xpPercentage}%;"></div></div>` 
+            : `<div style="text-align: center; font-size: 0.8rem; color: #ef4444; margin: 8px 0; font-weight: bold;">[Bez talentu]</div>`;
 
         const renderStatRow = (statKey, label) => {
             const val = player.stats[statKey];
@@ -47,9 +53,7 @@ function renderTraining() {
                 <div style="font-size: 0.85rem; color: #4b5563; text-align: center; margin-bottom: 2px;">[${player.rank}] ${getPlayerLevelText(player)}</div>
                 <div class="player-stars">${starsHtml}</div>
                 
-            <div class="xp-bar-container">
-                <div class="xp-bar-fill ${player.level >= player.maxLevel ? 'maxed' : ''}" style="width: ${xpPercentage}%;"></div>
-            </div>
+                ${xpBarHtml}
                 
                 <div style="text-align: center; font-size: 0.85rem; margin-bottom: 12px; color: #4b5563;">
                     Volné body: <strong style="color: ${player.unspentPoints > 0 ? '#10b981' : '#6b7280'}; font-size: 1.1rem;">${player.unspentPoints}</strong>
@@ -87,16 +91,20 @@ function renderTraining() {
                 : '<p style="color: #4b5563; font-style: italic; background: #fdf5e6; padding: 10px; border-radius: 5px; width: 100%; text-align: center;">Nikdo aktuálně nemá volné tréninkové body.</p>'}
         </div>
 
-        <h3 style="color: #fdf5e6; background: rgba(59, 130, 246, 0.8); padding: 5px 15px; border-radius: 5px; display: inline-block;">Hráči, kteří sbírají zápasovou praxi</h3>
-        <div class="player-list" style="margin-bottom: 30px; opacity: 0.95;">
-            ${practicePlayers.length > 0 
-                ? practicePlayers.map(p => createTrainingCard(p)).join('') 
-                : '<p style="color: #4b5563; font-style: italic; background: #fdf5e6; padding: 10px; border-radius: 5px; width: 100%; text-align: center;">Všichni aktivní hráči čekají na trénink.</p>'}
-        </div>
+        <details style="margin-top: 20px; background: rgba(0,0,0,0.4); border: 2px solid #3b82f6; border-radius: 8px; padding: 10px;" open>
+            <summary style="color: #fdf5e6; font-size: 1.2rem; font-weight: bold; cursor: pointer; padding: 5px; text-align: center; list-style: none;">
+                Hráči, kteří sbírají zápasovou praxi (Rozbalit) ▾
+            </summary>
+            <div class="player-list" style="margin-top: 20px; opacity: 0.95;">
+                ${practicePlayers.length > 0 
+                    ? practicePlayers.map(p => createTrainingCard(p)).join('') 
+                    : '<p style="color: #4b5563; font-style: italic; background: #fdf5e6; padding: 10px; border-radius: 5px; width: 100%; text-align: center;">Všichni aktivní hráči čekají na trénink.</p>'}
+            </div>
+        </details>
 
         ${maxedPlayers.length > 0 ? `
-        <details style="margin-top: 40px; background: rgba(0,0,0,0.4); border: 2px solid #8d6e63; border-radius: 8px; padding: 10px;">
-            <summary style="color: #fdf5e6; font-size: 1.2rem; font-weight: bold; cursor: pointer; padding: 10px; text-align: center; list-style: none;">
+        <details style="margin-top: 20px; background: rgba(0,0,0,0.4); border: 2px solid #8d6e63; border-radius: 8px; padding: 10px;">
+            <summary style="color: #fdf5e6; font-size: 1.2rem; font-weight: bold; cursor: pointer; padding: 5px; text-align: center; list-style: none;">
                 Hráči na maximální úrovni (Rozbalit) ▾
             </summary>
             <div class="player-list" style="opacity: 0.8; margin-top: 20px;">
