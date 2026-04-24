@@ -42,12 +42,8 @@ function degradeInventory() {
 
 // --- VÝPOČET ZÁKLADNÍ SÍLY TÝMU PRO ZOBRAZENÍ (0.0 - 10.0) ---
 function calculateBaseTeamRating(players, formation) {
-    const formations = {
-        '4-4-2': { gk: [0, 1], def: [1, 5], mid: [5, 9], att: [9, 11] },
-        '4-3-3': { gk: [0, 1], def: [1, 5], mid: [5, 8], att: [8, 11] },
-        '5-4-1': { gk: [0, 1], def: [1, 6], mid: [6, 10], att: [10, 11] }
-    };
-    const layout = formations[formation] || formations['4-4-2'];
+
+    const layout = FORMATIONS_LAYOUT[formation] || FORMATIONS_LAYOUT['4-4-2'];
     
     let ratings = { att: 0, mid: 0, def: 0, gk: 0 };
     let counts = { att: 0, mid: 0, def: 0, gk: 0 };
@@ -205,13 +201,8 @@ function initGame() {
         const myTeamName = playerData.managerName ? `FC ${playerData.managerName}` : "Tvůj Tým";
         const currentDiv = playerData.division || 10;
 
-        // Mnohem větší seznam jmen rozdělený na "Vesnické" a "Městské" pro pocit postupu
-        const villageNames = ["Sokol Horní Lhota", "SK Prdelkovice", "FC Dřeváci", "Tatran Sedlčany", "Dynamo Vesnice", "AFK Bída", "Zoufalci United", "TJ Sokol Pěnčín", "Sokol Brozany", "FK Kolomaz", "SK Holomajzna", "Sokol Řeporyje"];
-        const proNames = ["Baník Ostrava (B)", "Slavoj Žižkov", "FK Admira", "SK Slavia (B)", "Meteor Praha", "Slavoj Vyšehrad", "Sokol Hostivice", "FK Jablonec (B)", "SK Kladno", "FK Teplice (B)", "FC Graffin Vlašim", "1.FK Příbram", "FK Viktoria Žižkov"];
-        
-        // Pokud jsme v 10.-8. divizi, bereme vesnice, výše už profíky
-        const pool = currentDiv >= 8 ? villageNames : proNames;
-        const shuffledNames = pool.sort(() => 0.5 - Math.random());
+        const pool = currentDiv >= 8 ? BOT_TEAM_NAMES.village : BOT_TEAM_NAMES.pro;
+        const shuffledNames = [...pool].sort(() => 0.5 - Math.random());
 
         playerData.league = [];
         playerData.league.push({ name: myTeamName, z: 0, v: 0, r: 0, p: 0, gf: 0, ga: 0, points: 0, isPlayer: true });
@@ -805,60 +796,6 @@ window.skipPvETime = function() {
     }
 }
 
-// Zobrazení detailních statistik bota
-window.viewPvEBot = function(dIndex, sIndex) {
-    const stage = PVE_DUNGEONS[dIndex].stages[sIndex];
-    const stats = stage.botStats;
-    const mainContent = document.getElementById('main-content');
-    
-    mainContent.innerHTML = `
-        <div class="scouting-card">
-            <h2 class="section-title" style="margin-top: 0; text-shadow: 2px 2px 4px black;">Skauting soupeře</h2>
-            <h3 class="scouting-title">${stage.name}</h3>
-            <p style="color: #9ca3af; margin-top: 0;">Předpokládaná formace: <strong style="color: white;">4-4-2</strong></p>
-            
-            <p class="scouting-desc">${stage.desc}</p>
-            
-            <div class="scouting-note">
-                ℹ️ <strong>Upozornění trenéra:</strong> Níže uvedené hodnoty představují průměrné statistiky <strong>každého jednotlivého hráče</strong> v týmu soupeře. Nehraješ proti jednomu hráči, ale proti jedenácti borcům s těmito parametry.
-            </div>
-
-            <div class="scouting-grid">
-                <div class="stat-box stat-atk">
-                    <span class="stat-label">⚔️ Útok</span>
-                    <span class="stat-val">${stats.atk}</span>
-                </div>
-                <div class="stat-box stat-def">
-                    <span class="stat-label">🛡️ Obrana</span>
-                    <span class="stat-val">${stats.def}</span>
-                </div>
-                <div class="stat-box stat-spd">
-                    <span class="stat-label">🏃 Rychlost</span>
-                    <span class="stat-val">${stats.spd}</span>
-                </div>
-                <div class="stat-box stat-str">
-                    <span class="stat-label">💪 Síla</span>
-                    <span class="stat-val">${stats.str}</span>
-                </div>
-                <div class="stat-box stat-eng">
-                    <span class="stat-label">🔋 Výdrž</span>
-                    <span class="stat-val">${stats.eng}</span>
-                </div>
-                <div class="stat-box stat-gk">
-                    <span class="stat-label">🧤 Brankář</span>
-                    <span class="stat-val">${stats.gk}</span>
-                </div>
-                <div class="stat-box stat-tek full-width">
-                    <span class="stat-label">⚽ Technika</span>
-                    <span class="stat-val">${stats.tek}</span>
-                </div>
-            </div>
-            
-            <button class="btn-task" style="margin-top: 25px; width: 100%; padding: 15px; background-color: #4b5563; border-color: #374151; font-size: 1.1rem; color: white;" onclick="renderPvE()">⬅ Návrat do podzemí</button>
-        </div>
-    `;
-}
-
 // Generátor odměny v podobě hráče
 function generateRewardPlayer(rankName, minStars, maxStars) {
     const stars = Math.floor(Math.random() * (maxStars - minStars + 1)) + minStars;
@@ -1317,52 +1254,6 @@ window.testSimulateFullSeason = function() {
     }
 }
 
-// --- BOTI A LIGA --- ------------------------------
-window.viewBotTeam = function(teamName) {
-    const mainContent = document.getElementById('main-content');
-    const botTeam = playerData.league.find(t => t.name === teamName);
-    if (!botTeam || botTeam.isPlayer) return;
-
-    const originalPlayers = playerData.players;
-    playerData.players = botTeam.players;
-
-    const formations = {
-        '4-4-2': { gk: [0, 1], def: [1, 5], mid: [5, 9], att: [9, 11] },
-        '4-3-3': { gk: [0, 1], def: [1, 5], mid: [5, 8], att: [8, 11] },
-        '5-4-1': { gk: [0, 1], def: [1, 6], mid: [6, 10], att: [10, 11] }
-    };
-    const layout = formations[botTeam.formation];
-
-    mainContent.innerHTML = `
-        <div style="text-align: center; position: relative;">
-            <button onclick="renderMatches()" style="position: absolute; left: 0; top: 0; padding: 10px 20px; background: #4e342e; color: white; border: none; border-radius: 5px; cursor: pointer;">⬅ Zpět na Zápasy</button>
-            <h2 class="section-title">Skauting soupeře: ${botTeam.name}</h2>
-            <div style="background-color: rgba(0, 0, 0, 0.85); color: #fdf5e6; padding: 15px; border-radius: 8px; border: 2px solid #ef4444; max-width: 500px; margin: 0 auto 20px auto;">
-                <h3 style="margin: 0; color: #fca5a5;">Odhalená formace: ${botTeam.formation}</h3>
-                <p style="margin: 5px 0 0 0; font-size: 0.9rem;">Přizpůsob svou formaci v Šatně, abys získal taktickou výhodu +10 %!</p>
-            </div>
-        </div>
-        <div class="pitch-section">
-            <h3 class="pitch-role-title">Útočníci</h3>
-            <div class="player-list">${renderPlayerGroup(layout.att[0], layout.att[1], 'att')}</div>
-        </div>
-        <div class="pitch-section">
-            <h3 class="pitch-role-title">Záložníci</h3>
-            <div class="player-list">${renderPlayerGroup(layout.mid[0], layout.mid[1], 'mid')}</div>
-        </div>
-        <div class="pitch-section">
-            <h3 class="pitch-role-title">Obránci</h3>
-            <div class="player-list">${renderPlayerGroup(layout.def[0], layout.def[1], 'def')}</div>
-        </div>
-        <div class="pitch-section">
-            <h3 class="pitch-role-title">Brankář</h3>
-            <div class="player-list">${renderPlayerGroup(layout.gk[0], layout.gk[1], 'gk')}</div>
-        </div>
-    `;
-
-    playerData.players = originalPlayers;
-}
-
 // Funkce pro okamžité dokončení záznamu
 window.finishMatchReplay = function() {
     clearInterval(window.matchReplayInterval);
@@ -1523,11 +1414,15 @@ function simulateOfflineMatch(matchTime) {
 
     if (levelUps.length > 0) result.log.push({ min: '90+', text: `🌟 ZLEPŠENÍ: Hráči ${levelUps.join(', ')} postoupili na novou úroveň!`, score: `${result.myGoals}:${result.botGoals}` });
 
+    // --- OPRAVA HODNOCENÍ: Výpočet ratingu (0.0 - 10.0) ---
+    const myBaseRating = calculateBaseTeamRating(playerData.players, playerData.formation);
+    const botBaseRating = calculateBaseTeamRating(opponent.players, opponent.formation);
+
     addMailMessage(
         `Report: ${myTeam.name} vs ${opponent.name}`, 
         result.log, 
         `${result.myGoals}:${result.botGoals}`, 
-        { money: rewardMoney, xp: rewardXP, pXp: pXpGained, homeTeam: myTeam.name, awayTeam: opponent.name, myRating: result.myPower, botRating: result.botPower },
+        { money: rewardMoney, xp: rewardXP, pXp: pXpGained, homeTeam: myTeam.name, awayTeam: opponent.name, myRating: myBaseRating, botRating: botBaseRating },
         new Date(matchTime).toLocaleString('cs-CZ') // Správný historický čas
     );
 
@@ -1565,10 +1460,8 @@ function processSeasonEndOffline() {
     // Vygenerování nové ligy potichu
     const myTeamName = playerData.managerName ? `FC ${playerData.managerName}` : "Tvůj Tým";
     const currentDiv = playerData.division || 10;
-    const villageNames = ["Sokol Horní Lhota", "SK Prdelkovice", "FC Horní Nětčice", "FC Dřeváci", "FC Dolní Nětčice", "Mrlínek", "Hlinsko pod Hostýnem", "Tatran Sedlčany", "Dynamo Vesnice", "AFK Bída", "Zoufalci United", "TJ Sokol Pěnčín", "Sokol Brozany", "FK Kolomaz", "SK Holomajzna", "Sokol Řeporyje"];
-    const proNames = ["Baník Ostrava (B)", "Slavoj Žižkov", "FK Admira", "SK Slavia (B)", "Meteor Praha", "Slavoj Vyšehrad", "Sokol Hostivice", "FK Jablonec (B)", "SK Kladno", "FK Teplice (B)", "FC Graffin Vlašim", "1.FK Příbram", "FK Viktoria Žižkov"];
-    const pool = currentDiv >= 8 ? villageNames : proNames;
-    const shuffledNames = pool.sort(() => 0.5 - Math.random());
+    const pool = currentDiv >= 8 ? BOT_TEAM_NAMES.village : BOT_TEAM_NAMES.pro;
+    const shuffledNames = [...pool].sort(() => 0.5 - Math.random());
 
     playerData.league = [];
     playerData.league.push({ name: myTeamName, z: 0, v: 0, r: 0, p: 0, gf: 0, ga: 0, points: 0, isPlayer: true });

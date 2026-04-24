@@ -76,8 +76,9 @@ function renderTraining() {
     mainContent.innerHTML = `
         <div style="text-align: center;">
             <h2 class="section-title">Tréninkové hřiště</h2>
-            <div style="background-color: rgba(0, 0, 0, 0.75); color: #fdf5e6; padding: 15px 30px; border-radius: 8px; border: 2px solid #10b981; max-width: 600px; margin: 0 auto 20px auto; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
-                <p style="margin: 0; font-size: 1rem;">
+            
+            <div class="info-box success">
+                <p class="info-text-base">
                     Zde můžeš vylepšovat statistiky svých hráčů za body získané v zápasech.<br>
                     Každý hráč má svůj strop (Max) podle svého Ranku.
                 </p>
@@ -85,14 +86,15 @@ function renderTraining() {
         </div>
         
         <h3 style="color: #fdf5e6; background: rgba(16, 185, 129, 0.8); padding: 5px 15px; border-radius: 5px; display: inline-block;">Hráči připravení k tréninku</h3>
+        
         <div class="player-list" style="margin-bottom: 30px;">
             ${trainablePlayers.length > 0 
                 ? trainablePlayers.map(p => createTrainingCard(p)).join('') 
                 : '<p style="color: #4b5563; font-style: italic; background: #fdf5e6; padding: 10px; border-radius: 5px; width: 100%; text-align: center;">Nikdo aktuálně nemá volné tréninkové body.</p>'}
         </div>
 
-        <details style="margin-top: 20px; background: rgba(0,0,0,0.4); border: 2px solid #3b82f6; border-radius: 8px; padding: 10px;" open>
-            <summary style="color: #fdf5e6; font-size: 1.2rem; font-weight: bold; cursor: pointer; padding: 5px; text-align: center; list-style: none;">
+        <details class="collapsible-box blue" open>
+            <summary class="collapsible-header">
                 Hráči, kteří sbírají zápasovou praxi (Rozbalit) ▾
             </summary>
             <div class="player-list" style="margin-top: 20px; opacity: 0.95;">
@@ -103,8 +105,8 @@ function renderTraining() {
         </details>
 
         ${maxedPlayers.length > 0 ? `
-        <details style="margin-top: 20px; background: rgba(0,0,0,0.4); border: 2px solid #8d6e63; border-radius: 8px; padding: 10px;">
-            <summary style="color: #fdf5e6; font-size: 1.2rem; font-weight: bold; cursor: pointer; padding: 5px; text-align: center; list-style: none;">
+        <details class="collapsible-box">
+            <summary class="collapsible-header">
                 Hráči na maximální úrovni (Rozbalit) ▾
             </summary>
             <div class="player-list" style="opacity: 0.8; margin-top: 20px;">
@@ -126,11 +128,11 @@ function renderOffice() {
     <div class="info-panel">
             <div>
                 <h3 style="margin: 0 0 5px 0; color: #fcd34d;">Úroveň manažera: ${playerData.level}</h3>
-                <p style="margin: 0; font-size: 0.9rem; color: #d1d5db;">Vyšší úroveň přináší prestiž a lepší vyjednávací pozici se sponzory.</p>
+                <p class="info-text-base" style="color: #d1d5db;">Vyšší úroveň přináší prestiž a lepší vyjednávací pozici se sponzory.</p>
             </div>
-            <div style="text-align: right; background: rgba(245, 158, 11, 0.2); padding: 10px; border-radius: 8px; border: 1px solid #f59e0b;">
-                <span style="display: block; font-size: 0.8rem; text-transform: uppercase; color: #fcd34d;">Zisk z úkolů</span>
-                <span style="font-size: 1.5rem; font-weight: bold; color: #10b981;">+${bonusPercentage} %</span>
+            <div class="office-stats-box">
+                <span class="office-stats-label">Zisk z úkolů</span>
+                <span class="office-stats-val">+${bonusPercentage} %</span>
             </div>
         </div>
     `;
@@ -143,16 +145,16 @@ function renderOffice() {
         const currentFlavorText = flavorTexts[playerData.activeTask.title] || 'Pracuješ na úkolu, pot z tebe leje...';
 
         mainContent.innerHTML = `
-            <div style="text-align: center;">
+            <div class="text-center">
                 <h2 class="section-title">Kancelář manažera</h2>
                 ${trainerInfoHtml}
             </div>
-            <div style="background-color: #fdf5e6; border: 3px solid #8d6e63; border-radius: 10px; padding: 25px; max-width: 500px; margin: 30px auto; text-align: center; box-shadow: 5px 5px 15px rgba(0,0,0,0.5);">
-                <h3 style="color: #1e3a8a; margin-top: 0; border-bottom: 2px solid #a1887f; padding-bottom: 10px;">Probíhá: ${playerData.activeTask.title}</h3>
-                <p style="font-style: italic; color: #5d4037; font-size: 1.1rem; margin: 20px 0; line-height: 1.5;">"${currentFlavorText}"</p>
-            <div class="huge-timer danger" id="task-timer">
-                Počítám...
-            </div>
+            <div class="active-task-card">
+                <h3 class="active-task-title">Probíhá: ${playerData.activeTask.title}</h3>
+                <p class="active-task-flavor">"${currentFlavorText}"</p>
+                <div class="huge-timer danger" id="task-timer">
+                    Počítám...
+                </div>
                 <button class="btn-task btn-test" onclick="skipTask()">[TEST] Přeskočit čas</button>
             </div>`;
         return;
@@ -163,7 +165,7 @@ function renderOffice() {
     }
 
     mainContent.innerHTML = `
-        <div style="text-align: center;">
+        <div class="text-center">
             <h2 class="section-title">Kancelář manažera</h2>
             ${trainerInfoHtml}
         </div>
@@ -193,12 +195,12 @@ function renderStadium() {
     if (playerData.activeUpgrade !== null) {
         const bId = playerData.activeUpgrade.buildingId;
         activeBuildHTML = `
-            <div class="active-task-view" style="margin-bottom: 30px;">
+            <div class="active-build-container">
                 <h2>Staví se: ${buildingsConfig[bId].name}</h2>
-                <div class="timer" id="upgrade-timer">Počítám...</div>
+                <div class="timer huge-timer" id="upgrade-timer">Počítám...</div>
                 <button class="btn-task btn-test" onclick="skipUpgrade()">[TEST] Dokončit stavbu</button>
             </div>
-            <hr>
+            <hr style="border-color: #8d6e63; margin-bottom: 20px;">
         `;
     }
 
@@ -219,30 +221,30 @@ function renderStadium() {
         if (id === 'scout') {
             const timeRed = (currentLevel - 1) * 30;
             const chanceInc = ((currentLevel - 1) * 0.5).toFixed(1);
-            bonusText = `<div class="text-highlight-gold" style="margin-bottom: 10px; color: #b45309;">Aktuální bonus: -${timeRed} min čas, +${chanceInc}% šance na talenty.</div>`;
+            bonusText = `<div class="building-bonus-text">Aktuální bonus: -${timeRed} min čas, +${chanceInc}% šance na talenty.</div>`;
         } 
         else if (id === 'shop') {
             const moneyPerHour = 100 + (currentLevel - 1) * 50;
             const maxCap = 500 + (currentLevel - 1) * 500;
             const currentInSafe = Math.floor(playerData.shopSafe || 0);
             bonusText = `
-                <div class="text-highlight-gold" style="color: #b45309;">Příjem: ${moneyPerHour} 💰/hod (Max: ${maxCap})</div>
-                <div style="margin: 10px 0; padding: 10px; background: #f1f5f9; border-radius: 5px; border: 1px solid #cbd5e1; text-align: center;">
-                    V pokladně: <strong style="color: #10b981; font-size: 1.1rem;">${currentInSafe} / ${maxCap} 💰</strong>
-                    <button class="btn-task" style="padding: 8px 10px; font-size: 0.9rem; margin-top: 8px; width: 100%;" onclick="collectShopMoney()">Vybrat pokladnu</button>
+                <div class="building-bonus-text">Příjem: ${moneyPerHour} 💰/hod (Max: ${maxCap})</div>
+                <div class="shop-safe-box">
+                    V pokladně: <span class="shop-safe-amount">${currentInSafe} / ${maxCap} 💰</span>
+                    <button class="btn-task btn-collect-safe" onclick="collectShopMoney()">Vybrat pokladnu</button>
                 </div>`;
         }
         else if (id === 'tribune') {
             const bonus = currentLevel * 5;
-            bonusText = `<div class="text-highlight-gold" style="margin-bottom: 10px; color: #b45309;">Aktuální bonus k příjmu: +${bonus}% 💰</div>`;
+            bonusText = `<div class="building-bonus-text">Aktuální bonus k příjmu: +${bonus}% 💰</div>`;
         }
         else if (id === 'training') {
             const bonus = currentLevel * 5;
-            bonusText = `<div class="text-highlight-gold" style="margin-bottom: 10px; color: #b45309;">Aktuální bonus k XP hráčů: +${bonus}% 📈</div>`;
+            bonusText = `<div class="building-bonus-text">Aktuální bonus k XP hráčů: +${bonus}% 📈</div>`;
         }
         else if (id === 'pitch') {
             const bonus = currentLevel * 1;
-            bonusText = `<div class="text-highlight-gold" style="margin-bottom: 10px; color: #b45309;">Aktuální bonus k rychlosti: +${bonus}% 🏃</div>`;
+            bonusText = `<div class="building-bonus-text">Aktuální bonus k rychlosti: +${bonus}% 🏃</div>`;
         }
 
         // --- ŘEŠENÍ MAXIMÁLNÍHO LEVELU ---
@@ -258,11 +260,10 @@ function renderStadium() {
             if (id === 'pitch') maxText = "Trávník je v dokonalém stavu.";
             if (id === 'scout') maxText = "Skautská síť dosáhla svého vrcholu.";
 
-            // Vykreslíme zlatý boxík místo tlačítka
             upgradeSection = `
-                <div class="building-stats" style="text-align: center; background: #fef3c7; border-color: #f59e0b;">
-                    <strong style="color: #b45309;">🏆 DOSAŽENO MAXIMUM</strong>
-                    <p style="font-size: 0.8rem; margin: 5px 0 0 0;">${maxText}</p>
+                <div class="building-stats building-stats-maxed">
+                    <span class="maxed-title">🏆 DOSAŽENO MAXIMUM</span>
+                    <p class="maxed-desc">${maxText}</p>
                 </div>`;
         } else {
             // Pro všechny ostatní případy vykreslíme klasickou cenu a tlačítko
@@ -295,7 +296,7 @@ function renderStadium() {
         <div style="text-align: center;">
             <h2 class="section-title">Správa Stadionu</h2>
         </div>
-        <p style="text-align: center; color: white; margin-bottom: 20px;">Vylepšuj zázemí klubu. V jednu chvíli můžeš stavět pouze jednu budovu.</p>
+        <p class="stadium-subtitle">Vylepšuj zázemí klubu. V jednu chvíli můžeš stavět pouze jednu budovu.</p>
         ${activeBuildHTML}
         <div class="stadium-grid">
             ${buildingsHTML}
@@ -308,16 +309,16 @@ function renderPvE() {
     
     if (!playerData.pve) playerData.pve = { dungeonIndex: 0, stageIndex: 0, nextMatchTime: 0 };
 
-    // --- SPOILER LOCK: Kontrola, jestli v poště nečeká záznam z podzemí ---
+    // 1. KONTROLA NEPŘEČTENÝCH ZPRÁV (Spoiler lock)
     const hasUnreadPvE = playerData.mail.some(m => m.isPvE && !m.read);
     
     if (hasUnreadPvE) {
         mainContent.innerHTML = `
-            <div style="text-align: center;">
+            <div class="text-center">
                 <h2 class="section-title">Fotbalové podzemí</h2>
                 <div class="notification-banner large" onclick="document.querySelector('[data-target=\\'mail\\']').click()">
                     <h3 style="margin-top:0; font-size: 1.8rem;">📺 Záznam bitvy je připraven!</h3>
-                    <p style="font-size: 1.1rem; line-height: 1.5; font-weight: normal;">Zápas už se odehrál, ale výsledek je tajný. Běž do pošty, pusť si záznam a zjisti, jestli jsi postoupil na dalšího bosse!</p>
+                    <p class="pve-unread-banner-text">Zápas už se odehrál, ale výsledek je tajný. Běž do pošty, pusť si záznam a zjisti, jestli jsi postoupil na dalšího bosse!</p>
                     <button class="btn-task" style="background: #166534; border-color: #14532d; font-size: 1.2rem; margin-top: 15px; padding: 10px 30px;">Přejít do Pošty</button>
                 </div>
             </div>
@@ -328,12 +329,13 @@ function renderPvE() {
     const dIndex = playerData.pve.dungeonIndex;
     const sIndex = playerData.pve.stageIndex;
 
+    // 2. KONTROLA DOKONČENÍ VŠECH DUNGEONŮ
     if (dIndex >= PVE_DUNGEONS.length) {
         mainContent.innerHTML = `
-            <div style="text-align: center;">
+            <div class="text-center">
                 <h2 class="section-title">Fotbalové podzemí</h2>
-                <div style="background: rgba(0,0,0,0.8); color: #fcd34d; padding: 30px; border-radius: 10px; border: 2px solid #f59e0b;">
-                    <h3>🏆 Všechna podzemí pokořena! 🏆</h3>
+                <div class="info-box warning">
+                    <h3 class="text-highlight-gold">🏆 Všechna podzemí pokořena! 🏆</h3>
                     <p>Jsi absolutní mistr okresu. Počkej na další aktualizaci s novými bossy!</p>
                 </div>
             </div>
@@ -343,53 +345,45 @@ function renderPvE() {
 
     const dungeon = PVE_DUNGEONS[dIndex];
     const stage = dungeon.stages[sIndex];
-
     const hasSpace = playerData.players.length < 16;
-    
-    // Časovače a Cooldown
     const now = Date.now();
     const nextTime = playerData.pve.nextMatchTime || 0;
     const isOnCooldown = now < nextTime;
 
-    let warningHtml = '';
-    if (!hasSpace) {
-        warningHtml = `<div style="background: #fee2e2; color: #b91c1c; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-weight: bold; border: 1px solid #ef4444;">❌ Nemáš místo na střídačce! Běž do Šatny a někoho prodej.</div>`;
-    }
+    // 3. GENEROVÁNÍ OBSAHU
+    let warningHtml = hasSpace ? '' : `<div class="pve-warning-box">❌ Nemáš místo na střídačce! Běž do Šatny a někoho prodej.</div>`;
 
     let actionSection = '';
     if (isOnCooldown) {
         actionSection = `
-            <div style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                <p style="color: #9ca3af; margin: 0 0 10px 0;">Hráči odpočívají po těžkém utkání. Další pokus bude možný za:</p>
-            <div class="huge-timer" style="margin-top: 0;">
-                ⏳ <span id="pve-timer">Počítám...</span>
-            </div>
+            <div class="pve-cooldown-box">
+                <p class="pve-cooldown-label">Hráči odpočívají po těžkém utkání. Další pokus bude možný za:</p>
+                <div class="huge-timer" style="margin-top: 0;">
+                    ⏳ <span id="pve-timer">Počítám...</span>
+                </div>
             </div>
             <button class="btn-task btn-test" onclick="skipPvETime()">[TEST] Přeskočit čekání</button>
-            <button class="btn-task" style="width: 100%; font-size: 1.2rem; padding: 15px; background-color: #4b5563; border-color: #374151;" disabled>Odpočinek...</button>
+            <button class="btn-task btn-full-width" style="background-color: #4b5563; border-color: #374151;" disabled>Odpočinek...</button>
         `;
     } else {
-        const canFight = hasSpace;
         actionSection = `
         <button class="btn-task btn-full-width" 
-            style="background-color: ${canFight ? '#b91c1c' : '#4b5563'};" 
-            ${canFight ? `onclick="startPvEMatch(${dIndex}, ${sIndex})"` : 'disabled'}>
+            style="background-color: ${hasSpace ? '#b91c1c' : '#4b5563'};" 
+            ${hasSpace ? `onclick="startPvEMatch(${dIndex}, ${sIndex})"` : 'disabled'}>
             ⚔️ Vyzvat soupeře (Zdarma)
         </button>
         `;
     }
 
     mainContent.innerHTML = `
-        <div style="text-align: center;">
+        <div class="text-center">
             <h2 class="section-title">${dungeon.name}</h2>
-            <p style="color: #fdf5e6; font-style: italic; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; max-width: 600px; margin: 0 auto 20px auto;">
-                "${dungeon.desc}"
-            </p>
+            <p class="pve-dungeon-description">"${dungeon.desc}"</p>
         </div>
 
-        <div style="max-width: 600px; margin: 0 auto; background: rgba(0,0,0,0.8); border-radius: 10px; padding: 25px; border: 3px solid ${stage.isBoss ? '#ef4444' : '#8d6e63'}; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-            <div style="text-align: center; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-                <span style="background: ${stage.isBoss ? '#ef4444' : '#4b5563'}; color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 0.9rem;">
+        <div class="pve-stage-card ${stage.isBoss ? 'is-boss' : ''}">
+            <div class="pve-card-header">
+                <span class="pve-badge ${stage.isBoss ? 'boss' : 'normal'}">
                     Soupeř ${sIndex + 1} / ${dungeon.stages.length}
                 </span>
                 <button class="btn-task" style="padding: 5px 15px; background-color: #2563eb; border-color: #1d4ed8; font-size: 0.9rem;" onclick="viewPvEBot(${dIndex}, ${sIndex})">
@@ -397,13 +391,13 @@ function renderPvE() {
                 </button>
             </div>
             
-            <h3 style="color: ${stage.isBoss ? '#fca5a5' : '#fcd34d'}; text-align: center; font-size: 1.8rem; margin: 0 0 10px 0;">
+            <h3 class="pve-opponent-title" style="color: ${stage.isBoss ? '#fca5a5' : '#fcd34d'};">
                 ${stage.isBoss ? '☠️ ' : ''}${stage.name}
             </h3>
             
-            <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                <h4 style="color: #10b981; margin: 0 0 10px 0; text-align: center;">🎁 Odměna za vítězství</h4>
-                <ul style="color: #e5e7eb; margin: 0; padding-left: 20px;">
+            <div class="pve-reward-box">
+                <h4 class="pve-reward-header">🎁 Odměna za vítězství</h4>
+                <ul class="scout-odds-list" style="color: #e5e7eb;">
                     <li><strong>+${stage.reward.xp} XP</strong> pro všechny hráče na hřišti</li>
                     <li><strong>Zisk hráče:</strong> Rank [${stage.reward.rank}] (${stage.reward.minStars} až ${stage.reward.maxStars} ⭐)</li>
                 </ul>
@@ -414,19 +408,12 @@ function renderPvE() {
         </div>
     `;
 
-    if (isOnCooldown && typeof updateTimerUI === 'function') {
-        updateTimerUI('pve-timer', nextTime);
-    }
+    if (isOnCooldown) updateTimerUI('pve-timer', nextTime);
 }
 
 function renderLockerRoom() {
     const mainContent = document.getElementById('main-content');
-    const formations = {
-        '4-4-2': { gk: [0, 1], def: [1, 5], mid: [5, 9], att: [9, 11] },
-        '4-3-3': { gk: [0, 1], def: [1, 5], mid: [5, 8], att: [8, 11] },
-        '5-4-1': { gk: [0, 1], def: [1, 6], mid: [6, 10], att: [10, 11] }
-    };
-    const layout = formations[playerData.formation];
+    const layout = FORMATIONS_LAYOUT[playerData.formation];
 
     const formationHints = {
         '4-4-2': 'Zlatá střední cesta. Výborně si poradí s týmy, které hrají ustrašeného zanďoura.',
@@ -435,20 +422,24 @@ function renderLockerRoom() {
     };
     const currentHint = formationHints[playerData.formation];
 
+    // Logika pro barvu a text tlačítka "Prodej" - využije naše nové CSS třídy
+    const sellBtnClass = isSellMode ? 'btn-sell-active' : 'btn-sell-inactive';
+    const sellBtnText = isSellMode ? '❌ Zrušit prodej' : '💰 Režim prodeje';
+
     mainContent.innerHTML = `
-        <div style="text-align: center;">
+        <div class="text-center">
             <h2 class="section-title">Šatna a Sestava</h2>
             <div class="info-box">
                 <div style="margin-bottom: 15px;">
-                    <label for="formation-select" style="font-weight: bold; font-size: 1.1rem; margin-right: 10px;">Taktická formace:</label>
-                    <select id="formation-select" onchange="changeFormation(this.value)" style="padding: 6px 10px; font-size: 1rem; border-radius: 5px; background-color: #fdf5e6; color: #4e342e; font-weight: bold; border: 2px solid #8d6e63; cursor: pointer;">
+                    <label for="formation-select" class="formation-label">Taktická formace:</label>
+                    <select id="formation-select" class="formation-select" onchange="changeFormation(this.value)">
                         <option value="4-4-2" ${playerData.formation === '4-4-2' ? 'selected' : ''}>4-4-2 (Vyvážená)</option>
                         <option value="4-3-3" ${playerData.formation === '4-3-3' ? 'selected' : ''}>4-3-3 (Útočná)</option>
                         <option value="5-4-1" ${playerData.formation === '5-4-1' ? 'selected' : ''}>5-4-1 (Obranná)</option>
                     </select>
                 </div>
-                <p style="font-style: italic; color: #fcd34d; margin: 0 0 10px 0; font-size: 1.05rem;">💡 "${currentHint}"</p>
-                <p style="margin: 0; font-size: 0.85rem; color: #9ca3af;">Klikni na hráče a prohoď ho s jiným. Rozestavení se automaticky uloží.</p>
+                <p class="formation-hint">💡 "${currentHint}"</p>
+                <p class="text-muted" style="margin: 0;">Klikni na hráče a prohoď ho s jiným. Rozestavení se automaticky uloží.</p>
             </div>
         </div>
 
@@ -469,14 +460,14 @@ function renderLockerRoom() {
             <div class="player-list">${renderPlayerGroup(layout.gk[0], layout.gk[1], 'gk')}</div>
         </div>
         
-        <div class="pitch-section" style="background-color: rgba(0,0,0,0.4); border-color: #5d4037; border-radius: 8px; padding: 15px; margin-top: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #8d6e63; padding-bottom: 10px; margin-bottom: 15px;">
-                <h3 style="margin: 0; color: #fdf5e6; background: none; border: none; padding: 0;">Střídačka (Kapacita: ${playerData.players.length - 11}/5)</h3>
-                <button onclick="toggleSellMode()" style="padding: 8px 15px; font-weight: bold; cursor: pointer; border: none; border-radius: 5px; font-family: 'Kalam', cursive; font-size: 1rem; background-color: ${isSellMode ? '#ef4444' : '#f59e0b'}; color: white; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); transition: 0.2s;">
-                    ${isSellMode ? '❌ Zrušit prodej' : '💰 Režim prodeje'}
+        <div class="pitch-section bench-section">
+            <div class="bench-header">
+                <h3 class="bench-title">Střídačka (Kapacita: ${playerData.players.length - 11}/5)</h3>
+                <button onclick="toggleSellMode()" class="btn-sell-mode ${sellBtnClass}">
+                    ${sellBtnText}
                 </button>
             </div>
-            ${isSellMode ? '<p style="text-align: center; margin-top: 0; color: #fca5a5; font-weight: bold; background-color: rgba(220, 38, 38, 0.2); padding: 5px; border-radius: 4px;">Klikni na hráče, kterého chceš vyhodit z klubu.</p>' : ''}
+            ${isSellMode ? '<p class="sell-warning-text">Klikni na hráče, kterého chceš vyhodit z klubu.</p>' : ''}
             <div class="player-list">${renderPlayerGroup(11, 16, 'bench')}</div>
         </div>
     `;
@@ -490,15 +481,15 @@ function renderLockerRoom() {
             const item = items[i];
             if (item) {
                 slotsHtml += `
-                    <div class="player-card" style="border-style: solid; border-color: #8d6e63; background: #fffbeb; width: 180px;">
-                        <div style="font-weight: bold; color: #b45309; font-size: 0.9rem;">${item.name}</div>
-                        <div style="font-size: 0.75rem; margin: 5px 0;">⏳ Zbývá: ${item.duration} záp.</div>
-                        <button class="btn-task" style="background: #ef4444; border:none; padding: 3px 8px; font-size: 0.7rem;" onclick="discardItem('${role}', ${item.instanceId})">🗑️ Vyhodit</button>
+                    <div class="player-card inventory-card">
+                        <div class="inventory-item-name">${item.name}</div>
+                        <div class="inventory-item-duration">⏳ Zbývá: ${item.duration} záp.</div>
+                        <button class="btn-task btn-discard" onclick="discardItem('${role}', ${item.instanceId})">🗑️ Vyhodit</button>
                     </div>
                 `;
             } else {
                 slotsHtml += `
-                    <div class="player-card empty-slot" style="width: 180px; min-height: 80px; border-style: dashed; opacity: 0.5;">
+                    <div class="player-card empty-slot inventory-slot-empty">
                         <div style="font-size: 0.7rem;">Volný slot</div>
                     </div>
                 `;
@@ -513,8 +504,8 @@ function renderLockerRoom() {
     };
 
     mainContent.innerHTML += `
-        <details style="margin-top: 30px; background: rgba(0,0,0,0.5); border: 2px solid #f59e0b; border-radius: 8px; padding: 15px;">
-            <summary style="color: #fcd34d; font-size: 1.2rem; font-weight: bold; cursor: pointer; text-align: center; list-style: none; padding: 5px;">
+        <details class="collapsible-box gold">
+            <summary class="collapsible-header" style="color: #fcd34d;">
                 📦 Týmový trezor (Bonusové předměty) ▾
             </summary>
             <div style="margin-top: 20px;">
@@ -639,27 +630,29 @@ function renderScouting() {
     }).join('');
 
     mainContent.innerHTML = `
-        <div style="text-align: center;">
+        <div class="text-center">
             <h2 class="section-title">Kancelář hlavního skauta</h2>
-            <div class="info-box" style="max-width: 700px;">
-                <p style="margin: 0; font-size: 1.1rem; font-style: italic;">
-                    "Skautování nových hráčů bude trvat ještě <strong id="scout-timer" style="color: #f59e0b; font-family: monospace; font-size: 1.3rem;">Počítám...</strong><br>Zatím si musíte vybrat z toho, co jsem objevil, šéfe."
+            
+            <div class="info-box scout-info-box">
+                <p class="info-text-base" style="font-style: italic;">
+                    "Skautování nových hráčů bude trvat ještě <span id="scout-timer" class="scout-timer-text">Počítám...</span><br>
+                    Zatím si musíte vybrat z toho, co jsem objevil, šéfe."
                 </p>
                 
-                <details style="margin-top: 15px; text-align: left; background: rgba(0,0,0,0.4); border: 1px solid #8d6e63; border-radius: 5px; padding: 10px;">
-                    <summary style="cursor: pointer; color: #fcd34d; font-weight: bold; list-style: none;">
+                <details class="scout-details-box">
+                    <summary class="scout-details-summary">
                         📊 Zobrazit pravděpodobnosti skautingu (Rozbalit) ▾
                     </summary>
-                    <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.9rem; color: #e5e7eb;">
-                        <div style="flex: 1;">
-                            <strong style="color: #60a5fa;">Dostupné ranky (${currentDiv}. Divize):</strong>
-                            <ul style="margin: 5px 0; padding-left: 20px;">
+                    <div class="scout-odds-container">
+                        <div class="scout-odds-col">
+                            <div class="scout-odds-title">Dostupné ranky (${currentDiv}. Divize):</div>
+                            <ul class="scout-odds-list">
                                 ${rankOddsHtml}
                             </ul>
                         </div>
-                        <div style="flex: 1;">
-                            <strong style="color: #60a5fa;">Šance na talent (Hvězdy):</strong>
-                            <ul style="margin: 5px 0; padding-left: 20px;">
+                        <div class="scout-odds-col">
+                            <div class="scout-odds-title">Šance na talent (Hvězdy):</div>
+                            <ul class="scout-odds-list">
                                 <li>5 ⭐: ${fiveStarChance} %</li>
                                 <li>4 ⭐: 8.0 %</li>
                                 <li>3 ⭐: 15.0 %</li>
@@ -669,12 +662,12 @@ function renderScouting() {
                             </ul>
                         </div>
                     </div>
-                    <div style="font-size: 0.8rem; color: #9ca3af; margin-top: 10px; font-style: italic;">
+                    <div class="scout-note">
                         * Vylepšováním budovy Kanceláře skauta (aktuálně Lvl. ${scoutLevel}) se ti postupně zvyšuje šance na objevení 5hvězdičkových talentů. Postupem do vyšších lig se zase odemykají lepší ranky.
                     </div>
                 </details>
 
-                <button class="btn-task btn-skip" style="margin-top: 15px; padding: 5px 10px;" onclick="forceScoutRefresh()">[TEST] Vygenerovat hned</button>
+                <button class="btn-task btn-test" style="margin-top: 15px; padding: 5px 10px;" onclick="forceScoutRefresh()">[TEST] Vygenerovat hned</button>
             </div>
         </div>
         <div class="player-list">
@@ -686,31 +679,31 @@ function renderScouting() {
 }
 
 function renderMatches() {
-    const mainContent = document.getElementById('main-content');
+ const mainContent = document.getElementById('main-content');
 
-    const myTeamIndex = playerData.league.findIndex(t => t.isPlayer);
-    if (myTeamIndex !== -1 && playerData.managerName) {
-        playerData.league[myTeamIndex].name = `FC ${playerData.managerName}`;
-    }
+ const myTeamIndex = playerData.league.findIndex(t => t.isPlayer);
+ if (myTeamIndex !== -1 && playerData.managerName) {
+     playerData.league[myTeamIndex].name = `FC ${playerData.managerName}`;
+ }
 
-    // --- Zjistíme divizi pro dynamický nadpis ---
-    const currentDiv = playerData.division || 10;
-    const divName = currentDiv === 10 ? "Amatérská Liga (10. Divize)" : currentDiv === 1 ? "První Liga (Elita)" : `${currentDiv}. Divize`;
+ // --- Zjistíme divizi pro dynamický nadpis ---
+ const currentDiv = playerData.division || 10;
+ const divName = currentDiv === 10 ? "Amatérská Liga (10. Divize)" : currentDiv === 1 ? "První Liga (Elita)" : `${currentDiv}. Divize`;
 
-    const sortedLeague = [...playerData.league].sort((a, b) => {
-        if (b.points !== a.points) return b.points - a.points;
-        return (b.gf - b.ga) - (a.gf - a.ga); 
-    });
-    
-    const botsOnly = playerData.league.filter(t => !t.isPlayer);
-    const matchesPlayed = playerData.league[myTeamIndex].z;
-    const opponent = botsOnly[matchesPlayed % botsOnly.length];
+ const sortedLeague = [...playerData.league].sort((a, b) => {
+     if (b.points !== a.points) return b.points - a.points;
+     return (b.gf - b.ga) - (a.gf - a.ga); 
+ });
+ 
+ const botsOnly = playerData.league.filter(t => !t.isPlayer);
+ const matchesPlayed = playerData.league[myTeamIndex].z;
+ const opponent = botsOnly[matchesPlayed % botsOnly.length];
 
-    const prepareBtnHtml = playerData.isPrepared 
-        ? `<button class="btn-task" style="width: 100%; background-color: #4b5563; border-color: #374151; padding: 15px; font-size: 1.1rem; cursor: not-allowed;" disabled>Tým je plně připraven! ✓</button>`
-        : `<button class="btn-task" style="width: 100%; background-color: #166534; border-color: #14532d; padding: 15px; font-size: 1.1rem;" onclick="prepareForMatch()">Připravit se na zápas (+10% Síly)</button>`;
+ const prepareBtnHtml = playerData.isPrepared 
+    ? `<button class="btn-task" style="width: 100%; background-color: #4b5563; border-color: #374151; padding: 15px; font-size: 1.1rem; cursor: not-allowed;" disabled>Tým je plně připraven! ✓</button>`
+    : `<button class="btn-task" style="width: 100%; background-color: #166534; border-color: #14532d; padding: 15px; font-size: 1.1rem;" onclick="prepareForMatch()">Připravit se na zápas (+10% Síly)</button>`;
 
-    // KONTROLA BANNERU
+// KONTROLA BANNERU
     const hasUnreadMatch = playerData.mail.some(m => !m.read && !m.isPvE);
     const unreadBanner = hasUnreadMatch ? `
         <div class="notification-banner" onclick="document.querySelector('[data-target=\\'mail\\']').click()">
@@ -718,34 +711,39 @@ function renderMatches() {
         </div>
     ` : '';
 
+    // Aplikace nových tříd do HTML šablony
     mainContent.innerHTML = `
-        <div style="text-align: center;">
+        <div class="text-center" style="margin-bottom: 20px;">
             <h2 class="section-title">${divName}</h2>
+            <br>
+            <div class="season-timer-box">
+                ⏳ DO KONCE SEZÓNY: <span id="topbar-season-timer" class="season-timer-text">--:--</span>
+            </div>
         </div>
         
         ${unreadBanner}
 
         <div class="next-match-card">
-            <h3 style="margin-top: 0; color: #fcd34d; letter-spacing: 1px; text-transform: uppercase;">Nadcházející zápas</h3>
-            <p style="font-size: 1.3rem; margin: 15px 0;">
-                <span style="color: #60a5fa;">${playerData.league[myTeamIndex].name}</span> 
-                <span style="color: #9ca3af; font-size: 1rem; margin: 0 10px;">VS</span> 
-                <span style="color: #ef4444;">${opponent.name}</span>
+            <h3 class="next-match-title">Nadcházející zápas</h3>
+            <p class="vs-text-container">
+                <span class="team-home-text">${playerData.league[myTeamIndex].name}</span> 
+                <span class="vs-badge">VS</span> 
+                <span class="team-away-text">${opponent.name}</span>
             </p>
-        <div class="huge-timer">
-            <span id="match-timer">Počítám...</span>
-        </div>
+            <div class="huge-timer">
+                <span id="match-timer">Počítám...</span>
+            </div>
             
-            <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 15px;">
-                <button class="btn-task btn-skip" style="flex: 1; padding: 10px; background-color: #ef4444; border-color: #b91c1c;" onclick="skipMatchTime()">[TEST] Odehrát hned</button>
-                <button class="btn-task btn-skip" style="flex: 1; padding: 10px; background-color: #7c2d12; border-color: #450a0a;" onclick="testSimulateFullSeason()">⏩ [TEST] Simulovat sezónu</button>
+            <div class="match-buttons-row">
+                <button class="btn-task btn-test btn-play-now" onclick="skipMatchTime()">[TEST] Odehrát hned</button>
+                <button class="btn-task btn-test btn-sim-season" onclick="testSimulateFullSeason()">⏩ [TEST] Simulovat sezónu</button>
             </div>
 
-            <p style="font-size: 0.9rem; color: #9ca3af; margin-bottom: 15px;">Aktivuj přípravu, dokud je čas. Zvýšíš tím šanci na výhru a zkušenosti hráčů.</p>
+            <p class="prepare-text">Aktivuj přípravu, dokud je čas. Zvýšíš tím šanci na výhru a zkušenosti hráčů.</p>
             ${prepareBtnHtml}
         </div>
 
-        <div style="border-radius: 8px; overflow: hidden; max-width: 800px; margin: 0 auto; border: 3px solid #8d6e63; box-shadow: 5px 5px 15px rgba(0,0,0,0.5);">
+        <div class="league-table-wrapper">
             <table class="league-table" style="border: none; box-shadow: none;">
                 <thead>
                     <tr>
@@ -760,9 +758,15 @@ function renderMatches() {
                     </tr>
                 </thead>
                 <tbody>
-                    ${sortedLeague.map((team, index) => `
+                    ${sortedLeague.map((team, index) => {
+                        // Logika pro dynamickou barvu pozice v tabulce (Postup / Sestup)
+                        let posClass = '';
+                        if (index + 1 <= 2) posClass = 'table-pos-up';
+                        else if (index + 1 >= 9) posClass = 'table-pos-down';
+
+                        return `
                         <tr class="${team.isPlayer ? 'player-team-row' : ''}">
-                            <td style="font-weight: bold; color: ${index + 1 <= 2 ? '#166534' : index + 1 >= 9 ? '#dc2626' : 'inherit'};">${index + 1}.</td>
+                            <td style="font-weight: bold;" class="${posClass}">${index + 1}.</td>
                             <td style="text-align: left;">
                                 ${team.isPlayer ? 
                                     `<strong>${team.name}</strong>` : 
@@ -776,7 +780,8 @@ function renderMatches() {
                             <td>${team.p}</td>
                             <td style="font-weight: bold; font-size: 1.1rem;">${team.points}</td>
                         </tr>
-                    `).join('')}
+                        `;
+                    }).join('')}
                 </tbody>
             </table>
         </div>
@@ -1016,4 +1021,103 @@ window.openMatchReport = function(index) {
         if (step < msg.content.length) { renderReplayAction(msg.content[step]); step++; } 
         else { finishMatchReplay(); }
     }, 2500); 
+}
+
+// --- ZOBRAZENÍ DETAILU SOUPEŘE V LIZE ---
+window.viewBotTeam = function(teamName) {
+    const mainContent = document.getElementById('main-content');
+    const botTeam = playerData.league.find(t => t.name === teamName);
+    if (!botTeam || botTeam.isPlayer) return;
+
+    // Dočasně podstrčíme hráče bota do playerData.players, aby fungovala funkce renderPlayerGroup
+    const originalPlayers = playerData.players;
+    playerData.players = botTeam.players;
+
+    // Využíváme náš config!
+    const layout = FORMATIONS_LAYOUT[botTeam.formation];
+
+    mainContent.innerHTML = `
+        <div class="opponent-scout-header">
+            <button class="btn-back-absolute" onclick="renderMatches()">⬅ Zpět na Zápasy</button>
+            <h2 class="section-title">Skauting soupeře: ${botTeam.name}</h2>
+            <div class="opponent-hint-box">
+                <h3 class="opponent-hint-title">Odhalená formace: ${botTeam.formation}</h3>
+                <p class="opponent-hint-text">Přizpůsob svou formaci v Šatně, abys získal taktickou výhodu +10 %!</p>
+            </div>
+        </div>
+        <div class="pitch-section">
+            <h3 class="pitch-role-title">Útočníci</h3>
+            <div class="player-list">${renderPlayerGroup(layout.att[0], layout.att[1], 'att')}</div>
+        </div>
+        <div class="pitch-section">
+            <h3 class="pitch-role-title">Záložníci</h3>
+            <div class="player-list">${renderPlayerGroup(layout.mid[0], layout.mid[1], 'mid')}</div>
+        </div>
+        <div class="pitch-section">
+            <h3 class="pitch-role-title">Obránci</h3>
+            <div class="player-list">${renderPlayerGroup(layout.def[0], layout.def[1], 'def')}</div>
+        </div>
+        <div class="pitch-section">
+            <h3 class="pitch-role-title">Brankář</h3>
+            <div class="player-list">${renderPlayerGroup(layout.gk[0], layout.gk[1], 'gk')}</div>
+        </div>
+    `;
+
+    // Vrátíme zpět tvé skutečné hráče
+    playerData.players = originalPlayers;
+}
+
+// --- ZOBRAZENÍ DETAILU SOUPEŘE V PODZEMÍ ---
+window.viewPvEBot = function(dIndex, sIndex) {
+    const stage = PVE_DUNGEONS[dIndex].stages[sIndex];
+    const stats = stage.botStats;
+    const mainContent = document.getElementById('main-content');
+    
+    // Tady CSS třídy už byly od tebe připravené, jen jsme vyčistili tlačítko Zpět
+    mainContent.innerHTML = `
+        <div class="scouting-card">
+            <h2 class="section-title" style="margin-top: 0; text-shadow: 2px 2px 4px black;">Skauting soupeře</h2>
+            <h3 class="scouting-title">${stage.name}</h3>
+            <p class="text-muted" style="margin-top: 0;">Předpokládaná formace: <strong style="color: white;">4-4-2</strong></p>
+            
+            <p class="scouting-desc">${stage.desc}</p>
+            
+            <div class="scouting-note">
+                ℹ️ <strong>Upozornění trenéra:</strong> Níže uvedené hodnoty představují průměrné statistiky <strong>každého jednotlivého hráče</strong> v týmu soupeře. Nehraješ proti jednomu hráči, ale proti jedenácti borcům s těmito parametry.
+            </div>
+
+            <div class="scouting-grid">
+                <div class="stat-box stat-atk">
+                    <span class="stat-label">⚔️ Útok</span>
+                    <span class="stat-val">${stats.atk}</span>
+                </div>
+                <div class="stat-box stat-def">
+                    <span class="stat-label">🛡️ Obrana</span>
+                    <span class="stat-val">${stats.def}</span>
+                </div>
+                <div class="stat-box stat-spd">
+                    <span class="stat-label">🏃 Rychlost</span>
+                    <span class="stat-val">${stats.spd}</span>
+                </div>
+                <div class="stat-box stat-str">
+                    <span class="stat-label">💪 Síla</span>
+                    <span class="stat-val">${stats.str}</span>
+                </div>
+                <div class="stat-box stat-eng">
+                    <span class="stat-label">🔋 Výdrž</span>
+                    <span class="stat-val">${stats.eng}</span>
+                </div>
+                <div class="stat-box stat-gk">
+                    <span class="stat-label">🧤 Brankář</span>
+                    <span class="stat-val">${stats.gk}</span>
+                </div>
+                <div class="stat-box stat-tek full-width">
+                    <span class="stat-label">⚽ Technika</span>
+                    <span class="stat-val">${stats.tek}</span>
+                </div>
+            </div>
+            
+            <button class="btn-task btn-full-width" style="margin-top: 25px; background-color: #4b5563; border-color: #374151;" onclick="renderPvE()">⬅ Návrat do podzemí</button>
+        </div>
+    `;
 }

@@ -1,13 +1,7 @@
 function calculateSectorStrength(players, formation, isPrepared = false) {
     const sectors = { mid: 0, att: 0, def: 0, gk: 0 };
     const counts = { mid: 0, att: 0, def: 0, gk: 0 }; // Nové: počítadlo hráčů v sektoru
-    
-    const formations = {
-        '4-4-2': { gk: [0, 1], def: [1, 5], mid: [5, 9], att: [9, 11] },
-        '4-3-3': { gk: [0, 1], def: [1, 5], mid: [5, 8], att: [8, 11] },
-        '5-4-1': { gk: [0, 1], def: [1, 6], mid: [6, 10], att: [10, 11] }
-    };
-    const layout = formations[formation];
+    const layout = FORMATIONS_LAYOUT[formation];
 
     // --- BONUS ZA TRÁVNÍK ---
     const pitchLevel = playerData.buildings.pitch || 0;
@@ -53,12 +47,6 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
     let myGoals = 0;
     let botGoals = 0;
     let matchLog = [];
-
-    const formations = {
-        '4-4-2': { gk: [0, 1], def: [1, 5], mid: [5, 9], att: [9, 11] },
-        '4-3-3': { gk: [0, 1], def: [1, 5], mid: [5, 8], att: [8, 11] },
-        '5-4-1': { gk: [0, 1], def: [1, 6], mid: [6, 10], att: [10, 11] }
-    };
 
     const redCardedIds = [];
 
@@ -159,8 +147,8 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
 
         // 1. ZÓNA: STŘED HŘIŠTĚ
         if (gameState === 'center') {
-            const pMyMid = getActivePlayer(myPlayers, formations[myFormation].mid);
-            const pBotMid = getActivePlayer(botPlayers, formations[botFormation].mid);
+            const pMyMid = getActivePlayer(myPlayers, FORMATIONS_LAYOUT[myFormation].mid);
+            const pBotMid = getActivePlayer(botPlayers, FORMATIONS_LAYOUT[botFormation].mid);
             
             if (myMidP > botMidP) {
                 let thruChance = (activeTags.includes('super_vision') || activeTags.includes('vision_boost') || activeTags.includes('remote_ball')) ? 0.60 : 0.30;
@@ -187,8 +175,8 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
         } 
         // 2. ZÓNA: STŘED SOUPEŘOVA POLOVINA
         else if (gameState === 'away_mid') {
-            const pMyMid = getActivePlayer(myPlayers, formations[myFormation].mid);
-            const pBotMid = getActivePlayer(botPlayers, formations[botFormation].mid);
+            const pMyMid = getActivePlayer(myPlayers, FORMATIONS_LAYOUT[myFormation].mid);
+            const pBotMid = getActivePlayer(botPlayers, FORMATIONS_LAYOUT[botFormation].mid);
 
             if (Math.random() < 0.02 && !redCardedIds.includes(pBotMid.id)) {
                 redCardedIds.push(pBotMid.id);
@@ -217,8 +205,8 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
         }
         // 3. ZÓNA: STŘED MOJE POLOVINA
         else if (gameState === 'home_mid') {
-            const pMyMid = getActivePlayer(myPlayers, formations[myFormation].mid);
-            const pBotMid = getActivePlayer(botPlayers, formations[botFormation].mid);
+            const pMyMid = getActivePlayer(myPlayers, FORMATIONS_LAYOUT[myFormation].mid);
+            const pBotMid = getActivePlayer(botPlayers, FORMATIONS_LAYOUT[botFormation].mid);
 
             if (Math.random() < 0.02 && !redCardedIds.includes(pMyMid.id)) {
                 redCardedIds.push(pMyMid.id);
@@ -243,8 +231,8 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
         }
         // 4. ZÓNA: JEJICH OBRANA
         else if (gameState === 'away_def') {
-            const pMyAtt = getActivePlayer(myPlayers, formations[myFormation].att);
-            const pBotDef = getActivePlayer(botPlayers, formations[botFormation].def);
+            const pMyAtt = getActivePlayer(myPlayers, FORMATIONS_LAYOUT[myFormation].att);
+            const pBotDef = getActivePlayer(botPlayers, FORMATIONS_LAYOUT[botFormation].def);
 
             if (Math.random() < 0.03 && !redCardedIds.includes(pBotDef.id)) {
                 redCardedIds.push(pBotDef.id);
@@ -275,8 +263,8 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
         }
         // 5. ZÓNA: MOJE OBRANA
         else if (gameState === 'home_def') {
-            const pBotAtt = getActivePlayer(botPlayers, formations[botFormation].att);
-            const pMyDef = getActivePlayer(myPlayers, formations[myFormation].def);
+            const pBotAtt = getActivePlayer(botPlayers, FORMATIONS_LAYOUT[botFormation].att);
+            const pMyDef = getActivePlayer(myPlayers, FORMATIONS_LAYOUT[myFormation].def);
 
             if (activeTags.includes('long_clear') && Math.random() < 0.35) {
                 gameState = 'away_mid';
@@ -316,8 +304,8 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
         }
         // 6. ZÓNA: JEJICH VÁPNO
         else if (gameState === 'away_box') {
-            const pMyAtt = getActivePlayer(myPlayers, formations[myFormation].att);
-            const pBotGk = getActivePlayer(botPlayers, formations[botFormation].gk);
+            const pMyAtt = getActivePlayer(myPlayers, FORMATIONS_LAYOUT[myFormation].att);
+            const pBotGk = getActivePlayer(botPlayers, FORMATIONS_LAYOUT[botFormation].gk);
 
             if (activeTags.includes('hand_of_god') && Math.random() < 0.25) {
                 myGoals++; gameState = 'center';
@@ -358,8 +346,8 @@ function simulateMatch(mySectors, botSectors, myFormation, botFormation, myPlaye
         }
         // 7. ZÓNA: MOJE VÁPNO
         else if (gameState === 'home_box') {
-            const pBotAtt = getActivePlayer(botPlayers, formations[botFormation].att);
-            const pMyGk = getActivePlayer(myPlayers, formations[myFormation].gk);
+            const pBotAtt = getActivePlayer(botPlayers, FORMATIONS_LAYOUT[botFormation].att);
+            const pMyGk = getActivePlayer(myPlayers, FORMATIONS_LAYOUT[myFormation].gk);
 
             if (activeTags.includes('thou_shall_not_pass') && Math.random() < 0.25) {
                 gameState = 'away_mid';

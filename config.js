@@ -85,3 +85,18 @@ const PVE_DUNGEONS = [
         ]
     }
 ];
+
+// --- GLOBÁLNÍ DATA A NASTAVENÍ ---
+
+// Definice rozestavení hráčů na hřišti (Brankář, Obrana, Záloha, Útok)
+const FORMATIONS_LAYOUT = {
+    '4-4-2': { gk: [0, 1], def: [1, 5], mid: [5, 9], att: [9, 11] },
+    '4-3-3': { gk: [0, 1], def: [1, 5], mid: [5, 8], att: [8, 11] },
+    '5-4-1': { gk: [0, 1], def: [1, 6], mid: [6, 10], att: [10, 11] }
+};
+
+// Generátory jmen botů pro ligu (rozděleno podle úrovně)
+const BOT_TEAM_NAMES = {
+    village: ["Sokol Horní Lhota", "SK Prdelkovice", "FC Dřeváci", "Tatran Sedlčany", "Dynamo Vesnice", "AFK Bída", "Zoufalci United", "TJ Sokol Pěnčín", "Sokol Brozany", "FK Kolomaz", "SK Holomajzna", "Sokol Řeporyje", "FC Horní Nětčice", "FC Dolní Nětčice", "Mrlínek", "Hlinsko pod Hostýnem"],
+    pro: ["Baník Ostrava (B)", "Slavoj Žižkov", "FK Admira", "SK Slavia (B)", "Meteor Praha", "Slavoj Vyšehrad", "Sokol Hostivice", "FK Jablonec (B)", "SK Kladno", "FK Teplice (B)", "FC Graffin Vlašim", "1.FK Příbram", "FK Viktoria Žižkov"]
+};

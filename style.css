@@ -1036,6 +1036,527 @@ body {
     color: white;
 }
 
+/* --- SDÍLENÉ KOMPONENTY (Rozbalovací panely) --- */
+.collapsible-box {
+    margin-top: 20px;
+    background: rgba(0,0,0,0.4);
+    border: 2px solid #8d6e63; /* Výchozí hnědá barva */
+    border-radius: 8px;
+    padding: 10px;
+}
+
+/* Modrá varianta boxu */
+.collapsible-box.blue {
+    border-color: #3b82f6;
+}
+
+.collapsible-header {
+    color: #fdf5e6;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 5px;
+    text-align: center;
+    list-style: none; /* Skryje ošklivou výchozí šipku */
+}
+
+/* Společný styl pro informační text bez odsazení */
+.info-text-base {
+    margin: 0;
+    font-size: 1rem;
+}
+
+/* --- KANCELÁŘ --- */
+.office-stats-box {
+    text-align: right;
+    background: rgba(245, 158, 11, 0.2);
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #f59e0b;
+}
+
+.office-stats-label {
+    display: block;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: #fcd34d;
+}
+
+.office-stats-val {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #10b981;
+}
+
+.active-task-card {
+    background-color: #fdf5e6;
+    border: 3px solid #8d6e63;
+    border-radius: 10px;
+    padding: 25px;
+    max-width: 500px;
+    margin: 30px auto;
+    text-align: center;
+    box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
+}
+
+.active-task-title {
+    color: #1e3a8a;
+    margin-top: 0;
+    border-bottom: 2px solid #a1887f;
+    padding-bottom: 10px;
+}
+
+.active-task-flavor {
+    font-style: italic;
+    color: #5d4037;
+    font-size: 1.1rem;
+    margin: 20px 0;
+    line-height: 1.5;
+}
+
+/* Pomocná třída pro vycentrování nadpisů sekcí - využijeme ji u více obrazovek */
+.text-center {
+    text-align: center;
+}
+
+/* --- ŠATNA A SESTAVA --- */
+.formation-label {
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-right: 10px;
+}
+
+.formation-select {
+    padding: 6px 10px;
+    font-size: 1rem;
+    border-radius: 5px;
+    background-color: #fdf5e6;
+    color: #4e342e;
+    font-weight: bold;
+    border: 2px solid #8d6e63;
+    cursor: pointer;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.formation-hint {
+    font-style: italic;
+    color: #fcd34d;
+    margin: 0 0 10px 0;
+    font-size: 1.05rem;
+}
+
+/* Modifikátor pro sekci střídačky (tmavší) */
+.bench-section {
+    background-color: rgba(0,0,0,0.4);
+    border-color: #5d4037;
+    margin-top: 20px;
+}
+
+.bench-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #8d6e63;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.bench-title {
+    margin: 0;
+    color: #fdf5e6;
+}
+
+/* Tlačítka pro režim prodeje */
+.btn-sell-mode {
+    padding: 8px 15px;
+    font-weight: bold;
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+    transition: 0.2s;
+    color: white;
+}
+
+.btn-sell-inactive { background-color: #f59e0b; }
+.btn-sell-active { background-color: #ef4444; }
+
+.sell-warning-text {
+    text-align: center;
+    margin: 0 0 15px 0;
+    color: #fca5a5;
+    font-weight: bold;
+    background-color: rgba(220, 38, 38, 0.2);
+    padding: 5px;
+    border-radius: 4px;
+}
+
+/* Modifikátor pro zlatý rozbalovací box (Trezor) */
+.collapsible-box.gold {
+    border-color: #f59e0b;
+    margin-top: 30px;
+}
+
+/* Styly pro karty v trezoru */
+.inventory-card {
+    border-style: solid;
+    border-color: #8d6e63;
+    background: #fffbeb;
+    width: 180px;
+}
+
+.inventory-slot-empty {
+    width: 180px;
+    min-height: 80px;
+    border-style: dashed;
+    opacity: 0.5;
+}
+
+.inventory-item-name {
+    font-weight: bold;
+    color: #b45309;
+    font-size: 0.9rem;
+}
+
+.inventory-item-duration {
+    font-size: 0.75rem;
+    margin: 5px 0;
+}
+
+.btn-discard {
+    background: #ef4444;
+    border: none;
+    padding: 3px 8px;
+    font-size: 0.7rem;
+}
+.btn-discard:hover {
+    background: #dc2626;
+}
+
+/* --- STADION (ÚKLID) --- */
+.stadium-subtitle {
+    text-align: center;
+    color: white;
+    margin-bottom: 20px;
+}
+
+.active-build-container {
+    margin-bottom: 30px;
+}
+
+/* Zvýrazněný text pro bonusy budov */
+.building-bonus-text {
+    margin-bottom: 10px;
+    color: #b45309;
+    font-weight: bold;
+}
+
+/* Speciální box pro pokladnu obchodu */
+.shop-safe-box {
+    margin: 10px 0;
+    padding: 10px;
+    background: #f1f5f9;
+    border-radius: 5px;
+    border: 1px solid #cbd5e1;
+    text-align: center;
+}
+
+.shop-safe-amount {
+    color: #10b981;
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+.btn-collect-safe {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+    margin-top: 8px;
+    width: 100%;
+}
+
+/* Box pro budovy na maximálním levelu */
+.building-stats-maxed {
+    text-align: center;
+    background: #fef3c7;
+    border-color: #f59e0b;
+}
+
+.maxed-title {
+    color: #b45309;
+    font-weight: bold;
+}
+
+.maxed-desc {
+    font-size: 0.8rem;
+    margin: 5px 0 0 0;
+}
+
+/* --- SKAUTING (ÚKLID) --- */
+.scout-info-box {
+    max-width: 700px;
+}
+
+.scout-timer-text {
+    color: #f59e0b;
+    font-family: monospace;
+    font-size: 1.3rem;
+    font-weight: bold;
+}
+
+/* Rozbalovací box pro detaily pravděpodobností */
+.scout-details-box {
+    margin-top: 15px;
+    text-align: left;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid #8d6e63;
+    border-radius: 5px;
+    padding: 10px;
+}
+
+.scout-details-summary {
+    cursor: pointer;
+    color: #fcd34d;
+    font-weight: bold;
+    list-style: none;
+}
+
+.scout-odds-container {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: #e5e7eb;
+}
+
+.scout-odds-col {
+    flex: 1;
+}
+
+.scout-odds-title {
+    color: #60a5fa;
+    font-weight: bold;
+}
+
+.scout-odds-list {
+    margin: 5px 0;
+    padding-left: 20px;
+}
+
+.scout-note {
+    font-size: 0.8rem;
+    color: #9ca3af;
+    margin-top: 10px;
+    font-style: italic;
+}
+
+/* --- ZÁPASY A LIGA (ÚKLID) --- */
+.season-timer-box {
+    background: rgba(0,0,0,0.8);
+    color: #fcd34d;
+    padding: 8px 15px;
+    border-radius: 8px;
+    border: 1px solid #f59e0b;
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 0.9rem;
+}
+
+.season-timer-text {
+    font-family: monospace;
+    font-weight: bold;
+}
+
+.next-match-title {
+    margin-top: 0;
+    color: #fcd34d;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.vs-text-container {
+    font-size: 1.3rem;
+    margin: 15px 0;
+}
+
+/* Týmové barvy a odznáček VS */
+.team-home-text { color: #60a5fa; font-weight: bold; }
+.team-away-text { color: #ef4444; font-weight: bold; }
+.vs-badge { color: #9ca3af; font-size: 1rem; margin: 0 10px; font-weight: bold; }
+
+/* Řádek pro testovací tlačítka */
+.match-buttons-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 15px;
+}
+
+.match-buttons-row .btn-task {
+    flex: 1;
+    padding: 10px;
+}
+
+/* Specifické barvy pro testovací tlačítka */
+.btn-play-now { background-color: #ef4444; border-color: #b91c1c; }
+.btn-sim-season { background-color: #7c2d12; border-color: #450a0a; }
+
+.prepare-text {
+    font-size: 0.9rem;
+    color: #9ca3af;
+    margin-bottom: 15px;
+}
+
+/* Obal ligové tabulky */
+.league-table-wrapper {
+    border-radius: 8px;
+    overflow: hidden;
+    max-width: 800px;
+    margin: 0 auto;
+    border: 3px solid #8d6e63;
+    box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
+}
+
+/* Dynamické barvy pro tabulku */
+.table-pos-up { color: #166534; }
+.table-pos-down { color: #dc2626; }
+
+/* --- PODZEMÍ (PvE) - ÚKLID --- */
+.pve-unread-banner-text {
+    font-size: 1.1rem;
+    line-height: 1.5;
+    font-weight: normal;
+}
+
+.pve-dungeon-description {
+    color: #fdf5e6;
+    font-style: italic;
+    background: rgba(0,0,0,0.5);
+    padding: 10px;
+    border-radius: 5px;
+    max-width: 600px;
+    margin: 0 auto 20px auto;
+}
+
+.pve-stage-card {
+    max-width: 600px;
+    margin: 0 auto;
+    background: rgba(0,0,0,0.8);
+    border-radius: 10px;
+    padding: 25px;
+    border: 3px solid #8d6e63;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+
+/* Speciální styl pro Boss karty */
+.pve-stage-card.is-boss {
+    border-color: #ef4444;
+}
+
+.pve-card-header {
+    text-align: center;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pve-badge {
+    color: white;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.pve-badge.normal { background: #4b5563; }
+.pve-badge.boss { background: #ef4444; }
+
+.pve-opponent-title {
+    text-align: center;
+    font-size: 1.8rem;
+    margin: 0 0 10px 0;
+}
+
+.pve-reward-box {
+    background: rgba(255,255,255,0.1);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.pve-reward-header {
+    color: #10b981;
+    margin: 0 0 10px 0;
+    text-align: center;
+}
+
+.pve-cooldown-box {
+    background: rgba(0,0,0,0.5);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.pve-cooldown-label {
+    color: #9ca3af;
+    margin: 0 0 10px 0;
+}
+
+.pve-warning-box {
+    background: #fee2e2;
+    color: #b91c1c;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    font-weight: bold;
+    border: 1px solid #ef4444;
+}
+
+/* --- SKAUTING SOUPEŘE V LIZE (ÚKLID) --- */
+.opponent-scout-header {
+    text-align: center;
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.btn-back-absolute {
+    position: absolute;
+    left: 0;
+    top: 0;
+    padding: 10px 20px;
+    background: #4e342e;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.btn-back-absolute:hover {
+    background: #3e2723;
+}
+
+.opponent-hint-box {
+    background-color: rgba(0, 0, 0, 0.85);
+    color: #fdf5e6;
+    padding: 15px;
+    border-radius: 8px;
+    border: 2px solid #ef4444;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.opponent-hint-title {
+    margin: 0;
+    color: #fca5a5;
+}
+
+.opponent-hint-text {
+    margin: 5px 0 0 0;
+    font-size: 0.9rem;
+}
+
 /* ============================================================
    RESPONZIVITA - MOBILNÍ VERZE (Obrazovky pod 768px)
    ============================================================ */
