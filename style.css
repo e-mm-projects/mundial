@@ -1178,4 +1178,19 @@ body {
         width: 100% !important;
         max-width: 350px !important;
     }
+    /* Zmenšení a vycentrování bloku s koncem sezóny */
+    .resource:last-child {
+        grid-column: span 2;
+        background: rgba(245, 158, 11, 0.15);
+        margin-left: 0 !important; /* Vyruší to obří 30px odsazení z HTML */
+        padding: 5px !important;
+        border-left: none !important;
+        font-size: 0.9rem; /* Lehce menší text */
+    }
+
+    /* Schováme oranžové a červené testovací tlačítko na mobilu */
+    #top-bar .resource button {
+        display: none !important;
+    }
+
 }

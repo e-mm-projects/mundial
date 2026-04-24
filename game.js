@@ -1461,7 +1461,7 @@ window.checkOfflineProgress = function() {
     }
 }
 
-function simulateOfflineMatch() {
+function simulateOfflineMatch(matchTime) {
     const allTeams = [...playerData.league];
     const myTeam = allTeams.find(t => t.isPlayer);
     const bots = allTeams.filter(t => !t.isPlayer);
