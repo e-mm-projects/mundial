@@ -188,12 +188,20 @@ function initGame() {
         }
     }
 
-    if (!playerData.formation) playerData.formation = '4-4-2';
     if (!playerData.players || playerData.players.length === 0) {
         playerData.players = [];
-        for (let i = 0; i < 16; i++) {
-            playerData.players.push(generatePlayer(true)); 
-        }
+        
+        // --- ZÁKLADNÍ SESTAVA PRO 4-4-2 (Indexy 0 až 10) ---
+        playerData.players.push(generatePlayer(true, 'gk')); // Index 0: Brankář
+        for (let i = 0; i < 4; i++) playerData.players.push(generatePlayer(true, 'def')); // Index 1-4: Obránci
+        for (let i = 0; i < 4; i++) playerData.players.push(generatePlayer(true, 'mid')); // Index 5-8: Záložníci
+        for (let i = 0; i < 2; i++) playerData.players.push(generatePlayer(true, 'att')); // Index 9-10: Útočníci
+        
+        // --- STŘÍDAČKA (Zbytek do 14 hráčů) ---
+        playerData.players.push(generatePlayer(true, 'def'));
+        playerData.players.push(generatePlayer(true, 'mid'));
+        playerData.players.push(generatePlayer(true, 'att'));
+        
         saveGame();
     }
 
@@ -247,7 +255,6 @@ function initGame() {
             selectAvatar('images/avatar1.jpg'); 
         }
     } else {
-        // --- ZDE JE PŘIDANÝ KÓD ---
         // Než se načte uživatelské rozhraní, hra zkontroluje, jestli jsi nechyběl u zápasů
         checkOfflineProgress();
         refreshDailyShop(); 
@@ -647,16 +654,21 @@ function getPlayerPrice(player) {
     return priceTable[powerLevel] || 500000;
 }
 
-function generatePlayer(isStarter = false) {
-    let stars = 0;
+function generatePlayer(isStarter = false, forcedPosition = null) {
+    // 1. URČENÍ POZICE
+    const positions = ['att', 'mid', 'def', 'gk'];
+    const position = forcedPosition || positions[Math.floor(Math.random() * positions.length)];
     
-    // --- GENERACE HVĚZD --- //
+    // 2. NÁRODNOST
+    const nat = NATIONALITIES[Math.floor(Math.random() * NATIONALITIES.length)];
+
+    // 3. HVĚZDY (Tady zůstává tvá původní logika)
+    let stars = 0;
     if (isStarter) {
         stars = Math.random() > 0.15 ? 0 : 1;
     } else {
         const scoutLevel = (playerData.buildings && playerData.buildings.scout) ? playerData.buildings.scout : 1;
         const roll = Math.random() + ((scoutLevel - 1) * 0.005); 
-        
         if (roll >= 0.98) stars = 5;       
         else if (roll >= 0.90) stars = 4;  
         else if (roll >= 0.75) stars = 3;  
@@ -665,7 +677,7 @@ function generatePlayer(isStarter = false) {
         else stars = 0;                    
     }
 
-    // --- GENERACE RANKU (Podle tvé tabulky pravděpodobnosti) ---
+    // --- 4. GENERACE RANKU (Podle tvé tabulky pravděpodobnosti) ---
     const currentDiv = playerData.division || 10; 
     let rankIndex = 0;
     
@@ -714,31 +726,35 @@ function generatePlayer(isStarter = false) {
     }
 
     const selectedRank = PLAYER_RANKS[rankIndex];
-    const minStart = selectedRank.minStart || 1;
-    const maxStart = selectedRank.maxStart || 10;
+    const minS = selectedRank.minStart || 1;
+    const maxS = selectedRank.maxStart || 10;
 
-    // --- VYTVOŘENÍ OBJEKTU HRÁČE ---
+// 5. GENERACE STATISTIK (Pouze ty, které pozice potřebuje!)
+    const stats = {};
+    const allowedStats = POSITION_STATS[position].stats;
+    
+    // Všechny možné staty vynulujeme
+    ['atk', 'def', 'spd', 'str', 'eng', 'gk', 'tek'].forEach(s => stats[s] = 0);
+    
+    // Pouze těm povoleným dáme hodnotu
+    allowedStats.forEach(s => {
+        stats[s] = Math.min(selectedRank.cap, Math.floor(Math.random() * (maxS - minS + 1)) + minS);
+    });
+
     return {
         id: 'p_' + Math.random().toString(36).substr(2, 9),
         name: `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`,
-        
+        position: position,
+        nationality: nat.name,
+        flag: nat.flag,
         rank: selectedRank.name,
         statCap: selectedRank.cap, 
         stars: stars,
         level: 1,           
-        maxLevel: stars === 0 ? 1 : stars * 5, // Bez hvězd je strop vždy 1
+        maxLevel: stars === 0 ? 1 : stars * 5,
         xp: 0,
         unspentPoints: 0,
-        
-        stats: {
-            atk: Math.min(selectedRank.cap, Math.floor(Math.random() * (maxStart - minStart + 1)) + minStart),
-            def: Math.min(selectedRank.cap, Math.floor(Math.random() * (maxStart - minStart + 1)) + minStart),
-            spd: Math.min(selectedRank.cap, Math.floor(Math.random() * (maxStart - minStart + 1)) + minStart),
-            str: Math.min(selectedRank.cap, Math.floor(Math.random() * (maxStart - minStart + 1)) + minStart),
-            eng: Math.min(selectedRank.cap, Math.floor(Math.random() * (maxStart - minStart + 1)) + minStart),
-            gk:  Math.min(selectedRank.cap, Math.floor(Math.random() * (maxStart - minStart + 1)) + minStart),
-            tek: Math.min(selectedRank.cap, Math.floor(Math.random() * (maxStart - minStart + 1)) + minStart)
-        }
+        stats: stats
     };
 }
 
@@ -920,20 +936,11 @@ window.toggleSellMode = function() {
 window.handlePlayerClick = function(index) {
     if (isSellMode) {
         const playerToSell = playerData.players[index];
-        let activeFormations = [];
-        for (const form in playerData.presets) {
-            const presetIds = playerData.presets[form];
-            const playerIndexInPreset = presetIds.indexOf(playerToSell.id);
-            if (playerIndexInPreset !== -1 && playerIndexInPreset < 11) {
-                activeFormations.push(form);
-            }
-        }
-
-        if (activeFormations.length > 0) {
-            alert(`Tohoto hráče nelze prodat! Nastupuje v základní sestavě pro formace: ${activeFormations.join(', ')}.`);
+        // Pokud klikneš na hráče na hřišti (index 0 až 10), nedovolí prodej
+        if (index < 11) {
+            alert("Hráče ze základní sestavy nelze prodat! Nejdříve ho přesuň na střídačku.");
             return;
         }
-        
         const sellPrice = Math.floor(getPlayerPrice(playerToSell) / 2);
         
         if (confirm(`Opravdu chceš vyhodit hráče ${playerToSell.name} z klubu? Dostaneš za něj ${sellPrice} Peněz.`)) {
@@ -953,12 +960,47 @@ window.handlePlayerClick = function(index) {
     } else if (selectedPlayerIndex === index) {
         selectedPlayerIndex = null;
     } else {
+        // --- LOGIKA ZÁKAZU PŘESUNU MEZI POZICEMI ---
+        const playerA = playerData.players[selectedPlayerIndex];
+        const playerB = playerData.players[index];
+
+        // Pomocná funkce pro zjištění vyžadované pozice slotu
+        const getRequiredPos = (idx) => {
+            if (idx >= 11) return null; // Střídačka nemá omezení
+            const layout = FORMATIONS_LAYOUT[playerData.formation];
+            if (idx >= layout.gk[0] && idx < layout.gk[1]) return 'gk';
+            if (idx >= layout.def[0] && idx < layout.def[1]) return 'def';
+            if (idx >= layout.mid[0] && idx < layout.mid[1]) return 'mid';
+            if (idx >= layout.att[0] && idx < layout.att[1]) return 'att';
+            return null;
+        };
+
+        const reqPosTarget = getRequiredPos(index);
+        const reqPosSource = getRequiredPos(selectedPlayerIndex);
+
+        // Kontrola pro cílový slot (kam klikáme)
+        if (reqPosTarget && playerA.position !== reqPosTarget) {
+            alert(`Tento slot vyžaduje pozici: ${POSITION_STATS[reqPosTarget].label}. ${playerA.name} je ${POSITION_STATS[playerA.position].label}.`);
+            selectedPlayerIndex = null;
+            renderLockerRoom();
+            return;
+        }
+
+        // Kontrola pro zdrojový slot (pokud prohazujeme dva hráče na hřišti)
+        if (reqPosSource && playerB && playerB.position !== reqPosSource) {
+            alert(`Tento slot vyžaduje pozici: ${POSITION_STATS[reqPosSource].label}. ${playerB.name} je ${POSITION_STATS[playerB.position].label}.`);
+            selectedPlayerIndex = null;
+            renderLockerRoom();
+            return;
+        }
+
+        // Pokud kontroly prošly, prohodíme je
         const temp = playerData.players[selectedPlayerIndex];
         playerData.players[selectedPlayerIndex] = playerData.players[index];
         playerData.players[index] = temp;
         selectedPlayerIndex = null;
         
-        playerData.presets[playerData.formation] = playerData.players.map(p => p.id);
+        if (playerData.presets) playerData.presets[playerData.formation] = playerData.players.map(p => p.id);
         saveGame();
     }
     renderLockerRoom();
@@ -986,8 +1028,8 @@ function generateScoutedPlayers() {
 }
 
 window.buyPlayer = function(index, price) {
-    if (playerData.players.length >= 16) {
-        alert("Máš plnou střídačku (16/16)! Než koupíš dalšího hráče, musíš jít do Šatny a někoho prodat.");
+    if (playerData.players.length >= 18) {
+        alert("Máš plnou střídačku (18/18)! Než koupíš dalšího hráče, musíš jít do Šatny a někoho prodat.");
         return;
     }
 

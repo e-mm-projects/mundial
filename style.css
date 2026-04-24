@@ -307,9 +307,36 @@ body {
 .player-name {
     font-weight: bold;
     font-size: 1.1rem;
-    margin-bottom: 5px;
+    margin-bottom: 2px;
     color: #1e3a8a;
-    border-bottom: 1px solid #ccc;
+    text-align: center;
+    border-bottom: 2px solid rgba(0,0,0,0.1); /* Podtržení jména */
+}
+
+.player-position-row {
+    text-align: center;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    padding: 3px 0;
+    margin-bottom: 5px;
+    border-bottom: 1px solid rgba(0,0,0,0.1); /* Podtržení pozice */
+    color: #374151;
+}
+
+.player-info-line {
+    font-size: 0.85rem;
+    color: #4b5563;
+    text-align: center;
+    margin-bottom: 3px;
+}
+
+.player-rank-text {
+    font-size: 0.8rem;
+    font-style: italic;
+    color: #6b7280;
+    text-align: center;
+    margin-bottom: 5px;
 }
 
 .player-stars {
@@ -329,12 +356,19 @@ body {
     margin-top: 5px;
 }
 
-.stat-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 2px 5px;
+/* Decentní "vytažení" statistik místo zeleného podbarvení */
+.stat-item.highlighted {
+    background-color: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(0,0,0,0.05);
     border-radius: 4px;
-    border: 1px solid transparent;
+    box-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+    font-weight: normal;
+    color: inherit;
+}
+
+.stat-item.highlighted span {
+    color: #1e3a8a; /* Hodnota statu bude výraznější modrá */
+    font-weight: bold;
 }
 
 .stat-item span {
@@ -342,13 +376,6 @@ body {
     color: #d84315;
 }
 
-/* Styl pro zvýrazněné atributy podle pozice na hřišti */
-.stat-item.highlighted {
-    background-color: #dcfce7; /* Světle zelená */
-    border-color: #bbf7d0;
-    color: #166534;
-    font-weight: bold;
-}
 
 /* --- XP LIŠTA (Progress bar) --- */
 .xp-bar-container {
@@ -1555,6 +1582,52 @@ body {
 .opponent-hint-text {
     margin: 5px 0 0 0;
     font-size: 0.9rem;
+}
+
+/* --- POŠTA (DOPLNĚNÍ ÚKLIDU) --- */
+.mail-empty-text {
+    color: white;
+    margin-top: 20px;
+}
+
+.mail-msg-title {
+    font-size: 1.1rem;
+}
+
+.mail-msg-date {
+    font-size: 0.8rem;
+    color: #8d6e63;
+}
+
+.mail-msg-score-text {
+    font-weight: bold;
+}
+
+/* Tlačítka pro přehrání záznamu */
+.btn-replay-read {
+    background-color: #4b5563;
+    border-color: #374151;
+    padding: 5px 15px;
+}
+
+.btn-replay-unread {
+    background-color: #166534;
+    border-color: #14532d;
+    padding: 5px 15px;
+}
+
+/* --- BARVY KARET PODLE POZIC --- */
+.player-card.pos-att { background-color: #fee2e2 !important; border-color: #f87171; } /* Světle červená */
+.player-card.pos-mid { background-color: #e0f2fe !important; border-color: #7dd3fc; } /* Světle modrá */
+.player-card.pos-def { background-color: #f0fdf4 !important; border-color: #86efac; } /* Světle zelená */
+.player-card.pos-gk  { background-color: #ffffff !important; border-color: #d1d5db; } /* Bílá */
+
+/* Styl pro národnost na kartě */
+.player-nationality {
+    font-size: 0.8rem;
+    color: #6b7280;
+    text-align: center;
+    margin-bottom: 5px;
 }
 
 /* ============================================================

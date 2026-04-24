@@ -1,5 +1,7 @@
 // --- TRÉNINKOVÉ HŘIŠTĚ ---
 function renderTraining() {
+    let html = '';
+    const statLabels = { atk: 'Útok', def: 'Obrana', spd: 'Rychlost', str: 'Síla', eng: 'Výdrž', tek: 'Technika', gk: 'Brankář' };
     const mainContent = document.getElementById('main-content');
 
     // 1. Rozdělíme hráče do 3 přesných kategorií
@@ -16,6 +18,7 @@ function renderTraining() {
     // Pomocná funkce pro vykreslení karty v tréninku
     const createTrainingCard = (player) => {
         const starsHtml = player.stars > 0 ? '⭐'.repeat(player.stars) : '<span>&nbsp;</span>';
+        const posConfig = POSITION_STATS[player.position];
         
         let xpPercentage = 100;
         if (player.maxLevel > 0 && player.level < player.maxLevel) {
@@ -23,7 +26,6 @@ function renderTraining() {
             xpPercentage = Math.floor((player.xp / requiredXp) * 100);
         }
 
-        // Pokud hráč nemá hvězdy, schováme XP bar a ukážeme červený text
         const xpBarHtml = player.stars > 0 
             ? `<div class="xp-bar-container"><div class="xp-bar-fill ${player.level >= player.maxLevel ? 'maxed' : ''}" style="width: ${xpPercentage}%;"></div></div>` 
             : `<div style="text-align: center; font-size: 0.8rem; color: #ef4444; margin: 8px 0; font-weight: bold;">[Bez talentu]</div>`;
@@ -48,10 +50,15 @@ function renderTraining() {
         };
 
         return `
-            <div class="player-card" style="cursor: default; border-color: ${player.unspentPoints > 0 ? '#10b981' : '#a1887f'};">
+            <div class="player-card ${posConfig.colorClass}" style="cursor: default; border-width: 2px;">
                 <div class="player-name">${player.name}</div>
-                <div style="font-size: 0.85rem; color: #4b5563; text-align: center; margin-bottom: 2px;">[${player.rank}] ${getPlayerLevelText(player)}</div>
-                <div class="player-stars">${starsHtml}</div>
+                <div class="player-position-row">${posConfig.label}</div>
+                
+                <div class="player-info-line">
+                    <span style="font-style: italic; color: #6b7280;">${player.rank}</span> | ${getPlayerLevelText(player)} ${starsHtml}
+                </div>
+
+                <div class="player-nationality">Národnost: ${player.nationality}</div>
                 
                 ${xpBarHtml}
                 
@@ -60,13 +67,7 @@ function renderTraining() {
                 </div>
 
                 <div style="text-align: left; font-size: 0.9rem;">
-                    ${renderStatRow('atk', 'Útok')}
-                    ${renderStatRow('def', 'Obrana')}
-                    ${renderStatRow('spd', 'Rychlost')}
-                    ${renderStatRow('str', 'Síla')}
-                    ${renderStatRow('eng', 'Výdrž')}
-                    ${renderStatRow('tek', 'Technika')}
-                    ${renderStatRow('gk', 'Brankář')}
+                    ${posConfig.stats.map(s => renderStatRow(s, statLabels[s])).join('')}
                 </div>
             </div>
         `;
@@ -468,7 +469,7 @@ function renderLockerRoom() {
                 </button>
             </div>
             ${isSellMode ? '<p class="sell-warning-text">Klikni na hráče, kterého chceš vyhodit z klubu.</p>' : ''}
-            <div class="player-list">${renderPlayerGroup(11, 16, 'bench')}</div>
+            <div class="player-list">${renderPlayerGroup(11, 18, 'bench')}</div>
         </div>
     `;
 
@@ -520,12 +521,9 @@ function renderLockerRoom() {
 
 function renderPlayerGroup(startIndex, endIndex, role) {
     let html = '';
-    const checkHighlight = (statName, currentRole) => {
-        if (currentRole === 'att' && ['atk', 'spd', 'tek', 'eng'].includes(statName)) return 'highlighted';
-        if (currentRole === 'mid' && ['atk', 'def', 'spd', 'tek', 'eng'].includes(statName)) return 'highlighted';
-        if (currentRole === 'def' && ['def', 'str', 'spd', 'eng'].includes(statName)) return 'highlighted';
-        if (currentRole === 'gk'  && ['gk', 'tek', 'def', 'spd'].includes(statName)) return 'highlighted';
-        return ''; 
+    const statLabels = {
+        atk: 'Útok', def: 'Obrana', spd: 'Rychlost', 
+        str: 'Síla', eng: 'Výdrž', tek: 'Technika', gk: 'Brankář'
     };
 
     for (let i = startIndex; i < endIndex; i++) {
@@ -539,29 +537,31 @@ function renderPlayerGroup(startIndex, endIndex, role) {
         }
 
         const player = playerData.players[i];
-        const isSellTarget = (isSellMode && i >= 11) ? 'border-color: #ef4444; background-color: #fee2e2;' : '';
+        const posConfig = POSITION_STATS[player.position];
         const isSelected = selectedPlayerIndex === i ? 'selected' : '';
         const starsHtml = player.stars > 0 ? '⭐'.repeat(player.stars) : '<span>&nbsp;</span>';
-        
-        let baseValue = player.statCap * 10; 
         const sellPrice = Math.floor(getPlayerPrice(player) / 2);
         
         html += `
-            <div class="player-card ${isSelected}" style="${isSellTarget}" onclick="handlePlayerClick(${i})">
+            <div class="player-card ${posConfig.colorClass} ${isSelected}" onclick="handlePlayerClick(${i})">
                 <div class="player-name">${player.name}</div>
-                <div style="font-size: 0.85rem; color: #4b5563; text-align: center;">[${player.rank}] ${getPlayerLevelText(player)}</div>
-                <div class="player-stars">${starsHtml}</div>
                 
-                <div class="price-tag sell">Prodat za: ${sellPrice} 💰</div>
+                <div class="player-position-row">${posConfig.label}</div>
+                
+                <div class="player-info-line">
+                    <span style="font-style: italic; color: #6b7280;">${player.rank}</span> | ${getPlayerLevelText(player)} ${starsHtml}
+                </div>
+                
+                <div class="player-nationality">Národnost: ${player.nationality}</div>
+
+                ${isSellMode ? `<div class="price-tag sell">Prodat za: ${sellPrice} 💰</div>` : ''}
 
                 <div class="player-stats">
-                    <div class="stat-item ${checkHighlight('atk', role)}">Útok: <span>${player.stats.atk}</span></div>
-                    <div class="stat-item ${checkHighlight('def', role)}">Obrana: <span>${player.stats.def}</span></div>
-                    <div class="stat-item ${checkHighlight('spd', role)}">Rychlost: <span>${player.stats.spd}</span></div>
-                    <div class="stat-item ${checkHighlight('str', role)}">Síla: <span>${player.stats.str}</span></div>
-                    <div class="stat-item ${checkHighlight('eng', role)}">Výdrž: <span>${player.stats.eng}</span></div>
-                    <div class="stat-item ${checkHighlight('tek', role)}">Technika: <span>${player.stats.tek}</span></div>
-                    <div class="stat-item ${checkHighlight('gk', role)}">Brankář: <span>${player.stats.gk}</span></div>
+                    ${posConfig.stats.map(statKey => `
+                        <div class="stat-item highlighted">
+                            ${statLabels[statKey]}: <span>${player.stats[statKey]}</span>
+                        </div>
+                    `).join('')}
                 </div>
             </div>
         `;
@@ -604,25 +604,32 @@ function renderScouting() {
 
     const playersHtml = playerData.scoutedPlayers.map((player, index) => {
         const starsHtml = player.stars > 0 ? '⭐'.repeat(player.stars) : '<span>&nbsp;</span>';
+        const posConfig = POSITION_STATS[player.position];
         const price = getPlayerPrice(player);
         const canAfford = playerData.money >= price;
         
+        // Převodník popisků (pokud ho nemáš globálně, definuj ho i zde)
+        const statLabels = { atk: 'Útok', def: 'Obrana', spd: 'Rychlost', str: 'Síla', eng: 'Výdrž', tek: 'Technika', gk: 'Brankář' };
+
         return `
-            <div class="player-card">
+            <div class="player-card ${posConfig.colorClass}">
                 <div class="player-name">${player.name}</div>
-                <div style="font-size: 0.85rem; color: #4b5563; text-align: center;">[${player.rank}] ${getPlayerLevelText(player)}</div>
-                <div class="player-stars">${starsHtml}</div>
+                <div class="player-position-row">${posConfig.label}</div>
+                
+                <div class="player-info-line">
+                    <span style="font-style: italic; color: #6b7280;">${player.rank}</span> | ${getPlayerLevelText(player)} ${starsHtml}
+                </div>
+
+                <div class="player-nationality">Národnost: ${player.nationality}</div>
                 
                 <div class="price-tag buy">Cena: ${price} 💰</div>
 
                 <div class="player-stats">
-                    <div class="stat-item">Útok: <span>${player.stats.atk}</span></div>
-                    <div class="stat-item">Obrana: <span>${player.stats.def}</span></div>
-                    <div class="stat-item">Rychlost: <span>${player.stats.spd}</span></div>
-                    <div class="stat-item">Síla: <span>${player.stats.str}</span></div>
-                    <div class="stat-item">Výdrž: <span>${player.stats.eng}</span></div>
-                    <div class="stat-item">Technika: <span>${player.stats.tek}</span></div>
-                    <div class="stat-item">Brankář: <span>${player.stats.gk}</span></div>
+                    ${posConfig.stats.map(s => `
+                        <div class="stat-item highlighted">
+                            ${statLabels[s]}: <span>${player.stats[s]}</span>
+                        </div>
+                    `).join('')}
                 </div>
                 <button class="btn-upgrade" style="width: 100%; margin-top: 10px;" onclick="buyPlayer(${index}, ${price})" ${!canAfford ? 'disabled' : ''}>Koupit</button>
             </div>
@@ -796,15 +803,15 @@ function renderMail() {
     
     if (!playerData.mail || playerData.mail.length === 0) {
         mainContent.innerHTML = `
-            <div style="text-align: center;">
+            <div class="text-center">
                 <h2 class="section-title">Pošta</h2>
-                <p style="color: white; margin-top: 20px;">Schránka je zatím prázdná, trenére.</p>
+                <p class="mail-empty-text">Schránka je zatím prázdná, trenére.</p>
             </div>`;
         return;
     }
 
     mainContent.innerHTML = `
-        <div style="text-align: center;">
+        <div class="text-center">
             <h2 class="section-title">Doručená pošta</h2>
         </div>
         <div class="mail-container">
@@ -814,35 +821,34 @@ function renderMail() {
                 const btnText = m.read ? 'Znovu přehrát' : '▶ Přehrát zápas';
                 const unreadClass = m.read ? '' : 'unread';
 
-                // --- VÝPOČET BAREV (Změněno pouze toto) ---
-                let borderColor = '#9a9f05'; // Výchozí pro nepřečtené (Oranžová)
-                let scoreColor = '#9a9f05';  // Výchozí pro nepřečtené (Oranžová)
+                // Výpočet barev necháváme inline, protože se dynamicky mění podle výsledku
+                let borderColor = '#9a9f05'; 
+                let scoreColor = '#9a9f05';  
 
-                if (m.read) {
-                    if (m.result && m.result.includes(':')) {
-                        const [myGoals, botGoals] = m.result.split(':').map(Number);
-                        if (myGoals > botGoals) {
-                            borderColor = '#10b981'; // Zelená výhra
-                            scoreColor = '#166534';
-                        } else if (myGoals < botGoals) {
-                            borderColor = '#ef4444'; // Červená prohra
-                            scoreColor = '#b91c1c';
-                        } else {
-                            borderColor = '#6b7280'; // Šedá remíza
-                            scoreColor = '#4b5563';
-                        }
+                if (m.read && m.result && m.result.includes(':')) {
+                    const [myGoals, botGoals] = m.result.split(':').map(Number);
+                    if (myGoals > botGoals) {
+                        borderColor = '#10b981';
+                        scoreColor = '#166534';
+                    } else if (myGoals < botGoals) {
+                        borderColor = '#ef4444';
+                        scoreColor = '#b91c1c';
+                    } else {
+                        borderColor = '#6b7280';
+                        scoreColor = '#4b5563';
                     }
                 }
+
+                const btnClass = m.read ? 'btn-replay-read' : 'btn-replay-unread';
 
                 return `
                 <div class="mail-message ${unreadClass}" style="border-left-color: ${borderColor};">
                     <div>
-                        <strong style="font-size: 1.1rem;">${m.subject}</strong> 
-                        <span style="font-size: 0.8rem; color: #8d6e63;">(${m.date})</span>
-                        <br><span style="color: ${scoreColor}; font-weight: bold;">${scoreText}</span>
+                        <strong class="mail-msg-title">${m.subject}</strong> 
+                        <span class="mail-msg-date">(${m.date})</span>
+                        <br><span class="mail-msg-score-text" style="color: ${scoreColor};">${scoreText}</span>
                     </div>
-                    <button class="btn-task" onclick="openMatchReport(${index})" 
-                        style="padding: 5px 15px; background-color: ${m.read ? '#4b5563' : '#166534'}; border-color: ${m.read ? '#374151' : '#14532d'};">
+                    <button class="btn-task ${btnClass}" onclick="openMatchReport(${index})">
                         ${btnText}
                     </button>
                 </div>
@@ -1029,42 +1035,45 @@ window.viewBotTeam = function(teamName) {
     const botTeam = playerData.league.find(t => t.name === teamName);
     if (!botTeam || botTeam.isPlayer) return;
 
-    // Dočasně podstrčíme hráče bota do playerData.players, aby fungovala funkce renderPlayerGroup
-    const originalPlayers = playerData.players;
-    playerData.players = botTeam.players;
-
-    // Využíváme náš config!
     const layout = FORMATIONS_LAYOUT[botTeam.formation];
+
+    // Místo přepisování playerData.players vytvoříme dočasnou funkci jen pro toto zobrazení
+    const renderBotGroup = (startIndex, endIndex, players) => {
+        let html = '';
+        const statLabels = { atk: 'Útok', def: 'Obrana', spd: 'Rychlost', str: 'Síla', eng: 'Výdrž', tek: 'Technika', gk: 'Brankář' };
+
+        for (let i = startIndex; i < endIndex; i++) {
+            const player = players[i];
+            if (!player) continue;
+            const posConfig = POSITION_STATS[player.position];
+            
+            html += `
+                <div class="player-card ${posConfig.colorClass}">
+                    <div class="player-name">${player.name}</div>
+                    <div class="player-position-row">${posConfig.label}</div>
+                    
+                    <div class="player-info-line">
+                        <span style="font-style: italic; color: #6b7280;">${player.rank}</span> | Lvl.${player.level} ${'⭐'.repeat(player.stars)}
+                    </div>
+                    
+                    <div class="player-stats">
+                        ${posConfig.stats.map(s => `<div class="stat-item highlighted">${statLabels[s]}: <span>${player.stats[s]}</span></div>`).join('')}
+                    </div>
+                </div>`;
+        }
+        return html;
+    };
 
     mainContent.innerHTML = `
         <div class="opponent-scout-header">
             <button class="btn-back-absolute" onclick="renderMatches()">⬅ Zpět na Zápasy</button>
             <h2 class="section-title">Skauting soupeře: ${botTeam.name}</h2>
-            <div class="opponent-hint-box">
-                <h3 class="opponent-hint-title">Odhalená formace: ${botTeam.formation}</h3>
-                <p class="opponent-hint-text">Přizpůsob svou formaci v Šatně, abys získal taktickou výhodu +10 %!</p>
-            </div>
         </div>
-        <div class="pitch-section">
-            <h3 class="pitch-role-title">Útočníci</h3>
-            <div class="player-list">${renderPlayerGroup(layout.att[0], layout.att[1], 'att')}</div>
-        </div>
-        <div class="pitch-section">
-            <h3 class="pitch-role-title">Záložníci</h3>
-            <div class="player-list">${renderPlayerGroup(layout.mid[0], layout.mid[1], 'mid')}</div>
-        </div>
-        <div class="pitch-section">
-            <h3 class="pitch-role-title">Obránci</h3>
-            <div class="player-list">${renderPlayerGroup(layout.def[0], layout.def[1], 'def')}</div>
-        </div>
-        <div class="pitch-section">
-            <h3 class="pitch-role-title">Brankář</h3>
-            <div class="player-list">${renderPlayerGroup(layout.gk[0], layout.gk[1], 'gk')}</div>
-        </div>
+        <div class="pitch-section"><h3 class="pitch-role-title">Útočníci</h3><div class="player-list">${renderBotGroup(layout.att[0], layout.att[1], botTeam.players)}</div></div>
+        <div class="pitch-section"><h3 class="pitch-role-title">Záložníci</h3><div class="player-list">${renderBotGroup(layout.mid[0], layout.mid[1], botTeam.players)}</div></div>
+        <div class="pitch-section"><h3 class="pitch-role-title">Obránci</h3><div class="player-list">${renderBotGroup(layout.def[0], layout.def[1], botTeam.players)}</div></div>
+        <div class="pitch-section"><h3 class="pitch-role-title">Brankář</h3><div class="player-list">${renderBotGroup(layout.gk[0], layout.gk[1], botTeam.players)}</div></div>
     `;
-
-    // Vrátíme zpět tvé skutečné hráče
-    playerData.players = originalPlayers;
 }
 
 // --- ZOBRAZENÍ DETAILU SOUPEŘE V PODZEMÍ ---

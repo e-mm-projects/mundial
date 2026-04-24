@@ -1,6 +1,6 @@
 function calculateSectorStrength(players, formation, isPrepared = false) {
     const sectors = { mid: 0, att: 0, def: 0, gk: 0 };
-    const counts = { mid: 0, att: 0, def: 0, gk: 0 }; // Nové: počítadlo hráčů v sektoru
+    const counts = { mid: 0, att: 0, def: 0, gk: 0 }; 
     const layout = FORMATIONS_LAYOUT[formation];
 
     // --- BONUS ZA TRÁVNÍK ---
@@ -8,34 +8,37 @@ function calculateSectorStrength(players, formation, isPrepared = false) {
     const pitchBonus = 1 + (pitchLevel * 0.01); // 1 % za každý level
 
     players.slice(0, 11).forEach((p, index) => {
-        // Vytvoříme si pro výpočet "naboostovanou" rychlost
-        const effectiveSpd = p.stats.spd * pitchBonus;
+        const stats = p.stats;
+        // Rychlost ovlivněná trávníkem
+        const effSpd = stats.spd * pitchBonus;
 
         if (index >= layout.gk[0] && index < layout.gk[1]) {
-            sectors.gk += (p.stats.gk * 1.2) + p.stats.tek + p.stats.def + effectiveSpd;
+            // Brankář: Obrana + Rychlost + Technika + Brankář
+            sectors.gk += stats.def + effSpd + stats.tek + stats.gk;
             counts.gk++;
         } else if (index >= layout.def[0] && index < layout.def[1]) {
-            sectors.def += (p.stats.def * 1.2) + p.stats.str + effectiveSpd + p.stats.eng;
+            // Obránce: Obrana + Rychlost + Síla + Výdrž
+            sectors.def += stats.def + effSpd + stats.str + stats.eng;
             counts.def++;
         } else if (index >= layout.mid[0] && index < layout.mid[1]) {
-            sectors.mid += (p.stats.tek * 1.2) + p.stats.atk + p.stats.def + effectiveSpd + p.stats.eng;
+            // Záložník: Rychlost + Síla + Výdrž + Technika
+            sectors.mid += effSpd + stats.str + stats.eng + stats.tek;
             counts.mid++;
         } else if (index >= layout.att[0] && index < layout.att[1]) {
-            sectors.att += (p.stats.atk * 1.2) + effectiveSpd + p.stats.tek + p.stats.eng;
+            // Útočník: Útok + Rychlost + Výdrž + Technika
+            sectors.att += stats.atk + effSpd + stats.eng + stats.tek;
             counts.att++;
         }
     });
 
-    // 2. Přepočet na CHYTRÝ PRŮMĚR (Průměr * bonus za počet hráčů)
+    // Výpočet průměru a bonusu za formaci (ponecháno pro vyváženost)
     for (let key in sectors) {
         if (counts[key] > 0) {
             let average = sectors[key] / counts[key];
-            // Každý hráč v řadě přidává +15 % k celkovému výkonu řady
             sectors[key] = Math.floor(average * (1 + (counts[key] * 0.15)));
         }
     }
 
-    // 3. Bonus za přípravu na zápas
     if (isPrepared) {
         for (let key in sectors) sectors[key] = Math.floor(sectors[key] * 1.1);
     }
@@ -400,11 +403,10 @@ function generateBotTeam(division) {
     const formations = ['4-4-2', '4-3-3', '5-4-1'];
     const botFormation = formations[Math.floor(Math.random() * formations.length)];
     const botPlayers = [];
+    const layout = FORMATIONS_LAYOUT[botFormation]; // Načteme rozestavení z configu
 
-    // Pomocná funkce pro generování náhodného počtu v rozmezí
     const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
-    // Počty hráčů pro jednotlivé ranky v týmu (Indexy 0 až 5 podle PLAYER_RANKS)
     let counts = { 0:0, 1:0, 2:0, 3:0, 4:0, 5:0 };
 
     if (division === 10) { 
@@ -446,25 +448,28 @@ function generateBotTeam(division) {
         const rankIdx = rankPool[i];
         const rankData = PLAYER_RANKS[rankIdx];
         
-        const minS = rankData.minStart || 1;
-        const maxS = rankData.cap;
+        // URČENÍ POZICE BOTA PODLE INDEXU A FORMACE
+        let position = 'att';
+        if (i >= layout.gk[0] && i < layout.gk[1]) position = 'gk';
+        else if (i >= layout.def[0] && i < layout.def[1]) position = 'def';
+        else if (i >= layout.mid[0] && i < layout.mid[1]) position = 'mid';
+
+        const stats = { atk: 0, def: 0, spd: 0, str: 0, eng: 0, gk: 0, tek: 0 };
+        const allowedStats = POSITION_STATS[position].stats;
+        
+        allowedStats.forEach(s => {
+            stats[s] = rand(rankData.minStart || 1, rankData.cap);
+        });
 
         botPlayers.push({
             id: 'bot_' + Math.random().toString(36).substr(2, 9),
-            name: `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`,
+            name: `${firstNames[rand(0, firstNames.length-1)]} ${lastNames[rand(0, lastNames.length-1)]}`,
+            position: position, // Nově přidáno
+            nationality: "Neznámá",
             rank: rankData.name,
+            stars: rand(1, 3),
             level: 1,
-            statCap: rankData.cap,
-            stars: Math.floor(Math.random() * 3) + 1, // Boti mají průměrně 1-3 hvězdy
-            stats: {
-                atk: Math.floor(Math.random() * (maxS - minS + 1)) + minS,
-                def: Math.floor(Math.random() * (maxS - minS + 1)) + minS,
-                spd: Math.floor(Math.random() * (maxS - minS + 1)) + minS,
-                str: Math.floor(Math.random() * (maxS - minS + 1)) + minS,
-                eng: Math.floor(Math.random() * (maxS - minS + 1)) + minS,
-                gk:  Math.floor(Math.random() * (maxS - minS + 1)) + minS,
-                tek: Math.floor(Math.random() * (maxS - minS + 1)) + minS
-            }
+            stats: stats
         });
     }
 

@@ -100,3 +100,19 @@ const BOT_TEAM_NAMES = {
     village: ["Sokol Horní Lhota", "SK Prdelkovice", "FC Dřeváci", "Tatran Sedlčany", "Dynamo Vesnice", "AFK Bída", "Zoufalci United", "TJ Sokol Pěnčín", "Sokol Brozany", "FK Kolomaz", "SK Holomajzna", "Sokol Řeporyje", "FC Horní Nětčice", "FC Dolní Nětčice", "Mrlínek", "Hlinsko pod Hostýnem"],
     pro: ["Baník Ostrava (B)", "Slavoj Žižkov", "FK Admira", "SK Slavia (B)", "Meteor Praha", "Slavoj Vyšehrad", "Sokol Hostivice", "FK Jablonec (B)", "SK Kladno", "FK Teplice (B)", "FC Graffin Vlašim", "1.FK Příbram", "FK Viktoria Žižkov"]
 };
+
+// --- SEZNAM NÁRODNOSTÍ ---
+const NATIONALITIES = [
+    { name: "Česko", flag: "🇨🇿" }, { name: "Slovensko", flag: "🇸🇰" }, { name: "Německo", flag: "🇩🇪" },
+    { name: "Anglie", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" }, { name: "Španělsko", flag: "🇪🇸" }, { name: "Brazílie", flag: "🇧🇷" },
+    { name: "Argentina", flag: "🇦🇷" }, { name: "Francie", flag: "🇫🇷" }, { name: "Itálie", flag: "🇮🇹" },
+    { name: "Polsko", flag: "🇵🇱" }, { name: "Portugalsko", flag: "🇵🇹" }, { name: "Nizozemsko", flag: "🇳🇱" }
+];
+
+// --- DEFINICE STATISTIK PODLE POZIC ---
+const POSITION_STATS = {
+    'att': { label: 'Útočník', stats: ['atk', 'spd', 'eng', 'tek'], colorClass: 'pos-att' },
+    'mid': { label: 'Záložník', stats: ['spd', 'str', 'eng', 'tek'], colorClass: 'pos-mid' },
+    'def': { label: 'Obránce', stats: ['def', 'spd', 'str', 'eng'], colorClass: 'pos-def' },
+    'gk':  { label: 'Brankář',  stats: ['def', 'spd', 'tek', 'gk'],  colorClass: 'pos-gk' }
+};
