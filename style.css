@@ -41,6 +41,31 @@ body {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    overflow-y: auto; /* Povolí scrollování nahoru a dolů */
+    overflow-x: hidden; /* TOTO schová  spodní posuvník */
+    max-height: calc(100vh - 80px); /* VOLITELNÉ: Zabrání tomu, aby menu zalezlo pod horní lištu (číslo 80px případně uprav podle výšky tvého horního panelu) */
+}
+
+/* --- ELEGANTNÍ SCROLLBAR PRO MENU --- */
+/* Šířka samotného posuvníku */
+#sidebar::-webkit-scrollbar {
+    width: 5px; 
+}
+
+/* Dráha, po které posuvník jezdí (uděláme ji neviditelnou) */
+#sidebar::-webkit-scrollbar-track {
+    background: transparent; 
+}
+
+/* Samotný "jezdec" */
+#sidebar::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2); /* Průhledná černá, takže ztmaví tu zelenou pod ním */
+    border-radius: 10px;
+}
+
+/* Jezdec po najetí myší (ztmavne) */
+#sidebar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.4); 
 }
 
 /* Tlačítka v menu - Simulace dřevěných cedulí */
