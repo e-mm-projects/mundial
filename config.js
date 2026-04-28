@@ -55,32 +55,32 @@ const PVE_DUNGEONS = [
             {
                 name: 'FC JZD (Traktoristi)',
                 desc: 'Přijeli na zápas rovnou z pole. Mají obrovskou sílu, ale rychlost a techniku nechali v kabině.',
-                botStats: { atk: 3, def: 3, spd: 1, str: 20, eng: 3, gk: 3, tek: 1 }, // Sníženo ze 30 na 20
+                botPower: { att: 3, mid: 5, def: 20, gk: 8 },
                 reward: { xp: 200, rank: 'Kopyto', minStars: 1, maxStars: 2 }
             },
             {
                 name: 'Hospoda u Zrzavého Psa',
                 desc: 'O poločase do sebe kopli dvě piva. Mají šílenou výdrž, ale z míče mají strach.',
-                botStats: { atk: 2, def: 2, spd: 2, str: 2, eng: 25, gk: 2, tek: 1 }, // Sníženo na 15 výdrž
+                botPower: { att: 3, mid: 25, def: 5, gk: 8 },
                 reward: { xp: 300, rank: 'Kopyto', minStars: 1, maxStars: 2 }
             },
             {
                 name: 'Sokol "Stará Garda"',
                 desc: 'Věkový průměr 55 let. Moc toho nenaběhají, ale jejich obranný beton a zkušený brankář jsou legendární.',
-                botStats: { atk: 1, def: 25, spd: 1, str: 4, eng: 2, gk: 10, tek: 4 },
+                botPower: { att: 3, mid: 5, def: 30, gk: 8 },
                 reward: { xp: 400, rank: 'Kopyto', minStars: 1, maxStars: 2 }
             },
             {
                 name: 'Řezníci z Masokombinátu',
                 desc: 'Hrají ostře a neberou si servítky. Z jejich útočníků jde strach.',
-                botStats: { atk: 30, def: 4, spd: 5, str: 8, eng: 4, gk: 3, tek: 2 },
+                botPower: { att: 33, mid: 5, def: 7, gk: 8 },
                 reward: { xp: 500, rank: 'Kopyto', minStars: 1, maxStars: 2 }
             },
             {
                 name: 'Výběr Okresního Přeboru (BOSS)',
                 desc: 'To nejlepší (rozuměj nejhorší), co místní vesnice nabízí. Tým, který ti nedá nic zadarmo.',
-                botStats: { atk: 9, def: 9, spd: 9, str: 9, eng: 9, gk: 9, tek: 9 },
-                reward: { xp: 1000, rank: 'Slibný amatér', minStars: 1, maxStars: 1, isBoss: true }
+                botPower: { att: 13, mid: 10, def: 12, gk: 10 },
+                reward: { xp: 1000, rank: 'Slibný Amatér', minStars: 1, maxStars: 1, isBoss: true }
             }
         ]
     }

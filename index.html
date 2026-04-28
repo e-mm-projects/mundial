@@ -56,16 +56,16 @@
     <div id="container">
         <nav id="sidebar">
             <button class="nav-btn" data-target="office" data-name="Kancelář">Kancelář</button>
-            <button class="nav-btn" data-target="training" data-name="Tréninkové hřiště">Tréninkové hřiště</button>
-            <button class="nav-btn" data-target="match" data-name="Zápasy">Zápasy</button>
-            <button class="nav-btn" data-target="shop" data-name="Obchod">Obchod</button>
-            <button class="nav-btn" data-target="scouting" data-name="Skauting">Skauting</button>
-            <button class="nav-btn" data-target="stadium" data-name="Stadion">Stadion</button>
+            <button class="nav-btn" data-target="match" data-name="Zápasy">Liga a zápasy</button>
             <button class="nav-btn" data-target="locker-room" data-name="Šatna">Šatna</button>
+            <button class="nav-btn" data-target="training" data-name="Tréninkové hřiště">Tréninkové hřiště</button>
+            <button class="nav-btn" data-target="scouting" data-name="Skauting">Skauting Hráčů</button>
+            <button class="nav-btn" data-target="shop" data-name="Obchod">Fanshop</button>
+            <button class="nav-btn" data-target="stadium" data-name="Stadion">Stadion</button>
             <button class="nav-btn" data-target="pve" data-name="Podzemí (PvE)">Podzemí (PvE)</button>
             <button class="nav-btn" data-target="hall-of-fame" data-name="Síň Slávy">Síň Slávy</button>
+            <button class="nav-btn" data-target="minileague" data-name="Miniligy">Miniliga</button>
             <button class="nav-btn" data-target="mail" data-name="Pošta">Pošta</button>
-            <button class="nav-btn" data-target="alliance" data-name="Aliance">Aliance</button>
         </nav>
 
         <main id="main-content">
@@ -73,6 +73,39 @@
             <p>Vyber si v menu, kam chceš jít. Většina klubu se teprve staví!</p>
         </main>
     </div>
+
+    <script type="module">
+        // ZDE JSME PŘIDALI ref, set, get, child
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+        import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBTxnOLGod9J5LOCMQYy9rx6QJeIIPKMVU",
+            authDomain: "mundial-baf66.firebaseapp.com",
+            databaseURL: "https://mundial-baf66-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "mundial-baf66",
+            storageBucket: "mundial-baf66.appspot.com",
+            messagingSenderId: "49143845159",
+            appId: "1:49143845159:web:faf66175b7403347c81902"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        const auth = getAuth(app); // Spuštění ověřování
+
+        // PŘEDÁNÍ FUNKCÍ DO TVÉ HRY (game.js)
+        window.db = database;
+        window.dbRef = ref;
+        window.dbSet = set;
+        window.dbGet = get;
+        window.dbChild = child;
+
+        // Předání přihlašovacích funkcí do tvé hry
+        window.auth = auth;
+        window.signInAnonymously = signInAnonymously;
+        window.onAuthStateChanged = onAuthStateChanged;
+    </script>
 
     <script src="config.js"></script>
     <script src="items.js"></script>

@@ -1630,6 +1630,281 @@ body {
     margin-bottom: 5px;
 }
 
+/* =========================================
+   🏆 SEKCE MINILIGA
+========================================= */
+
+.minileague-container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: rgba(20, 20, 20, 0.9);
+}
+
+.minileague-menu-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 30px;
+}
+
+.minileague-card {
+    background: #374151;
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid #4b5563;
+}
+
+.minileague-card-title {
+    margin-top: 0;
+    margin-bottom: 5px;
+}
+.minileague-card-title.yellow { color: #fcd34d; }
+.minileague-card-title.blue { color: #60a5fa; }
+.minileague-card-title.purple { color: #a78bfa; }
+
+.minileague-card-desc {
+    font-size: 0.9rem;
+    color: #ccc;
+    margin-bottom: 15px;
+}
+
+.minileague-btn-group {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.minileague-input {
+    padding: 10px;
+    border-radius: 5px;
+    border: none;
+    width: 60%;
+    font-family: inherit;
+}
+
+/* Specifické barvy tlačítek */
+.btn-create-league { background-color: #059669; }
+.btn-create-league:hover { background-color: #047857; }
+
+.btn-join-league { background-color: #2563eb; }
+.btn-join-league:hover { background-color: #1d4ed8; }
+
+.btn-my-leagues { background-color: #7c3aed; font-size: 1.1rem; padding: 15px; }
+.btn-my-leagues:hover { background-color: #6d28d9; }
+
+
+/* VYTVOŘENÍ MINILIGY - Tabulka v minilize */
+.minileague-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    background: rgba(0, 0, 0, 0.3);
+    color: white;
+}
+
+.minileague-table th, .minileague-table td {
+    padding: 10px;
+    border-bottom: 1px solid #4b5563;
+    text-align: center;
+}
+
+.minileague-table th { background: #1f2937; }
+
+/* Rolovací sekce Šatna v detailu miniligy */
+.minileague-locker-accordion {
+    margin-top: 30px;
+    border: 2px solid #4b5563;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.locker-header {
+    background: #374151;
+    padding: 15px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    color: #fcd34d;
+}
+
+.locker-header:hover { background: #4b5563; }
+
+.locker-content {
+    padding: 20px;
+    background: rgba(30, 30, 30, 0.8);
+    display: none; /* Skryté, dokud se nerozklikne */
+}
+
+.locker-content.active { display: block; }
+
+/* Strukturovaná šatna v minilize */
+.ml-pitch-area {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.ml-pitch-row {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.ml-row-title {
+    font-size: 0.8rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #4b5563;
+    display: block;
+}
+
+.ml-bench-area {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 15px;
+    border-radius: 10px;
+    border: 2px dashed #4b5563;
+}
+
+/* Tlačítko pro režim odebrání */
+.btn-ml-remove {
+    background-color: #991b1b;
+    font-size: 0.8rem;
+    padding: 5px 15px;
+}
+.btn-ml-remove.active {
+    background-color: #ef4444;
+    box-shadow: 0 0 10px #ef4444;
+}
+
+.player-card.ml-selected {
+    border: 2px solid #fcd34d;
+    transform: scale(1.05);
+}
+
+
+/* =========================================
+   📦 REZERVA TÝMU
+========================================= */
+.reserve-accordion {
+    margin-top: 20px;
+    border: 2px solid #3b82f6; /* Modrá barva pro odlišení */
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.reserve-header {
+    background: #1e3a8a;
+    padding: 15px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    color: #fcd34d;
+}
+
+.reserve-header:hover { background: #1e40af; }
+
+.reserve-filters {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 5px 12px;
+    border-radius: 4px;
+    border: 1px solid #4b5563;
+    background: #374151;
+    color: white;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+.filter-btn.active {
+    background: #3b82f6;
+    border-color: #fcd34d;
+}
+
+.btn-reserve-action {
+    width: 100%;
+    margin-top: 5px;
+    font-size: 0.75rem;
+    padding: 6px;
+    border-radius: 3px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.btn-to-bench { background: #059669; color: white; }
+.btn-to-ml { background: #7c3aed; color: white; }
+.btn-to-reserve { background: #3b82f6; color: white; }
+
+.reserve-content.active { display: block !important; }
+
+
+/* Překrytí pro výběr miniligy */
+.ml-selector-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 1000;
+}
+
+.ml-selector-box {
+    background: #1f2937;
+    border: 2px solid #fcd34d;
+    border-radius: 10px;
+    padding: 20px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+.ml-selector-list {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ml-select-item {
+    background: #374151;
+    color: white;
+    border: 1px solid #4b5563;
+    padding: 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.2s;
+    font-weight: bold;
+}
+
+.ml-select-item:hover {
+    background: #7c3aed;
+    border-color: #fcd34d;
+}
+
+.btn-close-selector {
+    margin-top: 20px;
+    background: #4b5563;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
 /* ============================================================
    RESPONZIVITA - MOBILNÍ VERZE (Obrazovky pod 768px)
    ============================================================ */

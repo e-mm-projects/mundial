@@ -517,6 +517,25 @@ function renderLockerRoom() {
             </div>
         </details>
     `;
+
+    const reserveHtml = `
+        <div class="reserve-accordion">
+            <div class="reserve-header" onclick="document.querySelector('.reserve-content').classList.toggle('active')">
+                <span>📦 REZERVA TÝMU (Hráči mimo aktivní kádr)</span>
+                <span>▼</span>
+            </div>
+            <div class="reserve-content" style="display:none; padding: 15px; background: rgba(0,0,0,0.5);">
+                <div class="reserve-filters">
+                    <button class="filter-btn active" onclick="filterReserve('all')">Vše</button>
+                    ${PLAYER_RANKS.map(r => `<button class="filter-btn" onclick="filterReserve('${r.name}')">${r.name}</button>`).join('')}
+                </div>
+                <div id="reserve-player-list" class="player-list" style="margin-top:15px;">
+                    ${renderReservePlayers('all')}
+                </div>
+            </div>
+        </div>
+    `;
+    mainContent.innerHTML += reserveHtml;
 }
 
 function renderPlayerGroup(startIndex, endIndex, role) {
@@ -555,6 +574,7 @@ function renderPlayerGroup(startIndex, endIndex, role) {
                 <div class="player-nationality">Národnost: ${player.nationality}</div>
 
                 ${isSellMode ? `<div class="price-tag sell">Prodat za: ${sellPrice} 💰</div>` : ''}
+                ${i >= 11 && !isSellMode ? `<button class="btn-reserve-action btn-to-reserve" onclick="event.stopPropagation(); sendToReserve(${i})">Odeslat do rezervy</button>` : ''}
 
                 <div class="player-stats">
                     ${posConfig.stats.map(statKey => `
@@ -1079,54 +1099,343 @@ window.viewBotTeam = function(teamName) {
 // --- ZOBRAZENÍ DETAILU SOUPEŘE V PODZEMÍ ---
 window.viewPvEBot = function(dIndex, sIndex) {
     const stage = PVE_DUNGEONS[dIndex].stages[sIndex];
-    const stats = stage.botStats;
+    const power = stage.botPower;
     const mainContent = document.getElementById('main-content');
     
-    // Tady CSS třídy už byly od tebe připravené, jen jsme vyčistili tlačítko Zpět
     mainContent.innerHTML = `
         <div class="scouting-card">
             <h2 class="section-title" style="margin-top: 0; text-shadow: 2px 2px 4px black;">Skauting soupeře</h2>
             <h3 class="scouting-title">${stage.name}</h3>
-            <p class="text-muted" style="margin-top: 0;">Předpokládaná formace: <strong style="color: white;">4-4-2</strong></p>
+            <p class="text-muted" style="margin-top: 0;">Odhadovaná síla řad soupeře</p>
             
             <p class="scouting-desc">${stage.desc}</p>
             
-            <div class="scouting-note">
-                ℹ️ <strong>Upozornění trenéra:</strong> Níže uvedené hodnoty představují průměrné statistiky <strong>každého jednotlivého hráče</strong> v týmu soupeře. Nehraješ proti jednomu hráči, ale proti jedenácti borcům s těmito parametry.
-            </div>
-
             <div class="scouting-grid">
                 <div class="stat-box stat-atk">
-                    <span class="stat-label">⚔️ Útok</span>
-                    <span class="stat-val">${stats.atk}</span>
+                    <span class="stat-label">⚔️ Útočná síla</span>
+                    <span class="stat-val">${power.att}</span>
                 </div>
                 <div class="stat-box stat-def">
-                    <span class="stat-label">🛡️ Obrana</span>
-                    <span class="stat-val">${stats.def}</span>
+                    <span class="stat-label">🛡️ Obranná síla</span>
+                    <span class="stat-val">${power.def}</span>
                 </div>
-                <div class="stat-box stat-spd">
-                    <span class="stat-label">🏃 Rychlost</span>
-                    <span class="stat-val">${stats.spd}</span>
-                </div>
-                <div class="stat-box stat-str">
-                    <span class="stat-label">💪 Síla</span>
-                    <span class="stat-val">${stats.str}</span>
-                </div>
-                <div class="stat-box stat-eng">
-                    <span class="stat-label">🔋 Výdrž</span>
-                    <span class="stat-val">${stats.eng}</span>
+                <div class="stat-box stat-mid">
+                    <span class="stat-label">🧭 Síla zálohy</span>
+                    <span class="stat-val">${power.mid}</span>
                 </div>
                 <div class="stat-box stat-gk">
-                    <span class="stat-label">🧤 Brankář</span>
-                    <span class="stat-val">${stats.gk}</span>
-                </div>
-                <div class="stat-box stat-tek full-width">
-                    <span class="stat-label">⚽ Technika</span>
-                    <span class="stat-val">${stats.tek}</span>
+                    <span class="stat-label">🧤 Kvalita brankáře</span>
+                    <span class="stat-val">${power.gk}</span>
                 </div>
             </div>
             
-            <button class="btn-task btn-full-width" style="margin-top: 25px; background-color: #4b5563; border-color: #374151;" onclick="renderPvE()">⬅ Návrat do podzemí</button>
+            <div class="scouting-note" style="margin-top: 20px; border-bottom: none;">
+                ℹ️ Čísla představují průměrnou úroveň každého hráče v dané řadě.
+            </div>
+            
+            <button class="btn-task btn-full-width" style="margin-top: 10px; background-color: #4b5563; border-color: #374151;" onclick="renderPvE()">⬅ Návrat do podzemí</button>
         </div>
     `;
+}
+
+// MINILIGA - ROZCESTNÍK //
+
+window.renderMinileague = function() {
+    const mainContent = document.getElementById('main-content');
+    
+    mainContent.innerHTML = `
+        <div class="scouting-card minileague-container">
+            <h2 class="section-title">Online Miniligy</h2>
+            <p class="text-muted">Změř své síly s ostatními manažery z celého světa!</p>
+            
+            <div class="minileague-menu-wrapper">
+                
+                <div class="minileague-card">
+                    <h3 class="minileague-card-title yellow">Založit novou miniligu</h3>
+                    <p class="minileague-card-desc">Založ vlastní ligu a pozvi ostatní. Cena za založení je 1 💰.</p>
+                    <div class="minileague-btn-group">
+                        <button class="btn-task btn-create-league" onclick="createNewMinileague('Kopyto')">Vytvořit - Kopyto</button>
+                        <button class="btn-task btn-create-league" onclick="alert('Zatím ve vývoji!')">Vytvořit - Amatér</button>
+                        <button class="btn-task btn-create-league" onclick="alert('Zatím ve vývoji!')">Vytvořit - Srdcař</button>
+                    </div>
+                </div>
+
+                <div class="minileague-card">
+                    <h3 class="minileague-card-title blue">Připojit se do existující ligy</h3>
+                    <p class="minileague-card-desc">Znáš přesný název miniligy svého kamaráda? Požádej o přijetí!</p>
+                    <div class="minileague-btn-group">
+                        <input type="text" id="join-league-input" class="minileague-input" placeholder="Zadej název miniligy...">
+                        <button class="btn-task btn-join-league" onclick="alert('Zatím ve vývoji!')">Odeslat žádost</button>
+                    </div>
+                </div>
+
+                <div class="minileague-card">
+                    <h3 class="minileague-card-title purple">Moje miniligy</h3>
+                    <p class="minileague-card-desc">Zde najdeš rozehrané ligy a můžeš si nastavit svou soupisku.</p>
+                    <button class="btn-task btn-full-width btn-my-leagues" onclick="renderMyMinileaguesList()">Vstoupit do mých minilig</button>
+                </div>
+
+            </div>
+        </div>
+    `;
+}
+
+// MINILIGA - DETAILY //
+
+window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
+    const mainContent = document.getElementById('main-content');
+    const currentScroll = window.scrollY; // Zapamatujeme si, kde uživatel je
+
+    if (!skipLoader) {
+        mainContent.innerHTML = `<div class="loader">Načítám data z ligy...</div>`;
+    }
+
+    try {
+        const dbRef = window.dbRef(window.db);
+        const snapshot = await window.dbGet(window.dbChild(dbRef, `minileagues/${leagueName}`));
+        const league = snapshot.val();
+        const myTeam = league.teams[playerData.uid];
+        const layout = FORMATIONS_LAYOUT['4-4-2'];
+
+        let standingsHtml = Object.keys(league.standings)
+            .sort((a,b) => league.standings[b].pts - league.standings[a].pts)
+            .map((uid, i) => `<tr><td>${i+1}.</td><td style="text-align:left;">${league.participants[uid]}</td><td>${league.standings[uid].p}</td><td>${league.standings[uid].pts}</td></tr>`)
+            .join('');
+
+        const renderMLRow = (start, end, title) => {
+            let cards = "";
+            for (let i = start; i < end; i++) cards += renderMLPlayerCard(myTeam.players[i], i, leagueName);
+            return `<div class="ml-pitch-row"><span class="ml-row-title">${title}</span><div class="player-list">${cards}</div></div>`;
+        };
+
+        // STŘÍDAČKA - Pevně 5 míst (indexy 11 až 15)
+        let benchCards = "";
+        for (let i = 11; i < 16; i++) {
+            benchCards += renderMLPlayerCard(myTeam.players[i], i, leagueName);
+        }
+
+        mainContent.innerHTML = `
+            <div class="scouting-card minileague-container">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2 class="section-title">🏆 ${league.name}</h2>
+                    <button class="btn-task" onclick="renderMyMinileaguesList()" style="background:#4b5563;">Zavřít ligu</button>
+                </div>
+                
+                <table class="minileague-table">
+                    <thead><tr><th>#</th><th style="text-align:left;">Manažer</th><th>Z</th><th>Body</th></tr></thead>
+                    <tbody>${standingsHtml}</tbody>
+                </table>
+
+                <div class="minileague-locker-accordion">
+                    <div class="locker-header" onclick="document.querySelector('.locker-content').classList.toggle('active')">
+                        <span>👕 ŠATNA MINILIGY (Klikni pro sbalení/rozbalení)</span>
+                        <span>▼</span>
+                    </div>
+                    <div class="locker-content active">
+                        <div class="ml-pitch-area">
+                            ${renderMLRow(layout.gk[0], layout.gk[1], "Brankář")}
+                            ${renderMLRow(layout.def[0], layout.def[1], "Obránci")}
+                            ${renderMLRow(layout.mid[0], layout.mid[1], "Záložníci")}
+                            ${renderMLRow(layout.att[0], layout.att[1], "Útočníci")}
+                        </div>
+                        <div class="ml-bench-area">
+                            <span class="ml-row-title">Střídačka (max 5 míst)</span>
+                            <div class="player-list">${benchCards}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Vrátíme hráče tam, kam kliknul, bez trhnutí obrazovky
+        if (skipLoader) {
+            setTimeout(() => window.scrollTo(0, currentScroll), 0);
+        }
+
+    } catch (e) { 
+        console.error("Chyba miniligy:", e);
+        renderMinileague(); 
+    }
+}
+
+// Funkce pro karty - je nyní 100% identická s hlavní šatnou
+function renderMLPlayerCard(player, index, leagueName) {
+    const isSelected = window.selectedMLIndex === index ? 'ml-selected' : '';
+    
+    if (!player) {
+        return `<div class="player-card empty-slot ${isSelected}" onclick="handleMLPlayerClick('${leagueName}', ${index})">
+                    <div class="empty-text">Volné místo</div>
+                </div>`;
+    }
+    
+    const posConfig = POSITION_STATS[player.position];
+    const statLabels = { atk: 'Útok', def: 'Obrana', spd: 'Rychlost', str: 'Síla', eng: 'Výdrž', tek: 'Technika', gk: 'Brankář' };
+    const starsHtml = player.stars > 0 ? '⭐'.repeat(player.stars) : '<span>&nbsp;</span>';
+
+    // Tlačítko pro návrat do rezervy (pouze pro střídačku)
+    const returnHtml = index >= 11 
+        ? `<button class="btn-reserve-action btn-to-reserve" onclick="event.stopPropagation(); returnFromMLToReserve('${leagueName}', ${index})" style="margin-top:5px; background-color: #3b82f6;">Vrátit do rezervy</button>` 
+        : '';
+
+    return `
+        <div class="player-card ${posConfig.colorClass} ${isSelected}" onclick="handleMLPlayerClick('${leagueName}', ${index})">
+            <div class="player-name">${player.name}</div>
+            <div class="player-position-row">${posConfig.label}</div>
+            
+            <div class="player-info-line">
+                <span style="font-style: italic; color: #6b7280;">${player.rank}</span> | ${getPlayerLevelText(player)} ${starsHtml}
+            </div>
+            
+            <div class="player-nationality">Národnost: ${player.nationality}</div>
+
+            ${returnHtml}
+
+            <div class="player-stats" style="margin-top: 10px;">
+                ${posConfig.stats.map(s => `
+                    <div class="stat-item highlighted">
+                        ${statLabels[s]}: <span>${player.stats[s]}</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+window.renderMyMinileaguesList = function() {
+    const mainContent = document.getElementById('main-content');
+    const myLeagues = playerData.myMinileagues || [];
+
+    let leaguesHtml = myLeagues.length > 0 
+        ? myLeagues.map(league => {
+            // Pojistka: pokud je to nový formát (objekt), vezmeme z něj jméno a rank.
+            const leagueName = typeof league === 'object' ? league.name : league;
+            const leagueRank = typeof league === 'object' ? `(${league.rank})` : '';
+            
+            return `
+            <button class="btn-task btn-full-width" style="margin-bottom:10px; background:#7c3aed;" 
+                    onclick="renderMinileagueDetail('${leagueName}')">🏆 ${leagueName} ${leagueRank}</button>
+          `}).join('')
+        : `<p class="text-muted">Zatím nejsi v žádné minilize.</p>`;
+
+    mainContent.innerHTML = `
+        <div class="scouting-card minileague-container">
+            <h2 class="section-title">Moje miniligy</h2>
+            <div style="margin-top:20px;">${leaguesHtml}</div>
+            <button class="btn-task btn-full-width" style="margin-top:20px; background:#4b5563;" 
+                    onclick="renderMinileague()">Zpět</button>
+        </div>
+    `;
+}
+
+// Pomocná funkce pro vykreslení karet v minilize
+function renderMinileaguePlayers(players) {
+    const statLabels = { atk: 'Útok', def: 'Obrana', spd: 'Rychlost', str: 'Síla', eng: 'Výdrž', tek: 'Technika', gk: 'Brankář' };
+    return players.map((player, i) => {
+        const posConfig = POSITION_STATS[player.position];
+        return `
+            <div class="player-card ${posConfig.colorClass}" style="width:180px; font-size:0.8rem;">
+                <div class="player-name">${player.name}</div>
+                <div class="player-position-row">${posConfig.label}</div>
+                <div class="player-info-line">${player.rank} | Lvl.${player.level}</div>
+                <div class="player-stats">
+                    ${posConfig.stats.map(s => `<div class="stat-item">${statLabels[s]}: ${player.stats[s]}</div>`).join('')}
+                </div>
+                ${i >= 11 ? `<button class="btn-small-add" style="background:red; width:100%; margin-top:5px;" onclick="alert('Funkce odstranění bude doplněna')">Odstranit</button>` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+window.currentReserveFilter = 'all';
+
+window.filterReserve = function(rank) {
+    window.currentReserveFilter = rank;
+    // Přepnutí "active" třídy na tlačítkách
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent === rank || (rank === 'all' && btn.textContent === 'Vše'));
+    });
+    document.getElementById('reserve-player-list').innerHTML = renderReservePlayers(rank);
+}
+
+
+// FUNKCE PRO REZERVU //
+function renderReservePlayers(filter) {
+    const players = filter === 'all' 
+        ? playerData.reserve 
+        : playerData.reserve.filter(p => p.rank === filter);
+
+    if (players.length === 0) return `<p class="text-muted" style="width:100%; text-align:center;">V této kategorii nemáš žádné hráče.</p>`;
+
+    // Plné názvy statistik jako v hlavní hře
+    const statLabels = { atk: 'Útok', def: 'Obrana', spd: 'Rychlost', str: 'Síla', eng: 'Výdrž', tek: 'Technika', gk: 'Brankář' };
+
+    return players.map(player => {
+        const posConfig = POSITION_STATS[player.position];
+        const starsHtml = player.stars > 0 ? '⭐'.repeat(player.stars) : '<span>&nbsp;</span>';
+        
+        return `
+            <div class="player-card ${posConfig.colorClass}">
+                <div class="player-name">${player.name}</div>
+                <div class="player-position-row">${posConfig.label}</div>
+                
+                <div class="player-info-line">
+                    <span style="font-style: italic; color: #6b7280;">${player.rank}</span> | ${getPlayerLevelText(player)} ${starsHtml}
+                </div>
+                
+                <div class="player-nationality">Národnost: ${player.nationality}</div>
+
+                <button class="btn-reserve-action btn-to-bench" onclick="returnFromReserve('${player.id}')">Na střídačku</button>
+                <button class="btn-reserve-action btn-to-ml" onclick="openMLSelector('${player.id}')">Do miniligy</button>
+
+                <div class="player-stats" style="margin-top: 10px;">
+                    ${posConfig.stats.map(s => `
+                        <div class="stat-item highlighted">
+                            ${statLabels[s]}: <span>${player.stats[s]}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+window.openMLSelector = function(playerId) {
+    const player = playerData.reserve.find(p => p.id === playerId);
+    if (!player) return;
+
+    // Filtrujeme ligy podle ranku
+    const compatibleLeagues = (playerData.myMinileagues || []).filter(l => {
+        if (typeof l === 'object') return l.rank === player.rank;
+        return false;
+    });
+
+    if (compatibleLeagues.length === 0) {
+        alert(`Nemáš žádnou aktivní miniligu pro rank: ${player.rank}`);
+        return;
+    }
+
+    // Vytvoříme HTML pro overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'ml-selector-overlay';
+    overlay.id = 'ml-selector-modal';
+
+    const listHtml = compatibleLeagues.map(l => `
+        <div class="ml-select-item" onclick="executeMLTransfer('${playerId}', '${l.name}')">
+            🏆 ${l.name}
+        </div>
+    `).join('');
+
+    overlay.innerHTML = `
+        <div class="ml-selector-box">
+            <h3 style="color: #fcd34d; margin-top:0;">Odeslat do miniligy</h3>
+            <p style="font-size: 0.85rem; color: #ccc;">
+                Hráč <strong>${player.name}</strong> (${player.rank})<br>
+                bude odeslán do vybrané ligy:
+            </p>
+            <div class="ml-selector-list">${listHtml}</div>
+            <button class="btn-close-selector" onclick="document.getElementById('ml-selector-modal').remove()">Zavřít</button>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
 }
