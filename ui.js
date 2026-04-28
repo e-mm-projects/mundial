@@ -1196,11 +1196,35 @@ window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
         const league = snapshot.val();
         const myTeam = league.teams[playerData.uid];
         const layout = FORMATIONS_LAYOUT['4-4-2'];
-
+        // --- GENEROVÁNÍ NOVÉ TABULKY --- //
         let standingsHtml = Object.keys(league.standings)
-            .sort((a,b) => league.standings[b].pts - league.standings[a].pts)
-            .map((uid, i) => `<tr><td>${i+1}.</td><td style="text-align:left;">${league.participants[uid]}</td><td>${league.standings[uid].p}</td><td>${league.standings[uid].pts}</td></tr>`)
-            .join('');
+            .sort((a,b) => {
+                // Nejprve třídíme podle bodů
+                if (league.standings[b].pts !== league.standings[a].pts) {
+                    return league.standings[b].pts - league.standings[a].pts;
+                }
+                // Pokud je shoda bodů, rozhoduje rozdíl skóre
+                const diffB = league.standings[b].gf - league.standings[b].ga;
+                const diffA = league.standings[a].gf - league.standings[a].ga;
+                return diffB - diffA;
+            })
+            .map((uid, i) => {
+                const s = league.standings[uid];
+                // Zvýrazníme řádek, pokud je to tvůj tým
+                const isMyTeam = uid === playerData.uid ? 'class="my-team-row"' : '';
+                
+                return `
+                <tr ${isMyTeam}>
+                    <td style="color: #10b981; font-weight: bold;">${i+1}.</td>
+                    <td style="text-align:left;"><span class="ml-team-name">${league.participants[uid]}</span></td>
+                    <td>${s.p}</td>
+                    <td style="color: #6b7280;">${s.gf}:${s.ga}</td>
+                    <td>${s.w}</td>
+                    <td>${s.d}</td>
+                    <td>${s.l}</td>
+                    <td style="font-weight:bold; font-size:1.1rem;">${s.pts}</td>
+                </tr>`;
+            }).join('');
 
         const renderMLRow = (start, end, title) => {
             let cards = "";
@@ -1222,7 +1246,18 @@ window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
                 </div>
                 
                 <table class="minileague-table">
-                    <thead><tr><th>#</th><th style="text-align:left;">Manažer</th><th>Z</th><th>Body</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th style="text-align:left;">Manažer</th>
+                            <th>Z</th>
+                            <th>SKÓRE</th>
+                            <th>V</th>
+                            <th>R</th>
+                            <th>P</th>
+                            <th>B</th>
+                        </tr>
+                    </thead>
                     <tbody>${standingsHtml}</tbody>
                 </table>
 
@@ -1307,22 +1342,29 @@ window.renderMyMinileaguesList = function() {
 
     let leaguesHtml = myLeagues.length > 0 
         ? myLeagues.map(league => {
-            // Pojistka: pokud je to nový formát (objekt), vezmeme z něj jméno a rank.
             const leagueName = typeof league === 'object' ? league.name : league;
             const leagueRank = typeof league === 'object' ? `(${league.rank})` : '';
             
             return `
-            <button class="btn-task btn-full-width" style="margin-bottom:10px; background:#7c3aed;" 
-                    onclick="renderMinileagueDetail('${leagueName}')">🏆 ${leagueName} ${leagueRank}</button>
+            <div style="background: rgba(0,0,0,0.3); border: 1px solid #4b5563; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <strong style="color: #fcd34d; font-size: 1.1rem;">🏆 ${leagueName}</strong> 
+                    <span style="color: #ccc; font-size: 0.9rem;">${leagueRank}</span>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn-task" style="background:#2563eb; padding: 8px 15px;" onclick="renderMinileagueDetail('${leagueName}')">Vstoupit</button>
+                    <button class="btn-task" style="background:#991b1b; padding: 8px 15px;" onclick="leaveMinileague('${leagueName}')">Opustit</button>
+                </div>
+            </div>
           `}).join('')
-        : `<p class="text-muted">Zatím nejsi v žádné minilize.</p>`;
+        : `<p class="text-muted" style="text-align: center;">Zatím nejsi v žádné minilize.<br>Můžeš být maximálně ve 3 současně.</p>`;
 
     mainContent.innerHTML = `
         <div class="scouting-card minileague-container">
-            <h2 class="section-title">Moje miniligy</h2>
+            <h2 class="section-title">Moje miniligy (${myLeagues.length}/3)</h2>
             <div style="margin-top:20px;">${leaguesHtml}</div>
             <button class="btn-task btn-full-width" style="margin-top:20px; background:#4b5563;" 
-                    onclick="renderMinileague()">Zpět</button>
+                    onclick="renderMinileague()">Zpět na rozcestník</button>
         </div>
     `;
 }

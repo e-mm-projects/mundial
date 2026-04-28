@@ -354,6 +354,7 @@ function startGameUI() {
     if (officeBtn) officeBtn.click();
 
     setInterval(gameLoop, 1000);
+    setTimeout(fetchCloudMail, 2000); // 2 vteřiny po startu UI zkontrolujeme cloud poštu
 }
 
 function saveGame() {
@@ -362,6 +363,12 @@ function saveGame() {
 
 function gameLoop() {
     const now = Date.now();
+    // Kontrola pošty z cloudu každých 60 vteřin
+    if (!playerData.lastMailCheck) playerData.lastMailCheck = 0;
+    if (now - playerData.lastMailCheck > 60000) {
+        playerData.lastMailCheck = now;
+        if (playerData.isLoggedIn) fetchCloudMail();
+    }
     let uiNeedsUpdate = false;
 
     if (playerData.energy < 100) {
@@ -1689,6 +1696,12 @@ window.createNewMinileague = async function(rank) {
         return;
     }
 
+    // --- POJISTKA: MAX 3 MINILIGY ---
+    if ((playerData.myMinileagues || []).length >= 3) {
+        alert("Můžeš být současně maximálně ve 3 miniligách! Pokud chceš založit novou, musíš nějakou starou opustit.");
+        return;
+    }
+
     const leagueName = prompt("Zadej název své nové miniligy:");
     if (!leagueName || leagueName.trim().length < 3) {
         alert("Název musí mít alespoň 3 znaky.");
@@ -1710,12 +1723,14 @@ window.createNewMinileague = async function(rank) {
         playerData.money -= 1;
         const initialTeam = generateInitialMinileagueTeam();
 
-        // 3. Zápis do Firebase
+        // 3. Zápis do Firebase (s novými časovači)
         const leagueData = {
             name: cleanName,
             rank: rank,
             owner: playerData.uid,
             createdAt: Date.now(),
+            nextMatchTime: getNextMatchSlot(), // Čas nejbližšího zápasu
+            seasonEndTime: Date.now() + (14 * 24 * 60 * 60 * 1000), // Za 14 dní
             participants: {
                 [playerData.uid]: playerData.managerName
             },
@@ -1759,49 +1774,68 @@ window.handleMLPlayerClick = async function(leagueName, index) {
     const league = snapshot.val();
     const myTeam = league.teams[playerData.uid];
 
-    // --- REŽIM VRACENÍ DO REZERVY ---
-    if (window.isMLRemoveMode) {
-        if (index < 11) {
-            alert("Hráče ze základní sestavy miniligy nelze vrátit! Přesuň ho nejdříve na lavičku.");
-            return;
-        }
-        const playerToReturn = myTeam.players[index];
-        if (!playerToReturn) return; // Kliknutí na prázdný slot
-
-        // 1. Kontrola kapacity tvé lokální rezervy (max 10 na rank)
-        const countInRank = (playerData.reserve || []).filter(p => p.rank === playerToReturn.rank).length;
-        if (countInRank >= 10) {
-            alert(`Nemůžeš ho vrátit, tvá Rezerva pro rank "${playerToReturn.rank}" je plná (10/10)!`);
-            return;
-        }
-
-        if (confirm(`Chceš hráče ${playerToReturn.name} stáhnout z Miniligy zpět do své Rezervy?`)) {
-            // Přidáme do lokální rezervy
-            if (!playerData.reserve) playerData.reserve = [];
-            playerData.reserve.push(playerToReturn);
-            
-            // Odstraníme z Miniligy na Firebase
-            myTeam.players[index] = null; 
-            await window.dbSet(window.dbRef(window.db, `minileagues/${leagueName}/teams/${playerData.uid}`), myTeam);
-            
-            saveGame();
-            renderMinileagueDetail(leagueName, true);
-            alert("Hráč byl úspěšně vrácen do tvé Rezervy v hlavní šatně.");
-        }
+    // 1. KLIKNUTÍ NA PRVNÍHO HRÁČE (VÝBĚR)
+    if (window.selectedMLIndex === null) {
+        if (!myTeam.players[index]) return; // Na prázdné místo nelze kliknout jako první
+        window.selectedMLIndex = index;
+        renderMinileagueDetail(leagueName, true); // ZÁSADNÍ OPRAVA: Okamžitý vizuální refresh
         return;
-
-        // Prohození
-        const temp = myTeam.players[window.selectedMLIndex];
-        myTeam.players[window.selectedMLIndex] = myTeam.players[index];
-        myTeam.players[index] = temp;
-
-        window.selectedMLIndex = null;
-        
-        // Uložení na Firebase!
-        await window.dbSet(window.dbRef(window.db, `minileagues/${leagueName}/teams/${playerData.uid}`), myTeam);
     }
+
+    // 2. KLIKNUTÍ NA STEJNÉHO HRÁČE ZNOVU (ODZNAČENÍ)
+    if (window.selectedMLIndex === index) {
+        window.selectedMLIndex = null;
+        renderMinileagueDetail(leagueName, true);
+        return;
+    }
+
+    // 3. KLIKNUTÍ NA DRUHOU POZICI (PROHOZENÍ)
+    const playerA = myTeam.players[window.selectedMLIndex];
+    const playerB = myTeam.players[index] || null; // OPRAVA: Převedeme undefined na bezpečný null
+
+    // ---  POJISTKA: ZÁKLAD MUSÍ BÝT KOMPLETNÍ ---
+    if (window.selectedMLIndex < 11 && !playerB) {
+        alert("Základní sestava musí být kompletní! Pokud chceš tohoto hráče posadit, musíš za něj na hřiště poslat někoho ze střídačky.");
+        window.selectedMLIndex = null;
+        renderMinileagueDetail(leagueName, true);
+        return;
+    }
+
+    // Zjistíme, kam jaký slot patří
+    const getMLPos = (idx) => {
+        if (idx >= 11) return null; // Střídačka
+        if (idx === 0) return 'gk';
+        if (idx >= 1 && idx <= 4) return 'def';
+        if (idx >= 5 && idx <= 8) return 'mid';
+        return 'att';
+    };
+
+    const targetPos = getMLPos(index);
+    const sourcePos = getMLPos(window.selectedMLIndex);
+
+    // KONTROLY POZIC (Hráč do brány musí být brankář atd.)
+    if (targetPos && playerA && playerA.position !== targetPos) {
+        alert(`Tento slot vyžaduje pozici: ${POSITION_STATS[targetPos].label}!`);
+        window.selectedMLIndex = null;
+        renderMinileagueDetail(leagueName, true);
+        return;
+    }
+
+    if (sourcePos && playerB && playerB.position !== sourcePos) {
+        alert(`Tento slot vyžaduje pozici: ${POSITION_STATS[sourcePos].label}!`);
+        window.selectedMLIndex = null;
+        renderMinileagueDetail(leagueName, true);
+        return;
+    }
+
+    // Vlastní prohození
+    myTeam.players[window.selectedMLIndex] = playerB;
+    myTeam.players[index] = playerA;
+    window.selectedMLIndex = null; // Vyčistíme výběr
     
-    renderMinileagueDetail(leagueName, true); // ZDE JE ZMĚNA: true zamezí skákání
+    // Uložení a překreslení
+    await window.dbSet(window.dbRef(window.db, `minileagues/${leagueName}/teams/${playerData.uid}`), myTeam);
+    renderMinileagueDetail(leagueName, true);
 }
 
 // PŘESUNY HRÁČŮ - REZERVA , STŘÍDAČKA, MINILIGA
@@ -1957,5 +1991,105 @@ window.returnFromMLToReserve = async function(leagueName, index) {
         saveGame();
         renderMinileagueDetail(leagueName, true); // true zamezí trhnutí obrazovky
         alert(`Hráč ${playerToReturn.name} byl úspěšně vrácen do tvé Rezervy v hlavní šatně.`);
+    }
+}
+
+// MINILIGA - OPUŠTĚNÍ MINILIGY //
+
+window.leaveMinileague = async function(leagueName) {
+    if (!confirm(`Opravdu chceš opustit miniligu ${leagueName}? Tvé body a statistiky v ní budou smazány. Tví hráči se vrátí do Rezervy (pokud tam máš místo).`)) {
+        return;
+    }
+
+    try {
+        const dbRef = window.dbRef(window.db);
+        const snapshot = await window.dbGet(window.dbChild(dbRef, `minileagues/${leagueName}`));
+        
+        if (snapshot.exists()) {
+            let league = snapshot.val();
+            const myTeam = league.teams ? league.teams[playerData.uid] : null;
+
+            // 1. Záchrana hráčů z miniligy zpět do hlavní Rezervy
+            if (myTeam && myTeam.players) {
+                if (!playerData.reserve) playerData.reserve = [];
+                myTeam.players.forEach(p => {
+                    if (p) {
+                        const countInRank = playerData.reserve.filter(r => r.rank === p.rank).length;
+                        // Vrátí hráče jen pokud není rezerva plná
+                        if (countInRank < 10) playerData.reserve.push(p);
+                    }
+                });
+            }
+
+            // 2. Vymazání uživatele z databáze miniligy
+            if (league.participants) delete league.participants[playerData.uid];
+            if (league.standings) delete league.standings[playerData.uid];
+            if (league.teams) delete league.teams[playerData.uid];
+
+            // 3. Rozhodnutí: Aktualizovat ligu, nebo ji celou smazat?
+            if (!league.participants || Object.keys(league.participants).length === 0) {
+                // Pokud po tvém odchodu nezbyl žádný manažer, ligu rovnou smažeme
+                await window.dbSet(window.dbRef(window.db, `minileagues/${leagueName}`), null);
+            } else {
+                // Jinak ligu uložíme bez tvých dat
+                await window.dbSet(window.dbRef(window.db, `minileagues/${leagueName}`), league);
+            }
+        }
+
+        // 4. Úklid u tebe lokálně
+        playerData.myMinileagues = playerData.myMinileagues.filter(l => {
+            const lName = typeof l === 'object' ? l.name : l;
+            return lName !== leagueName;
+        });
+
+        saveGame();
+        renderMyMinileaguesList(); // Překreslení seznamu
+        alert(`Úspěšně jsi opustil miniligu ${leagueName}.`);
+
+    } catch (error) {
+        console.error("Chyba při opouštění ligy:", error);
+        alert("Něco se pokazilo při komunikaci se serverem.");
+    }
+}
+
+// --- KONTROLA POŠTY Z CLOUDU  ---
+window.fetchCloudMail = async function() {
+    if (!playerData.uid) return;
+    try {
+        const dbRef = window.dbRef(window.db);
+        const snapshot = await window.dbGet(window.dbChild(dbRef, `mail_queue/${playerData.uid}`));
+        
+        if (snapshot.exists()) {
+            const mails = snapshot.val();
+            let hasNew = false;
+            
+            // Projdeme všechny nové zprávy ze serveru
+            for (const key in mails) {
+                const mail = mails[key];
+                playerData.mail.unshift(mail); // Přidáme je k tobě do lokální pošty
+                hasNew = true;
+                
+                // Zprávu jsme doručili, smažeme ji z cloudu ať ti nechodí dvakrát
+                await window.dbSet(window.dbRef(window.db, `mail_queue/${playerData.uid}/${key}`), null);
+            }
+            
+            // Pojistka, ať nemáš v poště milion zpráv
+            if (playerData.mail.length > 15) {
+                playerData.mail = playerData.mail.slice(0, 15);
+            }
+            
+            if (hasNew) {
+                saveGame();
+                alert("📩 Pošťák právě dorazil! Během tvé nepřítomnosti se odehrál zápas Miniligy. Podívej se do Pošty.");
+                
+                // Pokud zrovna koukáš na poštu, hned ji překreslíme
+                const activeBtn = document.querySelector('.nav-btn.active');
+                if (activeBtn && activeBtn.getAttribute('data-target') === 'mail') {
+                    if (typeof renderMail === "function") renderMail();
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Chyba při stahování pošty:", e);
     }
 }

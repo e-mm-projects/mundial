@@ -1718,23 +1718,49 @@ body {
 .btn-my-leagues { background-color: #7c3aed; font-size: 1.1rem; padding: 15px; }
 .btn-my-leagues:hover { background-color: #6d28d9; }
 
-
-/* VYTVOŘENÍ MINILIGY - Tabulka v minilize */
+/* --- TABULKA V MINILIZE (Kopie vzhledu hlavní ligy) --- */
 .minileague-table {
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 20px;
-    background: rgba(0, 0, 0, 0.3);
-    color: white;
+    background: #fdf6e3; /* Světlý pergamenový základ */
+    color: #333;
+    border-radius: 5px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
 }
 
-.minileague-table th, .minileague-table td {
+.minileague-table th {
+    background: #4e342e; /* Tmavě hnědá hlavička */
+    color: white;
+    padding: 12px 10px;
+    font-size: 0.9rem;
+}
+
+.minileague-table td {
     padding: 10px;
-    border-bottom: 1px solid #4b5563;
+    border-bottom: 1px solid #e5e7eb;
     text-align: center;
 }
 
-.minileague-table th { background: #1f2937; }
+.minileague-table tr:nth-child(even) {
+    background: rgba(0, 0, 0, 0.03); /* Lehké odlišení sudých řádků */
+}
+
+.minileague-table tr:hover {
+    background: rgba(0, 0, 0, 0.08); /* Zvýraznění po najetí myší */
+}
+
+/* Zvýraznění tvého vlastního týmu v tabulce */
+.minileague-table tr.my-team-row {
+    background: rgba(245, 158, 11, 0.2); /* Jemně oranžové podbarvení */
+    font-weight: bold;
+}
+
+.ml-team-name {
+    color: #2563eb; /* Modrý text pro název manažera/týmu */
+    font-weight: bold;
+}
 
 /* Rolovací sekce Šatna v detailu miniligy */
 .minileague-locker-accordion {
