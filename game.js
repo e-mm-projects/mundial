@@ -1660,16 +1660,24 @@ function processSeasonEndOffline() {
 // --- UNIVERZÁLNÍ GENERÁTOR TÝMU PRO MINILIGU ---
 window.generateMLStarterTeam = function(rankName) {
     const players = new Array(16).fill(null);
-    // Najdeme data pro požadovaný rank (pokud se splete, dáme Kopyto)
+    
+    // Najdeme data pro požadovaný rank (pokud se splete, dáme první dostupný)
     const rankData = PLAYER_RANKS.find(r => r.name === rankName) || PLAYER_RANKS[0];
 
+    // BEZPEČNÉ HODNOTY (proti chybám NaN, které Firebase tiše maže)
+    const minS = rankData.minStart || 1;
+    const maxS = rankData.maxStart || 10;
+
     const generateP = (pos, index) => {
-        // Vytvoříme nulové statistiky
-        const stats = { atk: 0, def: 0, spd: 0, str: 0, eng: 0, gk: 0, tek: 0 };
-        // Vygenerujeme čísla jen pro ty staty, které pozice potřebuje
-        POSITION_STATS[pos].stats.forEach(s => {
-            stats[s] = Math.floor(Math.random() * (rankData.maxStart - rankData.minStart + 1)) + rankData.minStart;
-        });
+        // Výchozí bezpečné hodnoty
+        const stats = { atk: 5, def: 5, spd: 5, str: 5, eng: 5, gk: 5, tek: 5 }; 
+        
+        // Hodíme kostkou jen u statistik, které pozice využívá
+        if (POSITION_STATS[pos]) {
+            POSITION_STATS[pos].stats.forEach(s => {
+                stats[s] = Math.floor(Math.random() * (maxS - minS + 1)) + minS;
+            });
+        }
 
         return {
             id: 'ml_base_' + Date.now() + '_' + index + '_' + Math.random().toString(36).substr(2, 5),
@@ -1677,7 +1685,7 @@ window.generateMLStarterTeam = function(rankName) {
             position: pos,
             nationality: NATIONALITIES[Math.floor(Math.random() * NATIONALITIES.length)].name,
             rank: rankData.name,
-            statCap: rankData.cap,
+            statCap: rankData.cap || 20,
             stars: 0,
             level: 1,
             maxLevel: 1,
@@ -2184,6 +2192,9 @@ window.runMLSimulation = async function(leagueName, league) {
         const nameB = league.participants[uidB];
 
         const getStrength = (team) => {
+            // --- POJISTKA: Pokud tým nebo hráči neexistují, síla je 0 ---
+            if (!team || !team.players) return 0; 
+            
             return team.players.slice(0, 11).reduce((sum, p) => {
                 if (!p) return sum;
                 return sum + (p.stats.atk + p.stats.def + p.stats.spd) / 3;
