@@ -1250,6 +1250,10 @@ window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
             league = newSnap.val();
         }
         const myTeam = league.teams[playerData.uid];
+        // --- FIREBASE POJISTKA PRO PRÁZDNÉ POLE HRÁČŮ --- //
+        if (myTeam && !myTeam.players) {
+            myTeam.players = new Array(16).fill(null);
+        }
         const layout = FORMATIONS_LAYOUT['4-4-2'];
         // --- GENEROVÁNÍ NOVÉ TABULKY --- //
         let standingsHtml = Object.keys(league.standings)

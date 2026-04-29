@@ -2108,7 +2108,12 @@ window.fetchCloudMail = async function() {
             
             if (hasNew) {
                 saveGame();
-                alert("📩 Pošťák právě dorazil! Během tvé nepřítomnosti se odehrál zápas Miniligy. Podívej se do Pošty.");
+                const hasInvite = Object.values(mails).some(m => m.type === "ml_invite");
+                if (hasInvite) {
+                    alert("📩 Pošťák právě dorazil! Někdo žádá o vstup do tvé miniligy.");
+                } else {
+                    alert("📩 Pošťák právě dorazil! Během tvé nepřítomnosti dorazila nová pošta (zápas nebo výsledky).");
+                }
                 
                 // Pokud zrovna koukáš na poštu, hned ji překreslíme
                 const activeBtn = document.querySelector('.nav-btn.active');
@@ -2341,7 +2346,12 @@ window.acceptMLInvite = async function(mailId, applicantUid, applicantName, leag
         await window.dbSet(window.dbRef(window.db, `mail_queue/${applicantUid}/${acceptMail.id}`), acceptMail);
 
         // 3. Smazání zprávy ze schránky zakladatele
-        playerData.mail = playerData.mail.filter(m => m.id !== mailId);
+        const mailMsg = playerData.mail.find(m => m.id === mailId);
+        if (mailMsg) {
+            mailMsg.type = "info"; // Změní typ na obyčejnou zprávu (zmizí tlačítka)
+            mailMsg.text = `Manažer **${applicantName}** žádal o vstup do tvé miniligy **${leagueName}**.\n\n**✅ ŽÁDOST BYLA PŘIJATA**`;
+            mailMsg.read = true;
+        }
         saveGame();
         
         // Překreslení pošty (pokud tam máš funkci renderMail)
@@ -2366,8 +2376,14 @@ window.rejectMLInvite = async function(mailId, applicantUid, leagueName) {
         };
         await window.dbSet(window.dbRef(window.db, `mail_queue/${applicantUid}/${rejectMail.id}`), rejectMail);
 
-        playerData.mail = playerData.mail.filter(m => m.id !== mailId);
+        const mailMsg = playerData.mail.find(m => m.id === mailId);
+        if (mailMsg) {
+            mailMsg.type = "info";
+            mailMsg.text = `Manažer žádal o vstup do tvé miniligy **${leagueName}**.\n\n**❌ ŽÁDOST BYLA ZAMÍTNUTA**`;
+            mailMsg.read = true;
+        }
         saveGame();
+
         if (typeof renderMail === "function") renderMail();
         alert("Žádost byla zamítnuta a odesílatel informován.");
     } catch (error) {
