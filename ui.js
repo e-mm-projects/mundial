@@ -475,7 +475,16 @@ function renderLockerRoom() {
 
     // --- PŘIDÁME TÝMOVÝ TREZOR NA KONEC ŠATNY ---
     const renderInventorySlot = (role, label, limit) => {
-        const items = playerData.inventory[role];
+        // --- BEZPEČNOSTNÍ POJISTKA PRO NOVÉ ÚČTY ---
+        // Pokud hráč nemá trezor (nebo v něm chybí konkrétní sekce), vytvoříme ho
+        if (!playerData.inventory) {
+            playerData.inventory = { att: [], mid: [], def: [], gk: [] };
+        }
+        
+        // Vezmeme předměty, nebo pokud sekce neexistuje, použijeme prázdné pole
+        const items = playerData.inventory[role] || [];
+        // -------------------------------------------
+
         let slotsHtml = '';
         
         for (let i = 0; i < limit; i++) {
