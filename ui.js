@@ -818,7 +818,7 @@ function renderMatches() {
 }
 
 // --- POŠTA (Seznam zpráv) ---
-function renderMail() {
+window.renderMail = function() {
     const mainContent = document.getElementById('main-content');
     
     if (!playerData.mail || playerData.mail.length === 0) {
@@ -836,26 +836,64 @@ function renderMail() {
         </div>
         <div class="mail-container">
             ${playerData.mail.map((m, index) => {
+                const unreadClass = m.read ? '' : 'unread';
+
+                // --- 1. ŽÁDOST O PŘIPOJENÍ DO MINILIGY ---
+                if (m.type === "ml_invite") {
+                    return `
+                    <div class="mail-message ${unreadClass}" style="border-left-color: #f59e0b;">
+                        <div>
+                            <strong class="mail-msg-title">${m.subject}</strong> 
+                            <span class="mail-msg-date">(${m.date})</span>
+                            <br><span style="color: #d1d5db; display: block; margin-top: 5px;">${m.text}</span>
+                        </div>
+                        <div style="margin-top: 10px; display: flex; gap: 10px;">
+                            <button class="btn-task" style="background: #10b981; padding: 5px 15px;" 
+                                    onclick="acceptMLInvite('${m.id}', '${m.applicantUid}', '${m.applicantName}', '${m.leagueName}', '${m.leagueRank}')">
+                                ✅ Přijmout
+                            </button>
+                            <button class="btn-task" style="background: #ef4444; padding: 5px 15px;" 
+                                    onclick="rejectMLInvite('${m.id}', '${m.applicantUid}', '${m.leagueName}')">
+                                ❌ Zamítnout
+                            </button>
+                        </div>
+                    </div>
+                    `;
+                }
+
+                // --- 2. KLASICKÁ TEXTOVÁ ZPRÁVA (výsledky miniligy, oznámení atd.) ---
+                if (m.text && !m.result) {
+                    return `
+                    <div class="mail-message ${unreadClass}" style="border-left-color: #3b82f6;">
+                        <div>
+                            <strong class="mail-msg-title">${m.subject}</strong> 
+                            <span class="mail-msg-date">(${m.date})</span>
+                            <br><span style="color: #d1d5db; display: block; margin-top: 5px;">${m.text}</span>
+                        </div>
+                        <button class="btn-task" style="background: #4b5563; padding: 5px 15px; margin-top: 10px;" 
+                                onclick="playerData.mail.splice(${index}, 1); saveGame(); renderMail();">
+                            🗑️ Smazat zprávu
+                        </button>
+                    </div>
+                    `;
+                }
+
+                // --- 3. VIDEO ZÁZNAM BĚŽNÉHO ZÁPASU (Původní logika) ---
                 const scoreDisplay = m.read ? m.result : '❓ : ❓';
                 const scoreText = m.read ? `Konečné skóre: ${scoreDisplay}` : `Skóre je tajné (Pusť si záznam!)`;
                 const btnText = m.read ? 'Znovu přehrát' : '▶ Přehrát zápas';
-                const unreadClass = m.read ? '' : 'unread';
 
-                // Výpočet barev necháváme inline, protože se dynamicky mění podle výsledku
                 let borderColor = '#9a9f05'; 
                 let scoreColor = '#9a9f05';  
 
                 if (m.read && m.result && m.result.includes(':')) {
                     const [myGoals, botGoals] = m.result.split(':').map(Number);
                     if (myGoals > botGoals) {
-                        borderColor = '#10b981';
-                        scoreColor = '#166534';
+                        borderColor = '#10b981'; scoreColor = '#166534';
                     } else if (myGoals < botGoals) {
-                        borderColor = '#ef4444';
-                        scoreColor = '#b91c1c';
+                        borderColor = '#ef4444'; scoreColor = '#b91c1c';
                     } else {
-                        borderColor = '#6b7280';
-                        scoreColor = '#4b5563';
+                        borderColor = '#6b7280'; scoreColor = '#4b5563';
                     }
                 }
 
@@ -1165,7 +1203,7 @@ window.renderMinileague = function() {
                     <p class="minileague-card-desc">Znáš přesný název miniligy svého kamaráda? Požádej o přijetí!</p>
                     <div class="minileague-btn-group">
                         <input type="text" id="join-league-input" class="minileague-input" placeholder="Zadej název miniligy...">
-                        <button class="btn-task btn-join-league" onclick="alert('Zatím ve vývoji!')">Odeslat žádost</button>
+                        <button class="btn-task btn-join-league" onclick="joinMinileague()">Odeslat žádost</button>
                     </div>
                 </div>
 
@@ -1193,7 +1231,15 @@ window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
     try {
         const dbRef = window.dbRef(window.db);
         const snapshot = await window.dbGet(window.dbChild(dbRef, `minileagues/${leagueName}`));
-        const league = snapshot.val();
+        let league = snapshot.val();
+
+        // --- SPOUŠTĚČ SIMULACE ---
+        if (Date.now() >= league.nextMatchTime) {
+            await window.runMLSimulation(leagueName, league);
+            // Po simulaci si data načteme znovu, aby byla tabulka aktuální
+            const newSnap = await window.dbGet(window.dbChild(dbRef, `minileagues/${leagueName}`));
+            league = newSnap.val();
+        }
         const myTeam = league.teams[playerData.uid];
         const layout = FORMATIONS_LAYOUT['4-4-2'];
         // --- GENEROVÁNÍ NOVÉ TABULKY --- //
@@ -1260,6 +1306,8 @@ window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
                     </thead>
                     <tbody>${standingsHtml}</tbody>
                 </table>
+                <button class="btn-task" style="background:#6366f1; margin-bottom: 15px;" 
+                    onclick="showMLHistory('${leagueName}')">📊 Výsledky poslední sezóny</button>
 
                 <div class="minileague-locker-accordion">
                     <div class="locker-header" onclick="document.querySelector('.locker-content').classList.toggle('active')">
@@ -1336,35 +1384,69 @@ function renderMLPlayerCard(player, index, leagueName) {
     `;
 }
 
-window.renderMyMinileaguesList = function() {
+window.renderMyMinileaguesList = async function() {
     const mainContent = document.getElementById('main-content');
     const myLeagues = playerData.myMinileagues || [];
 
-    let leaguesHtml = myLeagues.length > 0 
-        ? myLeagues.map(league => {
-            const leagueName = typeof league === 'object' ? league.name : league;
-            const leagueRank = typeof league === 'object' ? `(${league.rank})` : '';
+    if (myLeagues.length === 0) {
+        mainContent.innerHTML = `
+            <div class="scouting-card minileague-container">
+                <h2 class="section-title">Moje miniligy (0/3)</h2>
+                <div style="margin-top:20px; text-align:center;">
+                    <p class="text-muted">Zatím nejsi v žádné minilize.<br>Můžeš být maximálně ve 3 současně.</p>
+                </div>
+                <button class="btn-task btn-full-width" style="margin-top:20px; background:#4b5563;" onclick="renderMinileague()">Zpět na rozcestník</button>
+            </div>`;
+        return;
+    }
+
+    // Loader, protože teď taháme data z cloudu
+    mainContent.innerHTML = `<div class="loader">Načítám tvé miniligy z cloudu...</div>`;
+
+    let leaguesHtml = '';
+    const dbRef = window.dbRef(window.db);
+
+    for (const leagueData of myLeagues) {
+        const leagueName = typeof leagueData === 'object' ? leagueData.name : leagueData;
+        const leagueRank = typeof leagueData === 'object' ? `(${leagueData.rank})` : '';
+
+        // Stažení detailů ligy pro výpočet času
+        const snapshot = await window.dbGet(window.dbChild(dbRef, `minileagues/${leagueName}`));
+        
+        let timeText = "Status neznámý";
+        if (snapshot.exists()) {
+            const leagueInfo = snapshot.val();
+            const timeLeft = leagueInfo.seasonEndTime - Date.now();
             
-            return `
-            <div style="background: rgba(0,0,0,0.3); border: 1px solid #4b5563; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                <div>
-                    <strong style="color: #fcd34d; font-size: 1.1rem;">🏆 ${leagueName}</strong> 
-                    <span style="color: #ccc; font-size: 0.9rem;">${leagueRank}</span>
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <button class="btn-task" style="background:#2563eb; padding: 8px 15px;" onclick="renderMinileagueDetail('${leagueName}')">Vstoupit</button>
-                    <button class="btn-task" style="background:#991b1b; padding: 8px 15px;" onclick="leaveMinileague('${leagueName}')">Opustit</button>
-                </div>
+            if (timeLeft > 0) {
+                const d = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+                const h = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const m = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                timeText = `⏳ Konec za: <strong>${d}d ${h}h ${m}m</strong>`;
+            } else {
+                timeText = `✅ Sezóna končí, probíhá vyhodnocení`;
+            }
+        }
+
+        leaguesHtml += `
+        <div style="background: rgba(0,0,0,0.3); border: 1px solid #4b5563; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <strong style="color: #fcd34d; font-size: 1.1rem;">🏆 ${leagueName}</strong> 
+                <span style="color: #ccc; font-size: 0.9rem;">${leagueRank}</span>
+                <div style="font-size: 0.85rem; color: #9ca3af; margin-top: 6px;">${timeText}</div>
             </div>
-          `}).join('')
-        : `<p class="text-muted" style="text-align: center;">Zatím nejsi v žádné minilize.<br>Můžeš být maximálně ve 3 současně.</p>`;
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-task" style="background:#2563eb; padding: 8px 15px;" onclick="renderMinileagueDetail('${leagueName}')">Vstoupit</button>
+                <button class="btn-task" style="background:#991b1b; padding: 8px 15px;" onclick="leaveMinileague('${leagueName}')">Opustit</button>
+            </div>
+        </div>`;
+    }
 
     mainContent.innerHTML = `
         <div class="scouting-card minileague-container">
             <h2 class="section-title">Moje miniligy (${myLeagues.length}/3)</h2>
             <div style="margin-top:20px;">${leaguesHtml}</div>
-            <button class="btn-task btn-full-width" style="margin-top:20px; background:#4b5563;" 
-                    onclick="renderMinileague()">Zpět na rozcestník</button>
+            <button class="btn-task btn-full-width" style="margin-top:20px; background:#4b5563;" onclick="renderMinileague()">Zpět na rozcestník</button>
         </div>
     `;
 }
@@ -1481,3 +1563,18 @@ window.openMLSelector = function(playerId) {
 
     document.body.appendChild(overlay);
 }
+
+// FUNKCE KTERÁ UKÁŽE VÝSLEDKY POSLEDNÍ MINILIGY //
+window.showMLHistory = async function(leagueName) {
+    const dbRef = window.dbRef(window.db);
+    const snap = await window.dbGet(window.dbChild(dbRef, `minileagues/${leagueName}/lastResults`));
+    const results = snap.val();
+
+    if (!results) {
+        alert("Zatím nebyly odehrány žádné sezóny.");
+        return;
+    }
+
+    const resText = results.map((r, i) => `${i+1}. ${r.name} - ${r.pts} bodů`).join('\n');
+    alert(`🏆 POSLEDNÍ VÍTĚZOVÉ LIGY ${leagueName}:\n\n${resText}`);
+};

@@ -1730,7 +1730,7 @@ window.createNewMinileague = async function(rank) {
             owner: playerData.uid,
             createdAt: Date.now(),
             nextMatchTime: getNextMatchSlot(), // Čas nejbližšího zápasu
-            seasonEndTime: Date.now() + (14 * 24 * 60 * 60 * 1000), // Za 14 dní
+            seasonEndTime: Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 dní
             participants: {
                 [playerData.uid]: playerData.managerName
             },
@@ -1761,6 +1761,24 @@ window.createNewMinileague = async function(rank) {
         console.error("Chyba při zakládání ligy:", error);
         alert("Nepodařilo se založit ligu na serveru.");
     }
+
+    // Pomocná funkce pro určení dalšího hracího slotu (00, 08, 16 h)
+    window.getNextMatchSlot = function() {
+        const now = new Date();
+        const currentHour = now.getHours();
+        let nextMatch = new Date(now);
+        nextMatch.setMinutes(0, 0, 0);
+
+        if (currentHour < 8) {
+            nextMatch.setHours(8);
+        } else if (currentHour < 16) {
+            nextMatch.setHours(16);
+        } else {
+            nextMatch.setHours(0);
+            nextMatch.setDate(now.getDate() + 1);
+        }
+        return nextMatch.getTime();
+    };
 }
 
 // MINILIGA  - PŘESOUVÁNÍ A MAZÁNÍ //
@@ -2066,6 +2084,16 @@ window.fetchCloudMail = async function() {
             // Projdeme všechny nové zprávy ze serveru
             for (const key in mails) {
                 const mail = mails[key];
+                
+                // --- NOVÉ: AUTOMATICKÉ PŘIDÁNÍ LIGY PO SCHVÁLENÍ ---
+                if (mail.type === "ml_accepted") {
+                    if (!playerData.myMinileagues) playerData.myMinileagues = [];
+                    // Zkontrolujeme, jestli už ji nemá (obrana proti zdvojení)
+                    const alreadyHas = playerData.myMinileagues.find(l => (typeof l === 'object' ? l.name : l) === mail.leagueName);
+                    if (!alreadyHas) {
+                        playerData.myMinileagues.push({ name: mail.leagueName, rank: mail.leagueRank });
+                    }
+                }
                 playerData.mail.unshift(mail); // Přidáme je k tobě do lokální pošty
                 hasNew = true;
                 
@@ -2093,3 +2121,256 @@ window.fetchCloudMail = async function() {
         console.error("Chyba při stahování pošty:", e);
     }
 }
+
+
+//  JÁDRO SIMULÁTORU MINILIGY  // 
+window.runMLSimulation = async function(leagueName, league) {
+    const participants = Object.keys(league.participants);
+    if (participants.length < 2) return; // miniliga musí mít alespon 2 hráče
+
+    let playersToMatch = [...participants];
+    
+    // --- FÉROVÉ VOLNO (pro lichý počet) ---
+    if (playersToMatch.length % 2 !== 0) {
+        // Najdeme někoho, kdo měl volno nejméněkrát (nebo vůbec)
+        playersToMatch.sort((a, b) => {
+            const byesA = league.standings[a].byes || 0;
+            const byesB = league.standings[b].byes || 0;
+            return byesA - byesB;
+        });
+        
+        const luckyPlayer = playersToMatch.shift(); // Tenhle v tomto kole nehraje
+        league.standings[luckyPlayer].byes = (league.standings[luckyPlayer].byes || 0) + 1;
+    }
+
+    // Zbytek hráčů náhodně spárujeme
+    playersToMatch.sort(() => Math.random() - 0.5);
+    let matches = [];
+    while (playersToMatch.length > 0) {
+        matches.push([playersToMatch.pop(), playersToMatch.pop()]);
+    }
+
+    // --- SIMULACE ZÁPASŮ ---
+    for (const [uidA, uidB] of matches) {
+        const teamA = league.teams[uidA];
+        const teamB = league.teams[uidB];
+        const nameA = league.participants[uidA];
+        const nameB = league.participants[uidB];
+
+        const getStrength = (team) => {
+            return team.players.slice(0, 11).reduce((sum, p) => {
+                if (!p) return sum;
+                return sum + (p.stats.atk + p.stats.def + p.stats.spd) / 3;
+            }, 0);
+        };
+
+        const strA = getStrength(teamA);
+        const strB = getStrength(teamB);
+        
+        const scoreA = Math.floor(Math.random() * 3) + (strA > strB ? 1 : 0);
+        const scoreB = Math.floor(Math.random() * 3) + (strB > strA ? 1 : 0);
+
+        const updateStats = (uid, gf, ga) => {
+            const s = league.standings[uid];
+            s.p++; s.gf += gf; s.ga += ga;
+            if (gf > ga) { s.w++; s.pts += 3; }
+            else if (gf === ga) { s.d++; s.pts += 1; }
+            else { s.l++; }
+        };
+
+        updateStats(uidA, scoreA, scoreB);
+        updateStats(uidB, scoreB, scoreA);
+
+        const mailMsg = {
+            id: Date.now() + Math.random(),
+            sender: "🏆 Miniliga",
+            subject: `Zápas: ${nameA} vs ${nameB}`,
+            text: `🏆 Miniliga (${leagueName}): Zápas skončil ${scoreA}:${scoreB}.`,
+            date: new Date().toLocaleDateString(),
+            read: false
+        };
+        await window.dbSet(window.dbRef(window.db, `mail_queue/${uidA}/${mailMsg.id}`), mailMsg);
+        await window.dbSet(window.dbRef(window.db, `mail_queue/${uidB}/${mailMsg.id}`), mailMsg);
+    }
+
+    // --- KONEC SEZÓNY (7 DNÍ) ---
+    const isSeasonOver = Date.now() >= league.seasonEndTime;
+    if (isSeasonOver) {
+        const sortedFinal = Object.keys(league.standings)
+            .sort((a,b) => league.standings[b].pts - league.standings[a].pts);
+        
+        const top3 = sortedFinal.slice(0, 3).map(uid => ({
+            name: league.participants[uid],
+            pts: league.standings[uid].pts
+        }));
+
+        // Rozeslání závěrečných zpráv všem
+        for (let i = 0; i < sortedFinal.length; i++) {
+            const uid = sortedFinal[i];
+            const finalRank = i + 1;
+            const finalPts = league.standings[uid].pts;
+
+            const endSeasonMail = {
+                id: Date.now() + Math.random(),
+                sender: "🏆 Vedení Miniligy",
+                subject: `Konec sezóny v lize ${leagueName}`,
+                text: `Sezóna v lize ${leagueName} skončila! Skončil jsi na ${finalRank}. místě se ziskem ${finalPts} bodů. Právě byla odstartována nová sezóna, hodně štěstí!`,
+                date: new Date().toLocaleDateString(),
+                read: false
+            };
+            await window.dbSet(window.dbRef(window.db, `mail_queue/${uid}/${endSeasonMail.id}`), endSeasonMail);
+        }
+
+        league.lastResults = top3;
+        
+        // Reset tabulky
+        participants.forEach(uid => {
+            league.standings[uid] = { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0, byes: 0 };
+        });
+        league.seasonEndTime = Date.now() + (7 * 24 * 60 * 60 * 1000);
+    }
+
+    league.nextMatchTime = window.getNextMatchSlot();
+    await window.dbSet(window.dbRef(window.db, `minileagues/${leagueName}`), league);
+};
+
+// PŘIPOJENÍ HRÁČE DO MINILIGY // 
+
+window.joinMinileague = async function() {
+    if ((playerData.myMinileagues || []).length >= 3) {
+        alert("Můžeš být současně maximálně ve 3 miniligách! Pokud se chceš připojit do další, musíš jinou opustit.");
+        return;
+    }
+
+    const leagueName = prompt("Zadej přesný název miniligy, do které se chceš připojit:");
+    if (!leagueName || leagueName.trim() === "") return;
+
+    try {
+        const dbRef = window.dbRef(window.db);
+        const snapshot = await window.dbGet(window.dbChild(dbRef, `minileagues/${leagueName}`));
+
+        if (!snapshot.exists()) {
+            alert("Tato miniliga neexistuje. Zkontroluj překlepy v názvu a zkus to znovu.");
+            return;
+        }
+
+        const league = snapshot.val();
+
+        if (league.participants && league.participants[playerData.uid]) {
+            alert("V této minilize už dávno jsi!");
+            return;
+        }
+
+        const participantsCount = league.participants ? Object.keys(league.participants).length : 0;
+        if (participantsCount >= 10) {
+            alert("Tato miniliga je už bohužel plná (10/10 hráčů)!");
+            return;
+        }
+
+        // --- ZMĚNA: ODESLÁNÍ ŽÁDOSTI ZAKLADATELI ---
+        const ownerUid = league.owner;
+        if (!ownerUid) {
+            alert("Tato liga nemá zakladatele, nelze se připojit.");
+            return;
+        }
+
+        const inviteMail = {
+            id: Date.now() + Math.random().toString(36).substring(2),
+            type: "ml_invite", // Speciální typ zprávy
+            sender: "🏆 Systém",
+            subject: `Žádost o vstup: ${leagueName}`,
+            text: `Manažer **${playerData.managerName}** žádá o vstup do tvé miniligy **${leagueName}**.`,
+            applicantUid: playerData.uid,
+            applicantName: playerData.managerName,
+            leagueName: leagueName,
+            leagueRank: league.rank,
+            date: new Date().toLocaleDateString(),
+            read: false
+        };
+
+        // Zprávu rovnou hodíme zakladateli do cloudu
+        await window.dbSet(window.dbRef(window.db, `mail_queue/${ownerUid}/${inviteMail.id}`), inviteMail);
+        alert(`Žádost o vstup do ligy ${leagueName} byla odeslána zakladateli! Jakmile ji schválí, dostaneš zprávu do Pošty.`);
+
+    } catch (error) {
+        console.error("Chyba při žádosti:", error);
+        alert("Něco se pokazilo při komunikaci se serverem.");
+    }
+}
+
+// --- PŘIJETÍ DO LIGY ---
+window.acceptMLInvite = async function(mailId, applicantUid, applicantName, leagueName, leagueRank) {
+    try {
+        const dbRef = window.dbRef(window.db);
+        const snapshot = await window.dbGet(window.dbChild(dbRef, `minileagues/${leagueName}`));
+        
+        if (!snapshot.exists()) {
+            alert("Tato liga už neexistuje."); return;
+        }
+        const league = snapshot.val();
+        
+        const participantsCount = league.participants ? Object.keys(league.participants).length : 0;
+        if (participantsCount >= 10) {
+            alert("Nelze přijmout. Miniliga je už plná (10/10 hráčů)!"); return;
+        }
+
+        // 1. Zápis hráče do cloudu
+        if (!league.participants) league.participants = {};
+        league.participants[applicantUid] = applicantName;
+
+        if (!league.standings) league.standings = {};
+        league.standings[applicantUid] = { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0, byes: 0 };
+
+        if (!league.teams) league.teams = {};
+        league.teams[applicantUid] = { formation: '4-4-2', players: new Array(16).fill(null) };
+
+        await window.dbSet(window.dbRef(window.db, `minileagues/${leagueName}`), league);
+
+        // 2. Odeslání potvrzovací pošty žadateli
+        const acceptMail = {
+            id: Date.now() + Math.random().toString(36).substring(2),
+            type: "ml_accepted", // TENTO TYP AUTOMATICKY PŘIDÁ LIGU
+            sender: "🏆 Systém",
+            subject: `Schváleno: Vítej v lize ${leagueName}`,
+            text: `Tvůj vstup do miniligy **${leagueName}** byl schválen! Liga byla automaticky přidána do tvého seznamu. Běž do šatny miniligy a nastav si sestavu.`,
+            leagueName: leagueName,
+            leagueRank: leagueRank,
+            date: new Date().toLocaleDateString(),
+            read: false
+        };
+        await window.dbSet(window.dbRef(window.db, `mail_queue/${applicantUid}/${acceptMail.id}`), acceptMail);
+
+        // 3. Smazání zprávy ze schránky zakladatele
+        playerData.mail = playerData.mail.filter(m => m.id !== mailId);
+        saveGame();
+        
+        // Překreslení pošty (pokud tam máš funkci renderMail)
+        if (typeof renderMail === "function") renderMail();
+        alert(`Manažer ${applicantName} byl úspěšně přijat do tvé ligy!`);
+
+    } catch (error) {
+        console.error(error); alert("Chyba při přijímání hráče.");
+    }
+};
+
+// --- ZAMÍTNUTÍ Z LIGY ---
+window.rejectMLInvite = async function(mailId, applicantUid, leagueName) {
+    try {
+        const rejectMail = {
+            id: Date.now() + Math.random().toString(36).substring(2),
+            sender: "🏆 Systém",
+            subject: `Zamítnuto: ${leagueName}`,
+            text: `Zakladatel bohužel zamítl tvůj vstup do miniligy **${leagueName}**.`,
+            date: new Date().toLocaleDateString(),
+            read: false
+        };
+        await window.dbSet(window.dbRef(window.db, `mail_queue/${applicantUid}/${rejectMail.id}`), rejectMail);
+
+        playerData.mail = playerData.mail.filter(m => m.id !== mailId);
+        saveGame();
+        if (typeof renderMail === "function") renderMail();
+        alert("Žádost byla zamítnuta a odesílatel informován.");
+    } catch (error) {
+        console.error(error); alert("Chyba při zamítání.");
+    }
+};
