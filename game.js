@@ -1657,24 +1657,23 @@ function processSeasonEndOffline() {
 }
 
 // ---------- MINILIGA ------ //
-// Pomocná funkce pro vygenerování slabého týmu pro miniligu (Kopyta, 0*)
-function generateInitialMinileagueTeam() {
-    const players = [];
-    // Pouze 11 pozic pro formaci 4-4-2 (1x GK, 4x DEF, 4x MID, 2x ATT)
-    const positions = ['gk', 'def', 'def', 'def', 'def', 'mid', 'mid', 'mid', 'mid', 'att', 'att'];
+// --- UNIVERZÁLNÍ GENERÁTOR TÝMU PRO MINILIGU ---
+window.generateMLStarterTeam = function(rankName) {
+    const players = new Array(16).fill(null);
+    // Najdeme data pro požadovaný rank (pokud se splete, dáme Kopyto)
+    const rankData = PLAYER_RANKS.find(r => r.name === rankName) || PLAYER_RANKS[0];
 
-    const rankData = PLAYER_RANKS[0]; // Kopyto
-
-    positions.forEach(pos => {
+    const generateP = (pos, index) => {
+        // Vytvoříme nulové statistiky
         const stats = { atk: 0, def: 0, spd: 0, str: 0, eng: 0, gk: 0, tek: 0 };
-        // Pouze povoleným statistikám pro danou pozici dáme náhodnou hodnotu
+        // Vygenerujeme čísla jen pro ty staty, které pozice potřebuje
         POSITION_STATS[pos].stats.forEach(s => {
             stats[s] = Math.floor(Math.random() * (rankData.maxStart - rankData.minStart + 1)) + rankData.minStart;
         });
 
-        players.push({
-            id: 'ml_' + Math.random().toString(36).substr(2, 9),
-            name: `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`,
+        return {
+            id: 'ml_base_' + Date.now() + '_' + index + '_' + Math.random().toString(36).substr(2, 5),
+            name: `Nováček (${rankData.name})`,
             position: pos,
             nationality: NATIONALITIES[Math.floor(Math.random() * NATIONALITIES.length)].name,
             rank: rankData.name,
@@ -1685,10 +1684,24 @@ function generateInitialMinileagueTeam() {
             xp: 0,
             unspentPoints: 0,
             stats: stats
-        });
-    });
+        };
+    };
+
+    // Naplníme základní jedenáctku
+    players[0] = generateP('gk', 0);
+    players[1] = generateP('def', 1);
+    players[2] = generateP('def', 2);
+    players[3] = generateP('def', 3);
+    players[4] = generateP('def', 4);
+    players[5] = generateP('mid', 5);
+    players[6] = generateP('mid', 6);
+    players[7] = generateP('mid', 7);
+    players[8] = generateP('mid', 8);
+    players[9] = generateP('att', 9);
+    players[10] = generateP('att', 10);
+
     return players;
-}
+};
 
 window.createNewMinileague = async function(rank) {
     if (playerData.money < 1) {
@@ -1721,7 +1734,7 @@ window.createNewMinileague = async function(rank) {
 
         // 2. Stržení poplatku a příprava týmu
         playerData.money -= 1;
-        const initialTeam = generateInitialMinileagueTeam();
+        const initialTeam = window.generateMLStarterTeam(rank);
 
         // 3. Zápis do Firebase (s novými časovači)
         const leagueData = {
@@ -2108,11 +2121,19 @@ window.fetchCloudMail = async function() {
             
             if (hasNew) {
                 saveGame();
-                const hasInvite = Object.values(mails).some(m => m.type === "ml_invite");
+                const incoming = Object.values(mails);
+                const hasInvite = incoming.some(m => m.type === "ml_invite");
+                const hasAccepted = incoming.some(m => m.type === "ml_accepted");
+                const hasRejected = incoming.some(m => m.text && m.text.includes("ZAMÍTNUTA"));
+                
                 if (hasInvite) {
-                    alert("📩 Pošťák právě dorazil! Někdo žádá o vstup do tvé miniligy.");
+                    alert("📩 Pošťák právě dorazil! Někdo žádá o vstup do tvé miniligy. Koukni do pošty.");
+                } else if (hasAccepted) {
+                    alert("📩 Skvělá zpráva! Tvá žádost o vstup do miniligy byla schválena. Koukni do pošty.");
+                } else if (hasRejected) {
+                    alert("📩 Pošťák přinesl špatnou zprávu. Tvá žádost do miniligy byla zamítnuta.");
                 } else {
-                    alert("📩 Pošťák právě dorazil! Během tvé nepřítomnosti dorazila nová pošta (zápas nebo výsledky).");
+                    alert("📩 Pošťák právě dorazil! Během tvé nepřítomnosti se odehrál zápas (nebo dorazily výsledky).");
                 }
                 
                 // Pokud zrovna koukáš na poštu, hned ji překreslíme
@@ -2326,8 +2347,10 @@ window.acceptMLInvite = async function(mailId, applicantUid, applicantName, leag
         if (!league.standings) league.standings = {};
         league.standings[applicantUid] = { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0, byes: 0 };
 
+        // --- NOVÉ: POUŽITÍ UNIVERZÁLNÍHO GENERÁTORU ---
+        const starterTeam = window.generateMLStarterTeam(leagueRank);
         if (!league.teams) league.teams = {};
-        league.teams[applicantUid] = { formation: '4-4-2', players: new Array(16).fill(null) };
+        league.teams[applicantUid] = { formation: '4-4-2', players: starterTeam };
 
         await window.dbSet(window.dbRef(window.db, `minileagues/${leagueName}`), league);
 
