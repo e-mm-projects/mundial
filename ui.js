@@ -1165,7 +1165,7 @@ window.openMatchReport = function(index) {
             <div class="match-report-layout" style="display: flex; justify-content: center; align-items: flex-start; gap: 30px; width: 95%; max-width: 1400px; flex-wrap: wrap;">
                 ${myR ? createRatingPanel(homeTeam, myR, true) : '<div style="width: 220px; border: 1px dashed #444; color: #666; display: flex; align-items: center; justify-content: center; border-radius: 10px;">Data nedostupná</div>'}
                 
-                <div id="replay-window" class="replay-window-container" style="flex: 2; min-width: 400px; max-width: 800px; height: 350px; background: #111827; padding: 20px; border: 4px solid #374151; border-radius: 10px; overflow-y: auto;">
+                <div id="replay-window" class="replay-window-container" style="flex: 2 1 auto; width: 100%; min-width: 280px; max-width: 800px; height: 350px; max-height: 50vh; box-sizing: border-box; background: #111827; padding: 15px; border: 4px solid #374151; border-radius: 10px; overflow-y: auto;">
                 </div>
                 
                 ${botR ? createRatingPanel(awayTeam, botR, false) : '<div style="width: 220px; border: 1px dashed #444; color: #666; display: flex; align-items: center; justify-content: center; border-radius: 10px;">Data nedostupná</div>'}
