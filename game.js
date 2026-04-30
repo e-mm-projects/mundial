@@ -2185,28 +2185,50 @@ window.runMLSimulation = async function(leagueName, league) {
     }
 
     // --- SIMULACE ZÁPASŮ ---
+    // Dočasně si uložíme tvé jméno, protože ho hlavní simulátor používá pro generování komentáře
+    const originalManagerName = playerData.managerName;
+
     for (const [uidA, uidB] of matches) {
         const teamA = league.teams[uidA];
         const teamB = league.teams[uidB];
         const nameA = league.participants[uidA];
         const nameB = league.participants[uidB];
 
-        const getStrength = (team) => {
-            // --- POJISTKA: Pokud tým nebo hráči neexistují, síla je 0 ---
-            if (!team || !team.players) return 0; 
-            
-            return team.players.slice(0, 11).reduce((sum, p) => {
-                if (!p) return sum;
-                return sum + (p.stats.atk + p.stats.def + p.stats.spd) / 3;
-            }, 0);
-        };
+        // Nastavíme jméno domácího týmu pro simulátor
+        playerData.managerName = nameA;
 
-        const strA = getStrength(teamA);
-        const strB = getStrength(teamB);
+        // 1. ČISTÁ SÍLA: Žádný bonus za přípravu (nastaveno na false)
+        const sectorsA = calculateSectorStrength(teamA.players, teamA.formation || '4-4-2', false);
+        const sectorsB = calculateSectorStrength(teamB.players, teamB.formation || '4-4-2', false);
         
-        const scoreA = Math.floor(Math.random() * 3) + (strA > strB ? 1 : 0);
-        const scoreB = Math.floor(Math.random() * 3) + (strB > strA ? 1 : 0);
+        // Žádné předměty (prázdný trezor)
+        const emptyInv = {att: [], mid: [], def: [], gk: []}; 
 
+        // 2. ODSIMULOVÁNÍ ZÁPASU (použití hlavního enginu)
+        const matchResult = simulateMatch(
+            sectorsA, sectorsB, 
+            teamA.formation || '4-4-2', teamB.formation || '4-4-2', 
+            teamA.players, teamB.players, 
+            nameB, emptyInv
+        );
+
+        const scoreA = matchResult.myGoals;
+        const scoreB = matchResult.botGoals;
+        const logA = matchResult.log;
+
+        // Překlopení záznamu pro hostující tým (aby viděli své góly zeleně)
+        const logB = logA.map(act => {
+            const newAct = { ...act };
+            if (newAct.score) {
+                const [gA, gB] = newAct.score.split(':');
+                newAct.score = `${gB}:${gA}`;
+            }
+            if (newAct.type === 'goal') newAct.type = 'bad-goal';
+            else if (newAct.type === 'bad-goal') newAct.type = 'goal';
+            return newAct;
+        });
+
+        // Update tabulky
         const updateStats = (uid, gf, ga) => {
             const s = league.standings[uid];
             s.p++; s.gf += gf; s.ga += ga;
@@ -2218,17 +2240,39 @@ window.runMLSimulation = async function(leagueName, league) {
         updateStats(uidA, scoreA, scoreB);
         updateStats(uidB, scoreB, scoreA);
 
-        const mailMsg = {
-            id: Date.now() + Math.random(),
-            sender: "🏆 Miniliga",
-            subject: `Zápas: ${nameA} vs ${nameB}`,
-            text: `🏆 Miniliga (${leagueName}): Zápas skončil ${scoreA}:${scoreB}.`,
+        // 3. VÝPOČET HODNOCENÍ TÝMŮ PRO BOČNÍ TABULKY V ZÁZNAMU
+        const ratingA = calculateBaseTeamRating(teamA.players, teamA.formation || '4-4-2');
+        const ratingB = calculateBaseTeamRating(teamB.players, teamB.formation || '4-4-2');
+
+        // 4. ODESLÁNÍ PLNOHODNOTNÉHO VIDEOZÁZNAMU
+        const mailA = {
+            id: 'ml_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
+            subject: `🏆 ML: ${nameA} vs ${nameB}`,
+            content: logA,
+            result: `${scoreA}:${scoreB}`,
+            // Přidáme rewards objekt (Peníze a XP jsou 0, ale díky ratingu naskočí boční panely)
+            rewards: { money: 0, xp: 0, pXp: 0, homeTeam: nameA, awayTeam: nameB, myRating: ratingA, botRating: ratingB, isML: true },
             date: new Date().toLocaleDateString(),
             read: false
         };
-        await window.dbSet(window.dbRef(window.db, `mail_queue/${uidA}/${mailMsg.id}`), mailMsg);
-        await window.dbSet(window.dbRef(window.db, `mail_queue/${uidB}/${mailMsg.id}`), mailMsg);
+        
+        const mailB = {
+            id: 'ml_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
+            subject: `🏆 ML: ${nameB} vs ${nameA}`,
+            content: logB,
+            result: `${scoreB}:${scoreA}`,
+            rewards: { money: 0, xp: 0, pXp: 0, homeTeam: nameB, awayTeam: nameA, myRating: ratingB, botRating: ratingA, isML: true },
+            date: new Date().toLocaleDateString(),
+            read: false
+        };
+        
+        await window.dbSet(window.dbRef(window.db, `mail_queue/${uidA}/${mailA.id}`), mailA);
+        await window.dbSet(window.dbRef(window.db, `mail_queue/${uidB}/${mailB.id}`), mailB);
     }
+
+    // Vrátíme původní jméno hráče zpět
+    playerData.managerName = originalManagerName;
+    // --- KONEC SIMULACE ZÁPASŮ ---
 
     // --- KONEC SEZÓNY (7 DNÍ) ---
     const isSeasonOver = Date.now() >= league.seasonEndTime;
@@ -2248,7 +2292,7 @@ window.runMLSimulation = async function(leagueName, league) {
             const finalPts = league.standings[uid].pts;
 
             const endSeasonMail = {
-                id: Date.now() + Math.random(),
+                id: 'mail_' + Date.now() + '_' + Math.floor(Math.random() * 10000), // OPRAVA: Text bez tečky
                 sender: "🏆 Vedení Miniligy",
                 subject: `Konec sezóny v lize ${leagueName}`,
                 text: `Sezóna v lize ${leagueName} skončila! Skončil jsi na ${finalRank}. místě se ziskem ${finalPts} bodů. Právě byla odstartována nová sezóna, hodně štěstí!`,
