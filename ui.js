@@ -739,8 +739,8 @@ function renderMatches() {
     ? `<button class="btn-task" style="width: 100%; background-color: #4b5563; border-color: #374151; padding: 15px; font-size: 1.1rem; cursor: not-allowed;" disabled>Tým je plně připraven! ✓</button>`
     : `<button class="btn-task" style="width: 100%; background-color: #166534; border-color: #14532d; padding: 15px; font-size: 1.1rem;" onclick="prepareForMatch()">Připravit se na zápas (+10% Síly)</button>`;
 
-// KONTROLA BANNERU
-    const hasUnreadMatch = playerData.mail.some(m => !m.read && !m.isPvE);
+    // KONTROLA BANNERU
+    const hasUnreadMatch = playerData.mail.some(m => !m.read && !m.isPvE && m.result && m.result.includes(':'));
     const unreadBanner = hasUnreadMatch ? `
         <div class="notification-banner" onclick="document.querySelector('[data-target=\\'mail\\']').click()">
             📺 Máš v poště nezkouknutý záznam zápasu! Klikni sem a běž se podívat.
@@ -1249,6 +1249,9 @@ window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
             const newSnap = await window.dbGet(window.dbChild(dbRef, `minileagues/${leagueName}`));
             league = newSnap.val();
         }
+
+        window.currentMLNextMatch = league.nextMatchTime;
+
         const myTeam = league.teams[playerData.uid];
         // --- FIREBASE POJISTKA PRO PRÁZDNÉ POLE HRÁČŮ --- //
         if (myTeam && !myTeam.players) {
@@ -1304,6 +1307,14 @@ window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
                     <button class="btn-task" onclick="renderMyMinileaguesList()" style="background:#4b5563;">Zavřít ligu</button>
                 </div>
                 
+                <div class="info-box" style="background: rgba(30, 41, 59, 0.8); border: 1px solid #334155; margin-bottom: 20px;">
+                    <h3 style="margin: 0 0 10px 0; font-size: 1rem; color: #fcd34d;">⚽ Příští hrací kolo miniligy</h3>
+                    <div id="ml-match-timer" style="font-family: 'Courier New', monospace; font-size: 1.8rem; font-weight: bold; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.3);">
+                        00:00:00
+                    </div>
+                    <p style="margin: 5px 0 0 0; font-size: 0.8rem; color: #9ca3af;">Zápasy se hrají automaticky každých 8 hodin.</p>
+                </div>
+
                 <table class="minileague-table">
                     <thead>
                         <tr>
@@ -1423,12 +1434,21 @@ window.renderMyMinileaguesList = async function() {
         const leagueName = typeof leagueData === 'object' ? leagueData.name : leagueData;
         const leagueRank = typeof leagueData === 'object' ? `(${leagueData.rank})` : '';
 
-        // Stažení detailů ligy pro výpočet času
+        // Stažení detailů ligy
         const snapshot = await window.dbGet(window.dbChild(dbRef, `minileagues/${leagueName}`));
         
+        // Proměnné definujeme nahoře, aby byly dostupné i pro HTML výpis níže
         let timeText = "Status neznámý";
+        let ownerName = "Neznámý"; 
+
         if (snapshot.exists()) {
             const leagueInfo = snapshot.val();
+            
+            // Bezpečné načtení jména majitele
+            if (leagueInfo.participants && leagueInfo.owner) {
+                ownerName = leagueInfo.participants[leagueInfo.owner] || "Neznámý";
+            }
+
             const timeLeft = leagueInfo.seasonEndTime - Date.now();
             
             if (timeLeft > 0) {
@@ -1446,7 +1466,8 @@ window.renderMyMinileaguesList = async function() {
             <div>
                 <strong style="color: #fcd34d; font-size: 1.1rem;">🏆 ${leagueName}</strong> 
                 <span style="color: #ccc; font-size: 0.9rem;">${leagueRank}</span>
-                <div style="font-size: 0.85rem; color: #9ca3af; margin-top: 6px;">${timeText}</div>
+                <div style="font-size: 0.85rem; color: #9ca3af; margin-top: 4px;">Zakladatel: <span style="color: #60a5fa;">${ownerName}</span></div>
+                <div style="font-size: 0.85rem; color: #9ca3af; margin-top: 4px;">${timeText}</div>
             </div>
             <div style="display: flex; gap: 10px;">
                 <button class="btn-task" style="background:#2563eb; padding: 8px 15px;" onclick="renderMinileagueDetail('${leagueName}')">Vstoupit</button>

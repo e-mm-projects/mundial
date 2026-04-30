@@ -436,6 +436,11 @@ function gameLoop() {
         updateTimerUI('match-timer', playerData.nextMatchTime);
         updateTimerUI('topbar-season-timer', playerData.seasonEndTime);
 
+        if (window.currentMLNextMatch) {
+        updateTimerUI('ml-match-timer', window.currentMLNextMatch);
+        }
+        // Pokud jsme v detailu miniligy, aktualizujeme její odpočet
+        // (Využijeme čas z cloudu, který jsme si uložili do window.currentMLTime při renderu)
         if (now >= playerData.nextMatchTime) {
             processMatch();
         }
@@ -706,6 +711,8 @@ window.onload = initGame;
 
 // Pomocná funkce pro výpočet ceny hráče
 function getPlayerPrice(player) {
+    // --- OCHRANA PROTI FARMAŘENÍ: Výplňoví hráči jsou bezcenní ---
+    if (player.isMLFiller) return 0;
     // 1. Zjistíme index ranku (Kopyto = 0, Slibný amatér = 1 atd.)
     const rankNames = ["Kopyto", "Slibný amatér", "Srdcař", "Ligový borec", "Reprezentant", "Legenda"];
     let rankIndex = rankNames.indexOf(player.rank);
@@ -1691,7 +1698,8 @@ window.generateMLStarterTeam = function(rankName) {
             maxLevel: 1,
             xp: 0,
             unspentPoints: 0,
-            stats: stats
+            stats: stats,
+            isMLFiller: true // <--- TATO TAJNÁ ZNAČKA ZABRÁNÍ FARMAŘENÍ
         };
     };
 
@@ -2011,6 +2019,18 @@ window.returnFromMLToReserve = async function(leagueName, index) {
 
     if (!playerToReturn) return;
 
+    // --- OCHRANA PROTI VYUŽÍVÁNÍ SILNÝCH VÝPLŇOVÝCH HRÁČŮ ---
+    if (playerToReturn.isMLFiller) {
+        if (confirm(`Hráč ${playerToReturn.name} je pouze dočasná výplň pro miniligu a nelze ho přesunout do tvého hlavního klubu.\n\nChceš ho trvale smazat, abys uvolnil místo na střídačce?`)) {
+            // Hráč souhlasil -> Smažeme ho z miniligy
+            myTeam.players[index] = null; 
+            await window.dbSet(window.dbRef(window.db, `minileagues/${leagueName}/teams/${playerData.uid}`), myTeam);
+            saveGame();
+            renderMinileagueDetail(leagueName, true);
+        }
+        return; // Dál už nepokračujeme (hráč se do hlavní rezervy nepřesune)
+    }
+
     // 1. Kontrola kapacity tvé lokální rezervy (max 10 na rank)
     const countInRank = (playerData.reserve || []).filter(p => p.rank === playerToReturn.rank).length;
     if (countInRank >= 10) {
@@ -2052,7 +2072,8 @@ window.leaveMinileague = async function(leagueName) {
             if (myTeam && myTeam.players) {
                 if (!playerData.reserve) playerData.reserve = [];
                 myTeam.players.forEach(p => {
-                    if (p) {
+                    // --- VYFILTRUJEME VÝPLŇOVÉ HRÁČE (!p.isMLFiller) ---
+                    if (p && !p.isMLFiller) {
                         const countInRank = playerData.reserve.filter(r => r.rank === p.rank).length;
                         // Vrátí hráče jen pokud není rezerva plná
                         if (countInRank < 10) playerData.reserve.push(p);
