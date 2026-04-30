@@ -498,11 +498,7 @@ function checkLevelUp() {
 function updateTopBarUI() {
     document.getElementById('manager-name-display').innerText = playerData.managerName || 'Neznámý';
     document.getElementById('topbar-avatar').src = playerData.avatar || 'images/avatar1.jpg';
-    document.getElementById('ui-level').textContent = playerData.level;
-    document.getElementById('ui-xp').textContent = Math.floor(playerData.xp);
-    document.getElementById('ui-max-xp').textContent = getRequiredXp();
     document.getElementById('ui-money').textContent = Math.floor(playerData.money);
-    document.getElementById('ui-energy').textContent = playerData.energy;
 }
 
 
@@ -1477,7 +1473,6 @@ window.finishMatchReplay = function() {
             </div>
         `;
     }
-    replayWindow.scrollTop = replayWindow.scrollHeight;
 }
 
 function addMailMessage(subject, log, result, rewards = null, customDate = null) {

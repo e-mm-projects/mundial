@@ -36,21 +36,22 @@
         </div>
     </div>
             
-    <header id="top-bar">
-        <div class="manager-profile" style="display: flex; align-items: center; gap: 10px; margin-right: auto;">
+    <header id="top-bar" style="display: flex; align-items: center; justify-content: flex-start; position: relative; padding: 10px 20px; width: 100%; box-sizing: border-box;">
+        
+        <div class="manager-profile" style="display: flex; align-items: center; gap: 10px; z-index: 10;">
             <img id="topbar-avatar" src="images/avatar1.jpg" alt="Avatar" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid white;">
-            <div class="manager-info" style="display: flex; flex-direction: column; text-align: left; line-height: 1.2;">
+            <div class="manager-info" style="display: flex; flex-direction: column; justify-content: center; text-align: left; line-height: 1.2;">
                 <div style="display: flex; align-items: center;">
                     <span id="manager-name-display" style="font-weight: bold; color: white;">Manažer</span>
-                    <button onclick="logout()" class="btn-logout">Odhlásit</button>
+                    <button onclick="logout()" class="btn-logout" style="margin-left: 10px; padding: 4px 8px; font-size: 0.8rem;">Odhlásit</button>
                 </div>
-                <span style="font-size: 0.8em; color: #ccc;">Level trenéra: <span id="ui-level">-</span></span>
             </div>
         </div>
 
-        <div class="resource">XP: <span id="ui-xp">-</span> / <span id="ui-max-xp">-</span></div>
-        <div class="resource">Peníze: <span id="ui-money">-</span></div>
-        <div class="resource">Energie: <span id="ui-energy">-</span> / 100
+        <div class="resource" style="position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 1.1rem; font-weight: bold; background: rgba(0,0,0,0.8); padding: 5px 15px; border-radius: 20px; border: 1px solid #fcd34d; color: #fcd34d; box-shadow: 0 0 10px rgba(252, 211, 77, 0.2); z-index: 5;">
+            💰 <span id="ui-money">-</span>
+        </div>
+
     </header>
 
     <div id="container">
@@ -75,7 +76,6 @@
     </div>
 
     <script type="module">
-        // ZDE JSME PŘIDALI ref, set, get, child
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
         import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";

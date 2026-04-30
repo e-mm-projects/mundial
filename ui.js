@@ -118,9 +118,13 @@ function renderTraining() {
     `;
 }
 
-// --- KANCELÁŘ (ÚKOLY) ---
-function renderOffice() {
+// --- KANCELÁŘ (ÚKOLY) --- //
+window.renderOffice = function() {
     const mainContent = document.getElementById('main-content');
+
+    // Výpočet procent pro bary
+    const xpPercent = Math.min(100, (playerData.xp / getRequiredXp()) * 100);
+    const energyPercent = playerData.energy;
     
     const currentMultiplier = 1 + ((playerData.level - 1) * 0.05);
     const bonusPercentage = Math.round((currentMultiplier - 1) * 100); 
@@ -138,6 +142,27 @@ function renderOffice() {
         </div>
     `;
 
+    // Zde je tvůj kód pro bary (přidán text-align: left a drobný margin dolů)
+    const officeHtml = `
+        <div class="office-stat-container" style="max-width: 550px; margin: 10px auto 25px auto; text-align: left;">
+            <div class="office-bar-label">
+                <span>Zkušenosti trenéra</span>
+                <span>${Math.floor(playerData.xp)} / ${getRequiredXp()}</span>
+            </div>
+            <div class="office-progress-bg">
+                <div class="office-progress-fill fill-xp" style="width: ${xpPercent}%"></div>
+            </div>
+
+            <div class="office-bar-label">
+                <span>Tvoje energie</span>
+                <span>${energyPercent} %</span>
+            </div>
+            <div class="office-progress-bg" style="margin-bottom: 0;">
+                <div class="office-progress-fill fill-energy" style="width: ${energyPercent}%"></div>
+            </div>
+        </div>
+    `;
+
     if (playerData.activeTask !== null) {
         const flavorTexts = {
             'Jednání se sponzory': 'Přesvědčuješ ředitele místního uzenářství, že obří logo klobásy na dresech je přesně to, co jejich značka potřebuje. Zatím se tváří nedůvěřivě a nabízí ti k úplatku jen tlačenku...',
@@ -149,7 +174,7 @@ function renderOffice() {
             <div class="text-center">
                 <h2 class="section-title">Kancelář manažera</h2>
                 ${trainerInfoHtml}
-            </div>
+                ${officeHtml} </div>
             <div class="active-task-card">
                 <h3 class="active-task-title">Probíhá: ${playerData.activeTask.title}</h3>
                 <p class="active-task-flavor">"${currentFlavorText}"</p>
@@ -169,7 +194,7 @@ function renderOffice() {
         <div class="text-center">
             <h2 class="section-title">Kancelář manažera</h2>
             ${trainerInfoHtml}
-        </div>
+            ${officeHtml} </div>
         <div class="office-container">
             ${playerData.officeTasks.map((task, index) => `
                 <div class="task-card">
@@ -944,15 +969,50 @@ function renderReplayAction(action) {
     else if (action.type === 'chance') { textColor = "#60a5fa"; icon = "👀"; }
     else if (action.type === 'danger') { textColor = "#f87171"; icon = "⚠️"; }
 
-    replayWindow.innerHTML += `
+    const commentHtml = `
         <div style="display: flex; margin-bottom: 12px; background: ${bgColor}; padding: 8px; border-radius: 5px; border-left: 3px solid ${textColor};">
             <div style="min-width: 45px; font-weight: bold; color: ${textColor};">${action.min}'</div>
             <div style="margin-right: 10px;">${icon}</div>
             <div style="flex: 1; color: ${textColor};">${action.text}</div>
         </div>
     `;
-    replayWindow.scrollTop = replayWindow.scrollHeight;
+    
+    // POUŽITÍ afterbegin PRO VLOŽENÍ NAHORU!
+    replayWindow.insertAdjacentHTML('afterbegin', commentHtml);
 }
+
+// --- FUNKCE PRO ZRYCHLENÍ ZÁZNAMU ---
+window.currentReplayIndex = 0;
+
+window.speedUpReplay = function() {
+    // Zastavíme starý, pomalý interval
+    clearInterval(window.matchReplayInterval);
+
+    // Spustíme nový, mnohem rychlejší (zhruba 1.5x až 2x)
+    window.matchReplayInterval = setInterval(() => {
+        const replayWindow = document.getElementById('replay-window');
+        if (!replayWindow) {
+            clearInterval(window.matchReplayInterval);
+            return;
+        }
+
+        const msg = window.currentMatchMsg;
+        if (window.currentReplayIndex < msg.content.length) {
+            renderReplayAction(msg.content[window.currentReplayIndex]);
+            window.currentReplayIndex++;
+        } else {
+            finishMatchReplay();
+        }
+    }, 1000); // Rychlejší přehrávání (původně 2500)
+
+    // Vizuální odezva na tlačítku
+    const btn = document.getElementById('btn-speed-up');
+    if (btn) {
+        btn.innerHTML = "⏩ Přehrává se zrychleně";
+        btn.disabled = true;
+        btn.style.background = "#4f46e5"; 
+    }
+};
 
 // --- KLUBOVÝ FANSHOP ---
 function renderShop() {
@@ -1014,6 +1074,9 @@ window.openMatchReport = function(index) {
     msg.read = true; 
     saveGame();
     window.currentMatchMsg = msg; 
+    
+    // Vynulujeme počítadlo pro nově otevřený zápas
+    window.currentReplayIndex = 0;
 
     const mainContent = document.getElementById('main-content');
     const homeTeam = msg.rewards?.homeTeam || "Domácí";
@@ -1075,6 +1138,12 @@ window.openMatchReport = function(index) {
                 </div>
             </div>
 
+            <div style="display: flex; justify-content: flex-end; max-width: 800px; margin: 0 auto;">
+                <button id="btn-speed-up" class="btn-speed-control" onclick="speedUpReplay()">
+                    ⏩ Zrychlit (1.5x)
+                </button>
+            </div>
+
             <div class="match-report-layout">
                 ${myR ? createRatingPanel(homeTeam, myR, true) : '<div style="width: 220px; border: 1px dashed #444; color: #666; display: flex; align-items: center; justify-content: center; border-radius: 10px;">Data nedostupná</div>'}
                 
@@ -1086,13 +1155,19 @@ window.openMatchReport = function(index) {
         </div>
     `;
 
-    let step = 0;
     if (window.matchReplayInterval) clearInterval(window.matchReplayInterval);
+    
+    // Spuštění intervalu za použití naší nové proměnné currentReplayIndex
     window.matchReplayInterval = setInterval(() => {
         const replayWindow = document.getElementById('replay-window');
         if (!replayWindow) { clearInterval(window.matchReplayInterval); return; }
-        if (step < msg.content.length) { renderReplayAction(msg.content[step]); step++; } 
-        else { finishMatchReplay(); }
+        
+        if (window.currentReplayIndex < msg.content.length) { 
+            renderReplayAction(msg.content[window.currentReplayIndex]); 
+            window.currentReplayIndex++; 
+        } else { 
+            finishMatchReplay(); 
+        }
     }, 2500); 
 }
 
@@ -1340,10 +1415,10 @@ window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
                     </div>
                     <div class="locker-content active">
                         <div class="ml-pitch-area">
-                            ${renderMLRow(layout.gk[0], layout.gk[1], "Brankář")}
-                            ${renderMLRow(layout.def[0], layout.def[1], "Obránci")}
-                            ${renderMLRow(layout.mid[0], layout.mid[1], "Záložníci")}
                             ${renderMLRow(layout.att[0], layout.att[1], "Útočníci")}
+                            ${renderMLRow(layout.mid[0], layout.mid[1], "Záložníci")}
+                            ${renderMLRow(layout.def[0], layout.def[1], "Obránci")}
+                            ${renderMLRow(layout.gk[0], layout.gk[1], "Brankář")}
                         </div>
                         <div class="ml-bench-area">
                             <span class="ml-row-title">Střídačka (max 5 míst)</span>
