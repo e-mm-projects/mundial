@@ -2205,30 +2205,52 @@ window.runMLSimulation = async function(leagueName, league) {
     }
 
     // --- SIMULACE ZÁPASŮ ---
-    // Dočasně si uložíme tvé jméno, protože ho hlavní simulátor používá pro generování komentáře
-    const originalManagerName = playerData.managerName;
+const originalManagerName = playerData.managerName;
 
     for (const [uidA, uidB] of matches) {
-        const teamA = league.teams[uidA];
-        const teamB = league.teams[uidB];
-        const nameA = league.participants[uidA];
-        const nameB = league.participants[uidB];
+        // OPRAVA 1: Přidáno || {} pro případ, že tým (nebo jeho majitel) ještě v lize fyzicky nekliknul na "Vstoupit"
+        const teamA = league.teams[uidA] || {};
+        const teamB = league.teams[uidB] || {};
+        const nameA = league.participants[uidA] || "Neznámý tým";
+        const nameB = league.participants[uidB] || "Neznámý tým";
 
-        // Nastavíme jméno domácího týmu pro simulátor
         playerData.managerName = nameA;
 
-        // 1. ČISTÁ SÍLA: Žádný bonus za přípravu (nastaveno na false)
-        const sectorsA = calculateSectorStrength(teamA.players, teamA.formation || '4-4-2', false);
-        const sectorsB = calculateSectorStrength(teamB.players, teamB.formation || '4-4-2', false);
+        // Bezpečné načtení hráčů. Základní sestava (prvních 11 míst) nesmí obsahovat null.
+        const getSafePlayers = (team) => {
+            // Pokud tým nebo hráči chybí, vytvoříme prázdné pole o 16 místech
+            let players = (team && team.players) ? [...team.players] : new Array(16).fill(null);
+            
+            // Projdeme prvních 11 míst (základní sestava) a všechny "díry" zalepíme
+            for (let i = 0; i < 11; i++) {
+                if (!players[i]) {
+                    players[i] = { 
+                        id: 'dummy_' + Date.now() + '_' + i, 
+                        name: 'Zbloudilý fanoušek', 
+                        position: i === 0 ? 'GK' : 'ST',
+                        stats: {att: 0, mid: 0, def: 0, gk: 0}, 
+                        isMLFiller: true 
+                    };
+                }
+            }
+            return players;
+        };
+
+        const pA = getSafePlayers(teamA);
+        const pB = getSafePlayers(teamB);
+
+        // 1. ČISTÁ SÍLA: Využíváme pA a pB
+        const sectorsA = calculateSectorStrength(pA, teamA.formation || '4-4-2', false);
+        const sectorsB = calculateSectorStrength(pB, teamB.formation || '4-4-2', false);
         
-        // Žádné předměty (prázdný trezor)
+        // Žádné předměty
         const emptyInv = {att: [], mid: [], def: [], gk: []}; 
 
-        // 2. ODSIMULOVÁNÍ ZÁPASU (použití hlavního enginu)
+        // 2. ODSIMULOVÁNÍ ZÁPASU s bezpečnými poli pA a pB
         const matchResult = simulateMatch(
             sectorsA, sectorsB, 
             teamA.formation || '4-4-2', teamB.formation || '4-4-2', 
-            teamA.players, teamB.players, 
+            pA, pB, 
             nameB, emptyInv
         );
 
@@ -2236,7 +2258,7 @@ window.runMLSimulation = async function(leagueName, league) {
         const scoreB = matchResult.botGoals;
         const logA = matchResult.log;
 
-        // Překlopení záznamu pro hostující tým (aby viděli své góly zeleně)
+        // Překlopení záznamu pro hostující tým
         const logB = logA.map(act => {
             const newAct = { ...act };
             if (newAct.score) {
@@ -2251,6 +2273,7 @@ window.runMLSimulation = async function(leagueName, league) {
         // Update tabulky
         const updateStats = (uid, gf, ga) => {
             const s = league.standings[uid];
+            if (!s) return; // Pojistka, kdyby chyběl zápis v tabulce
             s.p++; s.gf += gf; s.ga += ga;
             if (gf > ga) { s.w++; s.pts += 3; }
             else if (gf === ga) { s.d++; s.pts += 1; }
@@ -2260,17 +2283,16 @@ window.runMLSimulation = async function(leagueName, league) {
         updateStats(uidA, scoreA, scoreB);
         updateStats(uidB, scoreB, scoreA);
 
-        // 3. VÝPOČET HODNOCENÍ TÝMŮ PRO BOČNÍ TABULKY V ZÁZNAMU
-        const ratingA = calculateBaseTeamRating(teamA.players, teamA.formation || '4-4-2');
-        const ratingB = calculateBaseTeamRating(teamB.players, teamB.formation || '4-4-2');
+        // 3. VÝPOČET HODNOCENÍ TÝMŮ PRO BOČNÍ TABULKY (opět pomocí pA a pB)
+        const ratingA = calculateBaseTeamRating(pA, teamA.formation || '4-4-2');
+        const ratingB = calculateBaseTeamRating(pB, teamB.formation || '4-4-2');
 
-        // 4. ODESLÁNÍ PLNOHODNOTNÉHO VIDEOZÁZNAMU
+        // 4. ODESLÁNÍ ZPRÁV
         const mailA = {
             id: 'ml_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
             subject: `🏆 ML: ${nameA} vs ${nameB}`,
             content: logA,
             result: `${scoreA}:${scoreB}`,
-            // Přidáme rewards objekt (Peníze a XP jsou 0, ale díky ratingu naskočí boční panely)
             rewards: { money: 0, xp: 0, pXp: 0, homeTeam: nameA, awayTeam: nameB, myRating: ratingA, botRating: ratingB, isML: true },
             date: new Date().toLocaleDateString(),
             read: false
@@ -2290,7 +2312,6 @@ window.runMLSimulation = async function(leagueName, league) {
         await window.dbSet(window.dbRef(window.db, `mail_queue/${uidB}/${mailB.id}`), mailB);
     }
 
-    // Vrátíme původní jméno hráče zpět
     playerData.managerName = originalManagerName;
     // --- KONEC SIMULACE ZÁPASŮ ---
 
@@ -2486,5 +2507,57 @@ window.rejectMLInvite = async function(mailId, applicantUid, leagueName) {
         alert("Žádost byla zamítnuta a odesílatel informován.");
     } catch (error) {
         console.error(error); alert("Chyba při zamítání.");
+    }
+};
+
+// --- VYHOZENÍ HRÁČE Z MINILIGY ---
+window.kickFromMinileague = async function(leagueName, targetUid, targetName) {
+    if (targetUid === playerData.uid) {
+        alert("Sám sebe vyhodit nemůžeš! Pokud chceš ligu zrušit, opust' ji přes hlavní menu.");
+        return;
+    }
+    
+    if (!confirm(`Opravdu chceš natrvalo vyhodit manažera ${targetName} z miniligy ${leagueName}?`)) {
+        return;
+    }
+
+    try {
+        const dbRef = window.dbRef(window.db);
+        const snap = await window.dbGet(window.dbChild(dbRef, `minileagues/${leagueName}`));
+        if (!snap.exists()) return;
+        
+        const league = snap.val();
+
+        // Bezpečnostní kontrola, zda kliká opravdu majitel
+        if (league.owner !== playerData.uid) {
+            alert("Pouze zakladatel miniligy může vyhazovat hráče!");
+            return;
+        }
+
+        // 1. Smazání hráče z dat miniligy
+        if (league.participants) delete league.participants[targetUid];
+        if (league.teams) delete league.teams[targetUid];
+        if (league.standings) delete league.standings[targetUid];
+
+        // 2. Uložení očištěné ligy do Firebase
+        await window.dbSet(window.dbRef(window.db, `minileagues/${leagueName}`), league);
+
+        // 3. Odstranění miniligy z profilu samotného vyhozeného hráče (aby se mu už neukazovala)
+        const userSnap = await window.dbGet(window.dbChild(dbRef, `users/${targetUid}/league`));
+        if (userSnap.exists()) {
+            let targetLeagues = userSnap.val() || [];
+            // Filtrujeme (odstraníme ligu podle jména - podporuje string i objekt)
+            targetLeagues = targetLeagues.filter(l => l !== leagueName && l.name !== leagueName);
+            await window.dbSet(window.dbRef(window.db, `users/${targetUid}/league`), targetLeagues);
+        }
+
+        alert(`Manažer ${targetName} byl úspěšně vyhozen z miniligy.`);
+        
+        // Aktualizujeme obrazovku
+        renderMinileagueDetail(leagueName, true);
+
+    } catch (error) {
+        console.error("Chyba při vyhazování hráče:", error);
+        alert("Něco se pokazilo. Zkus to znovu.");
     }
 };

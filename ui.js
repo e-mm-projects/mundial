@@ -1321,7 +1321,6 @@ window.renderMinileague = function() {
 }
 
 // MINILIGA - DETAILY //
-
 window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
     const mainContent = document.getElementById('main-content');
     const currentScroll = window.scrollY; // Zapamatujeme si, kde uživatel je
@@ -1352,6 +1351,8 @@ window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
         }
         const layout = FORMATIONS_LAYOUT['4-4-2'];
         // --- GENEROVÁNÍ NOVÉ TABULKY --- //
+        const isOwner = league.owner === playerData.uid; // Zjistíme, jestli jsi zakladatel
+
         let standingsHtml = Object.keys(league.standings)
             .sort((a,b) => {
                 // Nejprve třídíme podle bodů
@@ -1367,11 +1368,21 @@ window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
                 const s = league.standings[uid];
                 // Zvýrazníme řádek, pokud je to tvůj tým
                 const isMyTeam = uid === playerData.uid ? 'class="my-team-row"' : '';
+                const participantName = league.participants[uid];
+
+                // Generování tlačítka pro vyhození (jen pro majitele a ne pro něj samotného)
+                let actionButton = "";
+                if (isOwner && uid !== playerData.uid) {
+                    actionButton = `<button class="btn-task" style="background:#991b1b; padding: 2px 8px; font-size: 0.7rem; margin-left: 10px; border-radius: 4px;" onclick="kickFromMinileague('${leagueName}', '${uid}', '${participantName}')">Vyhodit</button>`;
+                }
                 
                 return `
                 <tr ${isMyTeam}>
                     <td style="color: #10b981; font-weight: bold;">${i+1}.</td>
-                    <td style="text-align:left;"><span class="ml-team-name">${league.participants[uid]}</span></td>
+                    <td style="text-align:left; display: flex; align-items: center; justify-content: space-between;">
+                        <span class="ml-team-name">${participantName}</span>
+                        ${actionButton}
+                    </td>
                     <td>${s.p}</td>
                     <td style="color: #6b7280;">${s.gf}:${s.ga}</td>
                     <td>${s.w}</td>
