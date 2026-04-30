@@ -1458,12 +1458,13 @@ window.finishMatchReplay = function() {
     visualBall.style.left = "50%";
     if (skipBtn) skipBtn.style.display = "none";
 
-    // Přidáme závěrečné info a odměny
-    replayWindow.innerHTML += `<div style="text-align: center; margin-top: 20px; padding: 10px; background: #374151; color: white; font-weight: bold; border-radius: 5px;">⚽ PÍSK! KONEC UTKÁNÍ ⚽</div>`;
+    // 1. Připravíme si závěrečné info do jedné proměnné
+    let finalHtml = `<div style="text-align: center; margin-bottom: 15px; padding: 10px; background: #374151; color: white; font-weight: bold; border-radius: 5px;">⚽ PÍSK! KONEC UTKÁNÍ ⚽</div>`;
     
+    // 2. Pokud jsou odměny, přidáme je do stejné proměnné
     if (msg.rewards) {
-        replayWindow.innerHTML += `
-            <div style="background: rgba(0, 0, 0, 0.5); border: 2px dashed #fcd34d; padding: 15px; margin-top: 15px; text-align: center; border-radius: 5px;">
+        finalHtml += `
+            <div style="background: rgba(0, 0, 0, 0.5); border: 2px dashed #fcd34d; padding: 15px; margin-bottom: 20px; text-align: center; border-radius: 5px;">
                 <p style="margin: 0 0 10px 0; color: #fcd34d; font-weight: bold; font-size: 1.2rem;">Zisk ze zápasu</p>
                 <div style="display: flex; justify-content: space-around; max-width: 400px; margin: 0 auto;">
                     <span style="color: #10b981; font-size: 1.1rem; font-weight: bold;">+${msg.rewards.money} 💰</span>
@@ -1473,6 +1474,9 @@ window.finishMatchReplay = function() {
             </div>
         `;
     }
+
+    // 3. A teď to celé najednou prskneme úplně na začátek (nahoru) okna
+    replayWindow.insertAdjacentHTML('afterbegin', finalHtml);
 }
 
 function addMailMessage(subject, log, result, rewards = null, customDate = null) {

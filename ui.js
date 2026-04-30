@@ -130,16 +130,16 @@ window.renderOffice = function() {
     const bonusPercentage = Math.round((currentMultiplier - 1) * 100); 
     
     const trainerInfoHtml = `
-    <div class="info-panel">
-            <div>
-                <h3 style="margin: 0 0 5px 0; color: #fcd34d;">Úroveň manažera: ${playerData.level}</h3>
-                <p class="info-text-base" style="color: #d1d5db;">Vyšší úroveň přináší prestiž a lepší vyjednávací pozici se sponzory.</p>
-            </div>
-            <div class="office-stats-box">
-                <span class="office-stats-label">Zisk z úkolů</span>
-                <span class="office-stats-val">+${bonusPercentage} %</span>
-            </div>
+    <div class="info-panel" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+        <div style="flex: 1; min-width: 150px;">
+            <h3 style="margin: 0 0 5px 0; color: #fcd34d;">Úroveň manažera: ${playerData.level}</h3>
+            <p class="info-text-base" style="color: #d1d5db; margin: 0;">Vyšší úroveň přináší prestiž a lepší vyjednávací pozici se sponzory.</p>
         </div>
+        <div class="office-stats-box" style="flex-shrink: 0; min-width: 110px; text-align: center; padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid #f59e0b; border-radius: 8px;">
+            <div style="font-size: 0.75rem; color: #fcd34d; text-transform: uppercase; margin-bottom: 5px; white-space: nowrap;">Zisk z úkolů</div>
+            <div style="font-size: 1.4rem; font-weight: bold; color: #10b981;">+${bonusPercentage} %</div>
+        </div>
+    </div>
     `;
 
     // Zde je tvůj kód pro bary (přidán text-align: left a drobný margin dolů)
@@ -982,13 +982,20 @@ function renderReplayAction(action) {
 }
 
 // --- FUNKCE PRO ZRYCHLENÍ ZÁZNAMU ---
+// Globální proměnné pro záznam
 window.currentReplayIndex = 0;
+window.isReplayFast = false; // Nová proměnná, která si pamatuje, jestli máme zrychleno
 
-window.speedUpReplay = function() {
-    // Zastavíme starý, pomalý interval
+window.toggleReplaySpeed = function() {
+    // 1. Přepneme stav (zapnuto/vypnuto)
+    window.isReplayFast = !window.isReplayFast;
+    
+    // 2. Zastavíme aktuální interval
     clearInterval(window.matchReplayInterval);
 
-    // Spustíme nový, mnohem rychlejší (zhruba 1.5x až 2x)
+    // 3. Nastavíme novou rychlost (1000ms = zrychleno, 2500ms = standardní)
+    const speed = window.isReplayFast ? 1000 : 2500;
+
     window.matchReplayInterval = setInterval(() => {
         const replayWindow = document.getElementById('replay-window');
         if (!replayWindow) {
@@ -1003,14 +1010,20 @@ window.speedUpReplay = function() {
         } else {
             finishMatchReplay();
         }
-    }, 1000); // Rychlejší přehrávání (původně 2500)
+    }, speed);
 
-    // Vizuální odezva na tlačítku
+    // 4. Decentní úprava vzhledu tlačítka
     const btn = document.getElementById('btn-speed-up');
     if (btn) {
-        btn.innerHTML = "⏩ Přehrává se zrychleně";
-        btn.disabled = true;
-        btn.style.background = "#4f46e5"; 
+        if (window.isReplayFast) {
+            btn.innerHTML = "⏪ Zpomalit (1x)";
+            btn.style.color = "#10b981"; // Text zezelená
+            btn.style.borderColor = "#10b981"; // Rámeček zezelená
+        } else {
+            btn.innerHTML = "⏩ Zrychlit (1.5x)";
+            btn.style.color = "#9ca3af"; // Zpět na šedou
+            btn.style.borderColor = "#4b5563"; // Zpět na šedou
+        }
     }
 };
 
@@ -1071,12 +1084,14 @@ function renderShop() {
 // --- DETAIL ZÁPASU (Záznam utkání) ---
 window.openMatchReport = function(index) {
     const msg = playerData.mail[index];
+    if (!msg) { renderMail(); return; } 
     msg.read = true; 
     saveGame();
     window.currentMatchMsg = msg; 
     
-    // Vynulujeme počítadlo pro nově otevřený zápas
+    // Vynulujeme počítadlo pro nově otevřený zápas a resetujeme rychlost
     window.currentReplayIndex = 0;
+    window.isReplayFast = false; 
 
     const mainContent = document.getElementById('main-content');
     const homeTeam = msg.rewards?.homeTeam || "Domácí";
@@ -1087,7 +1102,7 @@ window.openMatchReport = function(index) {
 
     // Pomocná funkce pro panel
     const createRatingPanel = (teamName, rating, isHome) => `
-        <div class="rating-panel ${isHome ? 'home' : 'away'}">
+        <div class="rating-panel ${isHome ? 'home' : 'away'}" style="flex-shrink: 0;">
             <h4 class="rating-panel-title">${teamName}</h4>
             <div class="rating-row"><span>⚔️ Útok:</span> <strong>${rating.att}</strong></div>
             <div class="rating-row"><span>🧭 Záloha:</span> <strong>${rating.mid}</strong></div>
@@ -1097,18 +1112,18 @@ window.openMatchReport = function(index) {
     `;
 
     mainContent.innerHTML = `
-        <div class="match-report-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-            <button onclick="renderMail()" style="padding: 10px 20px; background: #4e342e; color: white; border: 2px solid #3e2723; border-radius: 5px; cursor: pointer; font-weight: bold; flex-shrink: 0; font-family: inherit;">⬅ Zpět</button>
+        <div style="width: 100%; display: flex; flex-direction: column; align-items: center; gap: 5px;">
             
-            <div style="flex: 1; display: flex; justify-content: center; min-width: 250px;">
-                <h2 class="section-title" style="margin: 0 !important;">Záznam utkání</h2>
-            </div>
+            <div class="match-report-header" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; margin-bottom: 10px; width: 90%; max-width: 1200px;">
+                <div style="text-align: left;">
+                    <button onclick="renderMail()" style="padding: 10px 20px; background: #4e342e; color: white; border: 2px solid #3e2723; border-radius: 5px; cursor: pointer; font-weight: bold; font-family: inherit;">⬅ Zpět</button>
+                </div>
+                <div style="text-align: center;">
+                    <h2 class="section-title" style="margin: 0 !important; color: white;">ZÁZNAM UTKÁNÍ</h2>
+                </div>
+                <div></div> </div>
             
-            <button id="skip-replay-btn" onclick="finishMatchReplay()" style="padding: 10px 20px; background: #d84315; color: white; border: 2px solid #9a3412; border-radius: 5px; cursor: pointer; font-weight: bold; flex-shrink: 0; font-family: inherit;">⏩ Přeskočit</button>
-        </div>
-
-        <div style="display: flex; flex-direction: column;">
-            <div class="match-report-board">
+            <div class="match-report-board" style="width: 90%; max-width: 1200px; margin-bottom: 5px;">
                 <div class="score-container">
                     <div class="team-name-home">${homeTeam}</div>
                     <div id="match-score-board" class="match-score">0:0</div>
@@ -1138,26 +1153,29 @@ window.openMatchReport = function(index) {
                 </div>
             </div>
 
-            <div style="display: flex; justify-content: flex-end; max-width: 800px; margin: 0 auto;">
-                <button id="btn-speed-up" class="btn-speed-control" onclick="speedUpReplay()">
+            <div style="width: 100%; display: flex; justify-content: center; gap: 15px; margin-bottom: 5px;">
+                <button id="btn-speed-up" class="btn-speed-control" onclick="toggleReplaySpeed()" style="white-space: nowrap; padding: 6px 15px; font-size: 0.9rem;">
                     ⏩ Zrychlit (1.5x)
+                </button>
+                <button id="skip-replay-btn" class="btn-speed-control" onclick="finishMatchReplay()" style="white-space: nowrap; padding: 6px 15px; font-size: 0.9rem;">
+                    ⏭️ Přeskočit záznam
                 </button>
             </div>
 
-            <div class="match-report-layout">
+            <div class="match-report-layout" style="display: flex; justify-content: center; align-items: flex-start; gap: 30px; width: 95%; max-width: 1400px; flex-wrap: wrap;">
                 ${myR ? createRatingPanel(homeTeam, myR, true) : '<div style="width: 220px; border: 1px dashed #444; color: #666; display: flex; align-items: center; justify-content: center; border-radius: 10px;">Data nedostupná</div>'}
                 
-                <div id="replay-window" class="replay-window-container" style="flex: 1; max-width: 800px; height: 350px; background: #111827; padding: 20px; border: 4px solid #374151; border-radius: 10px; overflow-y: auto;">
-                    </div>
+                <div id="replay-window" class="replay-window-container" style="flex: 2; min-width: 400px; max-width: 800px; height: 350px; background: #111827; padding: 20px; border: 4px solid #374151; border-radius: 10px; overflow-y: auto;">
+                </div>
                 
                 ${botR ? createRatingPanel(awayTeam, botR, false) : '<div style="width: 220px; border: 1px dashed #444; color: #666; display: flex; align-items: center; justify-content: center; border-radius: 10px;">Data nedostupná</div>'}
             </div>
+            
         </div>
     `;
 
     if (window.matchReplayInterval) clearInterval(window.matchReplayInterval);
     
-    // Spuštění intervalu za použití naší nové proměnné currentReplayIndex
     window.matchReplayInterval = setInterval(() => {
         const replayWindow = document.getElementById('replay-window');
         if (!replayWindow) { clearInterval(window.matchReplayInterval); return; }
