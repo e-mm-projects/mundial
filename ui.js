@@ -1336,10 +1336,15 @@ window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
 
         // --- SPOUŠTĚČ SIMULACE ---
         if (Date.now() >= league.nextMatchTime) {
-            await window.runMLSimulation(leagueName, league);
-            // Po simulaci si data načteme znovu, aby byla tabulka aktuální
-            const newSnap = await window.dbGet(window.dbChild(dbRef, `minileagues/${leagueName}`));
-            league = newSnap.val();
+            let loops = 0; // Bezpečnostní pojistka (max 10 kol najednou)
+            
+            while (Date.now() >= league.nextMatchTime && loops < 10) {
+                await window.runMLSimulation(leagueName, league);
+                // Po každém kole načteme nová data, abychom měli aktuální čas nextMatchTime
+                const newSnap = await window.dbGet(window.dbChild(dbRef, `minileagues/${leagueName}`));
+                league = newSnap.val();
+                loops++;
+            }
         }
 
         window.currentMLNextMatch = league.nextMatchTime;
