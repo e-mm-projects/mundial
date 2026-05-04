@@ -2135,6 +2135,13 @@ window.fetchCloudMail = async function() {
                         playerData.myMinileagues.push({ name: mail.leagueName, rank: mail.leagueRank });
                     }
                 }
+                // --- NOVÉ: AUTOMATICKÉ SMAZÁNÍ LIGY PŘI VYHOZENÍ ---
+                else if (mail.type === "ml_kicked") {
+                    if (playerData.myMinileagues) {
+                        playerData.myMinileagues = playerData.myMinileagues.filter(l => (typeof l === 'object' ? l.name : l) !== mail.leagueName);
+                    }
+                }
+
                 playerData.mail.unshift(mail); // Přidáme je k tobě do lokální pošty
                 hasNew = true;
                 
@@ -2516,21 +2523,27 @@ window.kickFromMinileague = async function(leagueName, targetUid, targetName) {
             return;
         }
 
+        // Smazání hráče z dat miniligy
         if (league.participants) delete league.participants[targetUid];
         if (league.teams) delete league.teams[targetUid];
         if (league.standings) delete league.standings[targetUid];
 
         await window.dbSet(window.dbRef(window.db, `minileagues/${leagueName}`), league);
 
-        const userSnap = await window.dbGet(window.dbChild(dbRef, `users/${targetUid}/league`));
-        if (userSnap.exists()) {
-            let targetLeagues = userSnap.val() || [];
-            targetLeagues = targetLeagues.filter(l => l !== leagueName && l.name !== leagueName);
-            await window.dbSet(window.dbRef(window.db, `users/${targetUid}/league`), targetLeagues);
-        }
+        // --- NOVÉ: ODESLÁNÍ SPECIÁLNÍ ZPRÁVY VYHOZENÉMU HRÁČI ---
+        const kickMail = {
+            id: 'ml_kick_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
+            type: "ml_kicked", 
+            sender: "🏆 Vedení Miniligy",
+            subject: `Vyhození z miniligy: ${leagueName}`,
+            text: `Zakladatel tě bohužel vyhodil z miniligy **${leagueName}**. Liga byla odstraněna z tvého seznamu.`,
+            leagueName: leagueName,
+            date: new Date().toLocaleDateString(),
+            read: false
+        };
+        await window.dbSet(window.dbRef(window.db, `mail_queue/${targetUid}/${kickMail.id}`), kickMail);
 
         alert(`Manažer ${targetName} byl úspěšně vyhozen z miniligy.`);
-        
         renderMinileagueDetail(leagueName, true);
 
     } catch (error) {

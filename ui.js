@@ -1334,6 +1334,18 @@ window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
         const snapshot = await window.dbGet(window.dbChild(dbRef, `minileagues/${leagueName}`));
         let league = snapshot.val();
 
+        // --- ZÁCHRANNÝ ŠTÍT: HRÁČ UŽ V LIZE NENÍ NEBO LIGA NEEXISTUJE ---
+        if (!league || !league.participants || !league.participants[playerData.uid]) {
+            alert("Do této miniligy už nemáš přístup (byla zrušena, nebo jsi byl vyhozen).");
+            // Rovnou mu ji lokálně smažeme, ať ho to nemate
+            if (playerData.myMinileagues) {
+                playerData.myMinileagues = playerData.myMinileagues.filter(l => (typeof l === 'object' ? l.name : l) !== leagueName);
+                saveGame();
+            }
+            renderMyMinileaguesList(); // Vrátíme ho zpět na seznam
+            return;
+        }
+
         // --- SPOUŠTĚČ SIMULACE ---
         if (Date.now() >= league.nextMatchTime) {
             let loops = 0; // Bezpečnostní pojistka (max 10 kol najednou)
