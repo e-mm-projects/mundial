@@ -626,8 +626,11 @@ function renderPlayerGroup(startIndex, endIndex, role) {
 function renderScouting() {
     const mainContent = document.getElementById('main-content');
     
+    // Inicializace dat pro jistotu
     if (!playerData.scoutedPlayers) playerData.scoutedPlayers = [];
     if (!playerData.lastScoutRefresh) playerData.lastScoutRefresh = 0;
+    if (!playerData.unlockedScouts) playerData.unlockedScouts = [];
+    if (!playerData.sideScoutedPlayers) playerData.sideScoutedPlayers = {};
     
     const now = Date.now();
     const scoutInterval = getScoutInterval(); 
@@ -656,14 +659,15 @@ function renderScouting() {
     else if (currentDiv === 2) rankOddsHtml = "<li>Legenda: 20 %</li><li>Reprezentant: 60 %</li><li>Ligový borec: 20 %</li>";
     else if (currentDiv === 1) rankOddsHtml = "<li>Legenda: 25 %</li><li>Reprezentant: 75 %</li>";
 
+    // Převodník popisků statů
+    const statLabels = { atk: 'Útok', def: 'Obrana', spd: 'Rychlost', str: 'Síla', eng: 'Výdrž', tek: 'Technika', gk: 'Brankář' };
+
+    // VYKRESLENÍ HRÁČŮ OD HLAVNÍHO SKAUTA
     const playersHtml = playerData.scoutedPlayers.map((player, index) => {
         const starsHtml = player.stars > 0 ? '⭐'.repeat(player.stars) : '<span>&nbsp;</span>';
         const posConfig = POSITION_STATS[player.position];
         const price = getPlayerPrice(player);
         const canAfford = playerData.money >= price;
-        
-        // Převodník popisků (pokud ho nemáš globálně, definuj ho i zde)
-        const statLabels = { atk: 'Útok', def: 'Obrana', spd: 'Rychlost', str: 'Síla', eng: 'Výdrž', tek: 'Technika', gk: 'Brankář' };
 
         return `
             <div class="player-card ${posConfig.colorClass}">
@@ -690,6 +694,89 @@ function renderScouting() {
         `;
     }).join('');
 
+    // --- VYKRESLENÍ VEDLEJŠÍCH SKAUTŮ ---
+    let sideScoutsHtml = '<hr style="margin: 40px 0; border-color: #374151;">';
+    
+    // Vycentrovaný nadpis a odpočet
+    sideScoutsHtml += `
+        <div style="text-align: center; margin-bottom: 25px;">
+            <h2 class="section-title" style="display: inline-block;">Vedlejší skauti (Lokální hledání)</h2>
+            <div style="margin-top: 10px; font-weight: bold; color: #fcd34d; text-shadow: 1px 1px 2px black;">
+                Další skautování proběhne za: <span id="side-scout-timer" class="scout-timer-text">Počítám...</span>
+            </div>
+            <p style="color: #f3f4f6; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); margin-top: 10px; font-size: 0.95rem; max-width: 800px; margin-left: auto; margin-right: auto;">
+                Najmi si specialisty na konkrétní nižší soutěže. Zůstanou s tebou navždy a každých 24 hodin ti přivedou přesně 3 nové hráče svého ranku. Ideální pro doplňování minilig!
+            </p>
+        </div>
+    `;
+
+    const sideRanks = [0, 1, 2, 3]; // Indexy pro Kopyto, Amatér, Srdcař, Borec
+    const maxAllowedSideRank = window.getMaxAllowedSideScoutRank();
+
+    sideRanks.forEach(rankIdx => {
+        const rankObj = PLAYER_RANKS[rankIdx];
+        const isUnlocked = playerData.unlockedScouts.includes(rankIdx);
+        const isAllowedToBuy = rankIdx <= maxAllowedSideRank;
+
+        if (isUnlocked) {
+            // SKAUT JE ODEMČENÝ -> ZOBRAZÍME JEHO HRÁČE
+            const sPlayers = playerData.sideScoutedPlayers[rankIdx] || [];
+            let sPlayersCards = sPlayers.map((player, pIndex) => {
+                const starsHtml = player.stars > 0 ? '⭐'.repeat(player.stars) : '<span>&nbsp;</span>';
+                const posConfig = POSITION_STATS[player.position];
+                const price = getPlayerPrice(player);
+                const canAfford = playerData.money >= price;
+
+                return `
+                    <div class="player-card ${posConfig.colorClass}" style="transform: scale(0.95);">
+                        <div class="player-name">${player.name}</div>
+                        <div class="player-position-row">${posConfig.label}</div>
+                        <div class="player-info-line">
+                            <span style="font-style: italic; color: #6b7280;">${player.rank}</span> | ${getPlayerLevelText(player)} ${starsHtml}
+                        </div>
+                        <div class="player-nationality">Nár: ${player.nationality}</div>
+                        <div class="price-tag buy">Cena: ${price} 💰</div>
+                        <div class="player-stats">
+                            ${posConfig.stats.map(s => `<div class="stat-item highlighted">${statLabels[s]}: <span>${player.stats[s]}</span></div>`).join('')}
+                        </div>
+                        <button class="btn-upgrade" style="width: 100%; margin-top: 10px; background: #4f46e5;" onclick="buySideScoutedPlayer(${rankIdx}, ${pIndex}, ${price})" ${!canAfford ? 'disabled' : ''}>Koupit</button>
+                    </div>
+                `;
+            }).join('');
+
+            sideScoutsHtml += `
+                <div style="margin-bottom: 30px; background: rgba(17, 24, 39, 0.7); padding: 15px; border-radius: 8px; border: 1px solid #4b5563;">
+                    <h3 style="color: #fcd34d; margin: 0 0 15px 0; text-shadow: 1px 1px 2px black;"> Skaut na rank: ${rankObj.name}</h3>
+                    ${sPlayers.length > 0 ? `<div class="player-list">${sPlayersCards}</div>` : '<p style="color:#e5e7eb; text-align: center; font-style: italic;">Skaut obchází hospody, počkej na další refresh.</p>'}
+                </div>
+            `;
+        } else {
+            // SKAUT JE ZAMČENÝ -> ZOBRAZÍME TLAČÍTKO K NÁKUPU (NEBO ZÁMEK)
+            const scoutPrice = 1; // 1 mince
+            const canAffordScout = playerData.money >= scoutPrice;
+
+            let actionHtml = '';
+            if (isAllowedToBuy) {
+                actionHtml = `<button class="btn-upgrade" style="background: #059669; padding: 8px 15px; font-weight: bold;" onclick="unlockSideScout(${rankIdx})" ${!canAffordScout ? 'disabled' : ''}>Najmout trvale (${scoutPrice} 💰)</button>`;
+            } else {
+                actionHtml = `<button class="btn-upgrade" disabled style="background: #374151; color: #9ca3af; cursor: not-allowed; padding: 8px 15px; border: 1px solid #4b5563;">Odemkne se ve vyšší divizi</button>`;
+            }
+
+            sideScoutsHtml += `
+                <div style="margin-bottom: 15px; background: rgba(31, 41, 55, 0.75); padding: 15px; border-radius: 8px; border: 1px dashed #6b7280; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <h3 style="color: #f3f4f6; margin: 0 0 5px 0; text-shadow: 1px 1px 2px black;">🔒 Expert na rank: ${rankObj.name}</h3>
+                        <div style="font-size: 0.9rem; color: #d1d5db; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">Přivede 3 hráče tohoto ranku vždy při obměně nabídky.</div>
+                    </div>
+                    <div>
+                        ${actionHtml}
+                    </div>
+                </div>
+            `;
+        }
+    });
+
+    // SLOŽENÍ CELÉHO OKNA
     mainContent.innerHTML = `
         <div class="text-center">
             <h2 class="section-title">Kancelář hlavního skauta</h2>
@@ -731,12 +818,17 @@ function renderScouting() {
                 <button class="btn-task btn-test" style="margin-top: 15px; padding: 5px 10px;" onclick="forceScoutRefresh()">[TEST] Vygenerovat hned</button>
             </div>
         </div>
+        
         <div class="player-list">
             ${playersHtml}
         </div>
+
+        ${sideScoutsHtml}
     `;
 
+    // Aktualizujeme oba odpočty najednou
     updateTimerUI('scout-timer', nextRefresh);
+    updateTimerUI('side-scout-timer', nextRefresh);
 }
 
 function renderMatches() {

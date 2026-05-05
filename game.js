@@ -109,6 +109,7 @@ window.registerNewClub = async function(clubName) {
     }
 }
 
+
 // Pomocná funkce pro odečet výdrže předmětů po zápase
 function degradeInventory() {
     const categories = ['att', 'mid', 'def', 'gk'];
@@ -229,6 +230,14 @@ window.discardItem = function(role, instanceId) {
     }
 }
 
+window.getMaxAllowedSideScoutRank = function() {
+    const d = playerData.division || 10;
+    if (d === 10) return 0; // Max Kopyto
+    if (d === 9) return 1;  // Max Slibný amatér
+    if (d === 8) return 2;  // Max Srdcař
+    return 3;               // Divize 7 a lepší: Max Ligový borec (4 a 5 už vedlejší skaut neumí)
+};
+
 // --- INICIALIZACE A HERNÍ SMYČKA ---
 function initGame() {
     let savedData = localStorage.getItem('footballManagerData');
@@ -254,6 +263,8 @@ function initGame() {
         if(!playerData.mail) playerData.mail = [];
         if(!playerData.pve) playerData.pve = { dungeonIndex: 0, stageIndex: 0 };
         if(!playerData.reserve) playerData.reserve = [];
+        if(!playerData.unlockedScouts) playerData.unlockedScouts = []; // Seznam odemčených ranků
+        if(!playerData.sideScoutedPlayers) playerData.sideScoutedPlayers = {}; // Uložiště jejich hráčů
         if(!playerData.myMinileagues) playerData.myMinileagues = []; // Seznam objektů {name, rank} 
 
         if(!playerData.presets) {
@@ -747,7 +758,7 @@ function getPlayerPrice(player) {
     return priceTable[powerLevel] || 500000;
 }
 
-function generatePlayer(isStarter = false, forcedPosition = null) {
+function generatePlayer(isStarter = false, forcedPosition = null, forcedRankIndex = null) {
     // 1. URČENÍ POZICE
     const positions = ['att', 'mid', 'def', 'gk'];
     const position = forcedPosition || positions[Math.floor(Math.random() * positions.length)];
@@ -755,7 +766,7 @@ function generatePlayer(isStarter = false, forcedPosition = null) {
     // 2. NÁRODNOST
     const nat = NATIONALITIES[Math.floor(Math.random() * NATIONALITIES.length)];
 
-    // 3. HVĚZDY (Tady zůstává tvá původní logika)
+    // 3. HVĚZDY
     let stars = 0;
     if (isStarter) {
         stars = Math.random() > 0.15 ? 0 : 1;
@@ -770,66 +781,68 @@ function generatePlayer(isStarter = false, forcedPosition = null) {
         else stars = 0;                    
     }
 
-    // --- 4. GENERACE RANKU (Podle tvé tabulky pravděpodobnosti) ---
-    const currentDiv = playerData.division || 10; 
+    // --- 4. GENERACE RANKU ---
     let rankIndex = 0;
     
-    // Hod kostkou od 0 do 100 pro výpočet procent
-    const rand = Math.random() * 100; 
+    // POKUD HRÁČE HLEDÁ VEDLEJŠÍ SKAUT, VYNUTÍME JEHO 1 SPECIFICKÝ RANK (100% jistota)
+    if (forcedRankIndex !== null) {
+        rankIndex = forcedRankIndex;
+    } 
+    // JINAK FUNGUJE TVŮJ HLAVNÍ SKAUT PŘESNĚ JAKO DŘÍV
+    else {
+        const currentDiv = playerData.division || 10; 
+        const rand = Math.random() * 100; 
 
-    // 0 = Kopyto, 1 = Amatér, 2 = Srdcař, 3 = Borec, 4 = Reprezentant, 5 = Legenda
-    if (currentDiv === 10) {
-        rankIndex = 0; // 100% Kopyto
-    } else if (currentDiv === 9) {
-        if (rand < 30) rankIndex = 1; // 30% Amatér
-        else rankIndex = 0; // 70% Kopyto
-    } else if (currentDiv === 8) {
-        if (rand < 20) rankIndex = 2; // 20% Srdcař
-        else if (rand < 70) rankIndex = 1; // 50% Amatér (20 + 50 = 70)
-        else rankIndex = 0; // 30% Kopyto
-    } else if (currentDiv === 7) {
-        if (rand < 20) rankIndex = 3; // 20% Borec
-        else if (rand < 60) rankIndex = 2; // 40% Srdcař
-        else rankIndex = 1; // 40% Amatér
-    } else if (currentDiv === 6) {
-        if (rand < 50) rankIndex = 3; // 50% Borec
-        else if (rand < 80) rankIndex = 2; // 30% Srdcař
-        else rankIndex = 1; // 20% Amatér
-    } else if (currentDiv === 5) {
-        if (rand < 15) rankIndex = 4; // 15% Reprezentant
-        else if (rand < 75) rankIndex = 3; // 60% Borec
-        else rankIndex = 2; // 25% Srdcař
-    } else if (currentDiv === 4) {
-        if (rand < 40) rankIndex = 4; // 40% Reprezentant
-        else if (rand < 80) rankIndex = 3; // 40% Borec
-        else rankIndex = 2; // 20% Srdcař
-    } else if (currentDiv === 3) {
-        if (rand < 10) rankIndex = 5; // 10% Legenda
-        else if (rand < 60) rankIndex = 4; // 50% Reprezentant
-        else rankIndex = 3; // 40% Borec
-    } else if (currentDiv === 2) {
-        if (rand < 20) rankIndex = 5; // 20% Legenda
-        else if (rand < 80) rankIndex = 4; // 60% Reprezentant
-        else rankIndex = 3; // 20% Borec
-    } else if (currentDiv === 1) {
-        if (rand < 25) rankIndex = 5; // 25% Legenda
-        else rankIndex = 4; // 75% Reprezentant
-    } else {
-        rankIndex = 0; // Záchranná pojistka
+        if (currentDiv === 10) {
+            rankIndex = 0; 
+        } else if (currentDiv === 9) {
+            if (rand < 30) rankIndex = 1; else rankIndex = 0; 
+        } else if (currentDiv === 8) {
+            if (rand < 20) rankIndex = 2; 
+            else if (rand < 70) rankIndex = 1; 
+            else rankIndex = 0; 
+        } else if (currentDiv === 7) {
+            if (rand < 20) rankIndex = 3; 
+            else if (rand < 60) rankIndex = 2; 
+            else rankIndex = 1; 
+        } else if (currentDiv === 6) {
+            if (rand < 50) rankIndex = 3; 
+            else if (rand < 80) rankIndex = 2; 
+            else rankIndex = 1; 
+        } else if (currentDiv === 5) {
+            if (rand < 15) rankIndex = 4; 
+            else if (rand < 75) rankIndex = 3; 
+            else rankIndex = 2; 
+        } else if (currentDiv === 4) {
+            if (rand < 40) rankIndex = 4; 
+            else if (rand < 80) rankIndex = 3; 
+            else rankIndex = 2; 
+        } else if (currentDiv === 3) {
+            if (rand < 10) rankIndex = 5; 
+            else if (rand < 60) rankIndex = 4; 
+            else rankIndex = 3; 
+        } else if (currentDiv === 2) {
+            if (rand < 20) rankIndex = 5; 
+            else if (rand < 80) rankIndex = 4; 
+            else rankIndex = 3; 
+        } else if (currentDiv === 1) {
+            if (rand < 25) rankIndex = 5; 
+            else rankIndex = 4; 
+        } else {
+            rankIndex = 0; 
+        }
     }
 
     const selectedRank = PLAYER_RANKS[rankIndex];
     const minS = selectedRank.minStart || 1;
     const maxS = selectedRank.maxStart || 10;
 
-// 5. GENERACE STATISTIK (Pouze ty, které pozice potřebuje!)
+    // 5. GENERACE STATISTIK
     const stats = {};
     const allowedStats = POSITION_STATS[position].stats;
     
-    // Všechny možné staty vynulujeme
     ['atk', 'def', 'spd', 'str', 'eng', 'gk', 'tek'].forEach(s => stats[s] = 0);
     
-    // Pouze těm povoleným dáme hodnotu
     allowedStats.forEach(s => {
         stats[s] = Math.min(selectedRank.cap, Math.floor(Math.random() * (maxS - minS + 1)) + minS);
     });
@@ -850,6 +863,7 @@ function generatePlayer(isStarter = false, forcedPosition = null) {
         stats: stats
     };
 }
+
 
 function addPlayerXp(player, xpAmount) {
     // 1. ABSOLUTNÍ POJISTKA: Hráči bez hvězd (0 hvězd) nemohou získat XP
@@ -1156,15 +1170,93 @@ function getScoutInterval() {
 }
 
 function generateScoutedPlayers() {
+    // 1. HLAVNÍ SKAUT (Funguje normálně)
     playerData.scoutedPlayers = [];
     const amount = 3 + Math.floor(playerData.buildings.scout / 2); 
     
     for (let i = 0; i < amount; i++) {
         playerData.scoutedPlayers.push(generatePlayer(false)); 
     }
+
+    // 2. VEDLEJŠÍ SKAUTI (Pokud máš nějaké koupené)
+    playerData.sideScoutedPlayers = {};
+    if (playerData.unlockedScouts) {
+        playerData.unlockedScouts.forEach(rankIdx => {
+            playerData.sideScoutedPlayers[rankIdx] = [];
+            // Každý vygeneruje PŘESNĚ 3 hráče pouze a jenom svého ranku
+            for (let i = 0; i < 3; i++) {
+                playerData.sideScoutedPlayers[rankIdx].push(generatePlayer(false, null, rankIdx));
+            }
+        });
+    }
+
     playerData.lastScoutRefresh = Date.now();
     saveGame();
 }
+
+// Trvalé odemknutí vedlejšího skauta
+window.unlockSideScout = function(rankIndex) {
+    // Pojistka: existují jen skauti 0, 1, 2, 3
+    if (rankIndex > 3) return;
+
+    if (playerData.unlockedScouts.includes(rankIndex)) {
+        alert("Tohoto skauta už máš najatého natrvalo!");
+        return;
+    }
+    
+    const maxAllowed = window.getMaxAllowedSideScoutRank();
+    if (rankIndex > maxAllowed) {
+        alert("Na tohoto skauta tvůj klub ještě nemá dostatečné jméno. Musíš postoupit do vyšší divize!");
+        return;
+    }
+
+    const cost = 1; // Můžeš později změnit na libovolnou cenu
+    if (playerData.money < cost) {
+        alert(`Nemáš dost peněz na najmutí skauta (Cena: ${cost} 💰)!`);
+        return;
+    }
+
+    // Zaplacení a uložení skauta
+    playerData.money -= cost;
+    playerData.unlockedScouts.push(rankIndex);
+    
+    // Hned mu vygenerujeme první 3 hráče jeho ranku
+    if (!playerData.sideScoutedPlayers) playerData.sideScoutedPlayers = {};
+    playerData.sideScoutedPlayers[rankIndex] = [];
+    for (let i = 0; i < 3; i++) {
+        playerData.sideScoutedPlayers[rankIndex].push(generatePlayer(false, null, rankIndex));
+    }
+
+    saveGame();
+    updateTopBarUI();
+    renderScouting();
+    alert(`Úspěch! Trvale sis najal experta na rank "${PLAYER_RANKS[rankIndex].name}". Bude ti každých 24h generovat 3 hráče tohoto ranku.`);
+};
+
+// Koupě hráče z nabídky vedlejšího skauta
+window.buySideScoutedPlayer = function(rankIndex, playerIndex, price) {
+    if (playerData.players.length >= 18) {
+        alert("Máš plnou střídačku (18/18)! Než koupíš dalšího hráče, musíš někoho prodat v Šatně.");
+        return;
+    }
+
+    const targetArray = playerData.sideScoutedPlayers[rankIndex];
+    const player = targetArray[playerIndex];
+    if (!player) return;
+
+    if (playerData.money >= price) {
+        playerData.money -= price; 
+        playerData.players.push(player);  
+        targetArray.splice(playerIndex, 1); // Zmizí z nabídky vedlejšího skauta
+        
+        saveGame();
+        updateTopBarUI();
+        renderScouting();
+        alert(`Koupil jsi hráče ${player.name}! Najdeš ho na střídačce.`);
+    } else {
+        alert("Na tohoto hráče nemáš dostatek peněz!");
+    }
+};
 
 window.buyPlayer = function(index, price) {
     if (playerData.players.length >= 18) {
