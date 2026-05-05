@@ -75,6 +75,7 @@ function renderTraining() {
 
     // Vložení kompletní struktury obrazovky
     mainContent.innerHTML = `
+        <button class="help-btn-corner" onclick="showHelp('training')">Nápověda</button>
         <div style="text-align: center;">
             <h2 class="section-title">Tréninkové hřiště</h2>
             
@@ -155,7 +156,7 @@ window.renderOffice = function() {
 
             <div class="office-bar-label">
                 <span>Tvoje energie</span>
-                <span>${energyPercent} %</span>
+                <span>${energyPercent} </span>
             </div>
             <div class="office-progress-bg" style="margin-bottom: 0;">
                 <div class="office-progress-fill fill-energy" style="width: ${energyPercent}%"></div>
@@ -191,6 +192,7 @@ window.renderOffice = function() {
     }
 
     mainContent.innerHTML = `
+        <button class="help-btn-corner" onclick="showHelp('office')">Nápověda</button>
         <div class="text-center">
             <h2 class="section-title">Kancelář manažera</h2>
             ${trainerInfoHtml}
@@ -319,6 +321,7 @@ function renderStadium() {
 
     // Vložení do hlavní části obrazovky
     mainContent.innerHTML = `
+        <button class="help-btn-corner" onclick="showHelp('stadium')">Nápověda</button>
         <div style="text-align: center;">
             <h2 class="section-title">Správa Stadionu</h2>
         </div>
@@ -402,6 +405,7 @@ function renderPvE() {
     }
 
     mainContent.innerHTML = `
+        <button class="help-btn-corner" onclick="showHelp('pve')">Nápověda</button>
         <div class="text-center">
             <h2 class="section-title">${dungeon.name}</h2>
             <p class="pve-dungeon-description">"${dungeon.desc}"</p>
@@ -454,6 +458,7 @@ function renderLockerRoom() {
 
     mainContent.innerHTML = `
         <div class="text-center">
+            <button class="help-btn-corner" onclick="showHelp('locker-room')">Nápověda</button>
             <h2 class="section-title">Šatna a Sestava</h2>
             <div class="info-box">
                 <div style="margin-bottom: 15px;">
@@ -699,6 +704,7 @@ function renderScouting() {
     
     // Vycentrovaný nadpis a odpočet
     sideScoutsHtml += `
+        <button class="help-btn-corner" onclick="showHelp('scouting')">Nápověda</button>
         <div style="text-align: center; margin-bottom: 25px;">
             <h2 class="section-title" style="display: inline-block;">Vedlejší skauti (Lokální hledání)</h2>
             <div style="margin-top: 10px; font-weight: bold; color: #fcd34d; text-shadow: 1px 1px 2px black;">
@@ -866,6 +872,7 @@ function renderMatches() {
 
     // Aplikace nových tříd do HTML šablony
     mainContent.innerHTML = `
+        <button class="help-btn-corner" onclick="showHelp('match')">Nápověda</button>
         <div class="text-center" style="margin-bottom: 20px;">
             <h2 class="section-title">${divName}</h2>
             <br>
@@ -957,6 +964,7 @@ window.renderMail = function() {
     }
 
     mainContent.innerHTML = `
+        <button class="help-btn-corner" onclick="showHelp('mail')">Nápověda</button>
         <div class="text-center">
             <h2 class="section-title">Doručená pošta</h2>
         </div>
@@ -1164,6 +1172,7 @@ function renderShop() {
     }).join('');
 
     mainContent.innerHTML = `
+        <button class="help-btn-corner" onclick="showHelp('shop')">Nápověda</button>
         <div style="text-align: center;">
             <h2 class="section-title">Klubový Fanshop</h2>
         </div>
@@ -1376,6 +1385,7 @@ window.renderMinileague = function() {
     const mainContent = document.getElementById('main-content');
     
     mainContent.innerHTML = `
+        <button class="help-btn-corner" onclick="showHelp('minileague')">Nápověda</button>
         <div class="scouting-card minileague-container">
             <h2 class="section-title">Online Miniligy</h2>
             <p class="text-muted">Změř své síly s ostatními manažery z celého světa!</p>
@@ -1824,4 +1834,111 @@ window.showMLHistory = async function(leagueName) {
 
     const resText = results.map((r, i) => `${i+1}. ${r.name} - ${r.pts} bodů`).join('\n');
     alert(`🏆 POSLEDNÍ VÍTĚZOVÉ LIGY ${leagueName}:\n\n${resText}`);
+};
+
+
+// --- SYSTÉM NÁPOVĚDY ---
+const HELP_TEXTS = {
+    'office': `
+        <h3>🏢 Kancelář</h3>
+        <p>Tohle je tvůj hlavní manažerský stan. Zde můžeš využívat svou energii na plnění úkolů pro vedení klubu.</p>
+        <ul>
+            <li><strong>Jednání se sponzory:</strong> Přinese ti tolik potřebné finance do klubové kasy.</li>
+            <li><strong>Taktický rozbor:</strong> Získáš zkušenosti (XP) pro sebe jako trenéra. Zvyšováním své úrovně (Levelu) se ti zlepšují i odměny za tyto úkoly!</li>
+        </ul>
+        <p class="help-tip">Tip: Energie se automaticky doplňuje reálným časem. Nezapomeň ji tedy pravidelně spotřebovávat. Za hodinu se ti doplní přibližně 5 bodů energie.</p>
+    `,
+    'match': `
+        <h3>⚽ Liga a zápasy</h3>
+        <p>Tady vidíš rozlosování a tabulku své aktuální divize. Zápasy se hrají <strong>zcela automaticky</strong> v pevných časech (08:00, 16:00, 00:00).</p>
+        <ul>
+            <li>Nemusíš být u hry online! Pokud tu nejsi, tým zápas odehraje bez tvé přímé taktické přípravy.</li>
+            <li>Po odehrání 32 zápasů sezóna končí. První dva týmy postupují o divizi výš, poslední sestupují.</li>
+        </ul>
+        <p class="help-tip">Tip: Tlačítko "Příprava na zápas" ti před hvizdem poskytne taktickou výhodu a přidá tvým hráčům 10% k jejich statistikám.</p>
+    `,
+    'locker-room': `
+        <h3>👕 Šatna a Taktika</h3>
+        <p>Zde skládáš svou základní sestavu (prvních 11 hráčů) a střídačku.</p>
+        <ul>
+            <li><strong>Přesun hráčů:</strong> Klikni na jednoho hráče a pak na druhého. Tím si vymění svá místa. Pamatuj ale, že každá pozice na hřišti vyžaduje správného specialistu (např. útočník nemůže do obrány). Pokud bys z jakéhokoli důvodu měl hráče na špatné pozici, nepočítá se vůbec do statistik pro zápas.</li>
+            <li><strong>Rezerva:</strong> Hráče, které momentálně nevyužiješ, můžeš poslat do Rezervy, abys udělal místo na střídačce novým posilám. Rezerva má kapacitu 11 hráčů pro každý rank. Z rezervy pak můžeš své hráče posílat do Miniligy, kde můžeš hrát proti svým přátelům.</li>
+            <li><strong>Klubový trezor:</strong> V obchodě si můžeš nakoupit různé předměty, které ti dočasně zlepšují tvůj tým. Jejich seznam najdeš ve svém trezoru. Každý předmět má vlastní výdrž a po jejich spotřebě zmizí.</li>
+        </ul>
+    `,
+    'training': `
+        <h3>🏋️ Tréninkové hřiště</h3>
+        <p>Každý zápas (ať už v lize nebo podzemí) přináší tvým hráčům zkušenosti. Když jich nasbírají dost, postoupí na novou úroveň. To je jasné, ne?</p>
+        <ul>
+            <li>Za každý nový level dostane hráč <strong>2 tréninkové body</strong>.</li>
+            <li>Zde v Tréninku můžeš tyto body manuálně rozdělit do jeho statistik (Útok, Rychlost, Síla atd.) pomocí tlačítek <code>[+]</code>.</li>
+            <li>Každá hvězdička u hráče umožňuje získat 5 levelů.</li>
+        </ul>
+    `,
+    'scouting': `
+        <h3>🔎 Skauting hráčů</h3>
+        <p>Místo, kde získáváš čerstvou krev do týmu.</p>
+        <ul>
+            <li><strong>Hlavní skaut:</strong> Každých 24 hodin přivede nové hráče. Čím vyšší divizi tvůj klub hraje, tím lepší fotbalisty (ranky) najde.</li>
+            <li><strong>Vedlejší skauti:</strong> Můžeš si je jednorázově a natrvalo najmout. Vždy ti zaručeně přivedou 3 hráče jednoho specifického ranku. Skvělé pro hledání kopyt do nižších minilig!</li>
+        </ul>
+    `,
+    'minileague': `
+        <h3>🏆 Miniliga</h3>
+        <p>Vytvoř si vlastní soutěž nebo se přidej k přátelům (max. 10 manažerů v jedné lize). Zápasy se generují stylem "každý s každým".</p>
+        <ul>
+            <li><strong>Oddělená šatna:</strong> Tým pro miniligu si stavíš v její vlastní záložce! Používáš základní výplňové hráče nebo si do ní stahuješ vlastní hvězdy ze své Rezervy z hlavní hry.</li>
+            <li><strong>Výplňoví hráči:</strong> Prvotní automaticky vygenerovaná sestava hráčů nelze prodat, ani odeslat do šatny / rezervy týmu.</li>
+        </ul>
+    `,
+    'stadium': `
+        <h3>🏟️ Stadion a zázemí</h3>
+        <p>Tvůj klub je tak silný, jak silné má zázemí. Vylepšuj budovy za herní peníze!</p>
+        <ul>
+            <li><strong>Kancelář skauta:</strong> Zvyšuje šanci, že skaut objeví 5-hvězdičkového supertalenta. Navíc zrychluje skautování</li>
+            <li><strong>Tribuny a Fanshop:</strong> Zvyšují tvé finanční příjmy ze zápasů a generují pasivní zisk.</li>
+            <li><strong>Tréninkové centrum:</strong> Hráči získávají více XP z každého odehraného zápasu.</li>
+            <li><strong>Trávník:</strong> Hráči získávají % bonus ke své rychlosti při zápasech.</li>
+        </ul>
+    `,
+    'shop': `
+        <h3>🛒 Fanshop (Předměty)</h3>
+        <p>Tady si můžeš koupit speciální taktické vybavení, které hráčům přidává dočasné bonusy k síle v zápasech.</p>
+        <p>Pozor, tyto předměty mají <strong>omezenou výdrž</strong> a po několika odehraných zápasech se opotřebují a zničí!</p>
+    `,
+    'pve': `
+        <h3>🏰 Fotbalové Podzemí (PvE)</h3>
+        <p>Máš tým v plné síle, ale liga se hraje až večer? Vydej se do podzemí!</p>
+        <p>Stojíš proti řadě speciálních robotických týmů. Za poražení každého soupeře získáš jako odměnu <strong>nového hráče zdarma</strong> a obrovskou porci XP. Další zápas v podzemí můžeš hrát vždy až po hodinovém odpočinku.</p>
+    `,
+    'hall-of-fame': `
+        <h3>⭐ Síň Slávy</h3>
+        <p>Tady je zapsána celá tvá historie – sbírka odznaků, statistik a nejdůležitějších milníků tvé manažerské kariéry. (Ve výstavbě)</p>
+    `,
+    'mail': `
+        <h3>✉️ Pošta</h3>
+        <p>Tvoje poštovní schránka. Chodí ti sem všechny <strong>záznamy ze zápasů</strong> (z ligy, miniligy i podzemí), shrnutí sezóny a schvalování pozvánek od přátel.</p>
+    `
+};
+
+window.showHelp = function(sectionKey) {
+    const oldModal = document.getElementById('help-modal');
+    if (oldModal) oldModal.remove();
+
+    const helpContent = HELP_TEXTS[sectionKey] || "<p>Nápověda pro tuto sekci se připravuje...</p>";
+
+    const modalHtml = `
+        <div id="help-modal" class="help-modal-backdrop">
+            <div class="help-modal-content">
+                <div>
+                    ${helpContent}
+                </div>
+                <div style="text-align: center; margin-top: 25px;">
+                    <button class="btn-upgrade" style="background: #4b5563; padding: 8px 25px;" onclick="document.getElementById('help-modal').remove()">Jasná věc, díky!</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
 };

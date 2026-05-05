@@ -101,7 +101,7 @@ body {
 #main-content {
     flex: 1;    
     border: 5px solid #8d6e63;
-    /* Zde už NENÍ žádný background-color ani background-image, stará se o to JS! */
+    position: relative;
     border-radius: 8px;
     padding: 30px;
     overflow-y: auto;
@@ -2015,6 +2015,103 @@ body {
 
 .fill-xp { background: linear-gradient(90deg, #6366f1, #a855f7); }
 .fill-energy { background: linear-gradient(90deg, #f59e0b, #ef4444); }
+
+
+/* ========================================= */
+/* --- SYSTÉM NÁPOVĚDY (MODAL A TLAČÍTKO) --- */
+/* ========================================= */
+
+.help-btn-corner {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: #2563eb;
+    color: white;
+    border: 1px solid #1d4ed8;
+    /* Změna z kruhu na pilulku */
+    border-radius: 20px; 
+    padding: 6px 15px;
+    width: auto; 
+    height: auto;
+    
+    font-weight: bold;
+    font-size: 0.85rem;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s, background 0.2s;
+    text-transform: uppercase; /* Volitelné: udělá text výraznější */
+    letter-spacing: 0.5px;
+}
+
+.help-btn-corner:hover {
+    background: #1d4ed8;
+    transform: scale(1.05);
+}
+
+/* Ztmavené pozadí přes celou obrazovku */
+.help-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(3px);
+}
+
+/* Samotný pergamen s textem */
+.help-modal-content {
+    background: #1f2937;
+    border: 2px solid #fcd34d;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 500px;
+    padding: 25px;
+    color: #e5e7eb;
+    box-shadow: 0 0 20px rgba(0,0,0,0.8);
+    position: relative;
+    line-height: 1.6;
+    font-size: 0.95rem;
+}
+
+/* Křížek na zavření */
+.help-modal-close {
+    position: relative; /* TÍMTO TLAČÍTKO ZAMKNEŠ UVNITŘ! */
+    top: 10px;
+    right: 15px;
+    background: transparent;
+    border: none;
+    color: #9ca3af;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.help-modal-close:hover {
+    color: white;
+}
+
+/* Stylování prvků přímo UVNITŘ nápovědy */
+.help-modal-content h3 {
+    color: #fcd34d;
+    border-bottom: 1px solid #4b5563;
+    padding-bottom: 5px;
+    margin-top: 0;
+}
+
+.help-modal-content .help-tip {
+    color: #9ca3af;
+    font-size: 0.9em;
+    font-style: italic;
+}
 
 /* ============================================================
    RESPONZIVITA - MOBILNÍ VERZE (Obrazovky pod 768px)
