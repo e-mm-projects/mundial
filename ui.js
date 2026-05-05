@@ -1305,7 +1305,7 @@ window.renderMinileague = function() {
                     <p class="minileague-card-desc">Znáš přesný název miniligy svého kamaráda? Požádej o přijetí!</p>
                     <div class="minileague-btn-group">
                         <input type="text" id="join-league-input" class="minileague-input" placeholder="Zadej název miniligy...">
-                        <button class="btn-task btn-join-league" onclick="joinMinileague()">Odeslat žádost</button>
+                        <button onclick="joinMinileague()">Odeslat žádost</button>
                     </div>
                 </div>
 

@@ -2271,6 +2271,12 @@ window.runMLSimulation = async function(leagueName, league) {
             }
             if (newAct.type === 'goal') newAct.type = 'bad-goal';
             else if (newAct.type === 'bad-goal') newAct.type = 'goal';
+
+            // Otočení pozice míče! (Pokud je míč na 80%, host ho vidí na 20%)
+            if (typeof newAct.zone === 'number') {
+                newAct.zone = 100 - newAct.zone;
+            }
+            
             return newAct;
         });
 
@@ -2361,8 +2367,22 @@ window.joinMinileague = async function() {
         return;
     }
 
-    const leagueName = prompt("Zadej přesný název miniligy, do které se chceš připojit:");
-    if (!leagueName || leagueName.trim() === "") return;
+    // --- LOGIKA PRO NAČTENÍ NÁZVU Z POLÍČKA ---
+    const inputEl = document.getElementById('join-league-input');
+    let leagueName = "";
+
+    if (inputEl && inputEl.value.trim() !== "") {
+        leagueName = inputEl.value.trim();
+        inputEl.value = ""; // Vyčistíme políčko po kliknutí
+    } else {
+        // Záložní řešení, kdyby hráč klikl na tlačítko a políčko bylo prázdné
+        leagueName = prompt("Zadej přesný název miniligy, do které se chceš připojit:");
+    }
+
+    if (!leagueName || leagueName.trim() === "") {
+        alert("Musíš zadat název miniligy!");
+        return;
+    }
 
     try {
         const dbRef = window.dbRef(window.db);
