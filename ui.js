@@ -182,7 +182,7 @@ window.renderOffice = function() {
                 <div class="huge-timer danger" id="task-timer">
                     Počítám...
                 </div>
-                <button class="btn-task btn-test" onclick="skipTask()">[TEST] Přeskočit čas</button>
+                ${window.IS_TEST_MODE ? `<button class="btn-task btn-test" onclick="skipTask()">[TEST] Přeskočit čas</button>` : ''}
             </div>`;
         return;
     }
@@ -226,7 +226,7 @@ function renderStadium() {
             <div class="active-build-container">
                 <h2>Staví se: ${buildingsConfig[bId].name}</h2>
                 <div class="timer huge-timer" id="upgrade-timer">Počítám...</div>
-                <button class="btn-task btn-test" onclick="skipUpgrade()">[TEST] Dokončit stavbu</button>
+                ${window.IS_TEST_MODE ? `<button class="btn-task btn-test" onclick="skipUpgrade()">[TEST] Dokončit stavbu</button>` : ''}
             </div>
             <hr style="border-color: #8d6e63; margin-bottom: 20px;">
         `;
@@ -391,7 +391,7 @@ function renderPvE() {
                     ⏳ <span id="pve-timer">Počítám...</span>
                 </div>
             </div>
-            <button class="btn-task btn-test" onclick="skipPvETime()">[TEST] Přeskočit čekání</button>
+            ${window.IS_TEST_MODE ? `<button class="btn-task btn-test" onclick="skipPvETime()">[TEST] Přeskočit čekání</button>` : ''}
             <button class="btn-task btn-full-width" style="background-color: #4b5563; border-color: #374151;" disabled>Odpočinek...</button>
         `;
     } else {
@@ -821,7 +821,7 @@ function renderScouting() {
                     </div>
                 </details>
 
-                <button class="btn-task btn-test" style="margin-top: 15px; padding: 5px 10px;" onclick="forceScoutRefresh()">[TEST] Vygenerovat hned</button>
+                ${window.IS_TEST_MODE ? `<button class="btn-task btn-test" style="margin-top: 15px; padding: 5px 10px;" onclick="forceScoutRefresh()">[TEST] Vygenerovat hned</button>` : ''}
             </div>
         </div>
         
@@ -895,8 +895,8 @@ function renderMatches() {
             </div>
             
             <div class="match-buttons-row">
-                <button class="btn-task btn-test btn-play-now" onclick="skipMatchTime()">[TEST] Odehrát hned</button>
-                <button class="btn-task btn-test btn-sim-season" onclick="testSimulateFullSeason()">⏩ [TEST] Simulovat sezónu</button>
+                ${window.IS_TEST_MODE ? `<button class="btn-task btn-test btn-play-now" onclick="skipMatchTime()">[TEST] Odehrát hned</button>` : ''}
+                ${window.IS_TEST_MODE ? `<button class="btn-task btn-test btn-sim-season" onclick="testSimulateFullSeason()">⏩ [TEST] Simulovat sezónu</button>` : ''}
             </div>
 
             <p class="prepare-text">Aktivuj přípravu, dokud je čas. Zvýšíš tím šanci na výhru a zkušenosti hráčů.</p>
@@ -1137,9 +1137,9 @@ function renderShop() {
                 <h2 class="section-title">Klubový Fanshop</h2>
                 <div class="info-box" style="margin: 30px auto; max-width: 500px;">
                     <p style="font-style: italic;">"Dneska už máme vyprodáno, trenére. Stavte se zítra."</p>
-                    <button class="btn-task btn-skip" style="margin-top: 15px;" onclick="refreshDailyShop(true); renderShop();"> 
+                    ${window.IS_TEST_MODE ? `<button class="btn-task btn-skip" style="margin-top: 15px;" onclick="refreshDailyShop(true); renderShop();"> 
                         📦 [TEST] Obnovit nabídku 
-                    </button>
+                    </button>` : ''}
                 </div>
             </div>`;
         return;
@@ -1163,9 +1163,9 @@ function renderShop() {
                     <button class="btn-upgrade" style="width: 100%; padding: 10px;" onclick="buyItem(${index})" ${!canAfford ? 'disabled' : ''}>
                         ${canAfford ? 'Koupit předmět' : 'Nedostatek peněz'}
                     </button>
-                    <button class="btn-task btn-test" style="width: 100%; padding: 5px; font-size: 0.8rem; margin-top: 5px;" onclick="buyItem(${index}, true)">
+                    ${window.IS_TEST_MODE ? `<button class="btn-task btn-test" style="width: 100%; padding: 5px; font-size: 0.8rem; margin-top: 5px;" onclick="buyItem(${index}, true)">
                         [TEST] Koupit ZDARMA
-                    </button>
+                    </button>` : ''}
                 </div>
             </div>
         `;

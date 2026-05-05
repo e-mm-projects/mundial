@@ -1,3 +1,30 @@
+// --- TAJNÝ PŘEPÍNAČ TESTOVACÍHO MÓDU ---
+window.IS_TEST_MODE = false; // Ve výchozím stavu je vždy skrytý
+let secretClickCount = 0;
+let secretClickTimer = null;
+
+window.toggleSecretTestMode = function() {
+    secretClickCount++;
+
+    // Pokud neklikneš znovu do 2 vteřin, počítadlo se vynuluje (aby to nešlo naklikat omylem za celý den)
+    clearTimeout(secretClickTimer);
+    secretClickTimer = setTimeout(() => {
+        secretClickCount = 0;
+    }, 2000);
+
+    // Pokud klikneš 5x rychle za sebou
+    if (secretClickCount >= 5) {
+        window.IS_TEST_MODE = !window.IS_TEST_MODE; // Přepne stav (zapne/vypne)
+        secretClickCount = 0; // Vynulujeme počítadlo
+
+        alert(window.IS_TEST_MODE ? "🛠️ VÝVOJÁŘSKÝ MÓD AKTIVOVÁN!" : "🔒 VÝVOJÁŘSKÝ MÓD DEAKTIVOVÁN.");
+
+        // Překreslíme aktuální obrazovku, aby se tlačítka hned objevila/zmizela
+        const activeBtn = document.querySelector('.nav-btn.active');
+        if (activeBtn) activeBtn.click();
+    }
+};
+
 let playerData = {};
 
 // --- LOGIN A PROFIL ---
