@@ -2000,6 +2000,34 @@ body {
 
 .reserve-content.active { display: block !important; }
 
+/* =========================================
+   VYSKAKOVACÍ OKNO - VÝBĚR MINILIGY
+========================================= */
+
+.ml-selector-overlay {
+    position: fixed;
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex; 
+    justify-content: center; 
+    align-items: center;
+    z-index: 1000;
+}
+
+.ml-selector-box {
+    background: #1f2937;
+    border: 2px solid #fcd34d;
+    border-radius: 10px;
+    padding: 20px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 0 20px rgba(0,0,0,0.8);
+    color: white;
+}
 
 .ml-selector-list {
     margin-top: 15px;
