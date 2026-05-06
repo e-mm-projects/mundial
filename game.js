@@ -1896,13 +1896,19 @@ window.createNewMinileague = async function(rank) {
         
         // 4. Uložení informace o lize k hráči (aby věděl, že v ní je)
         if (!playerData.myMinileagues) playerData.myMinileagues = [];
-        playerData.myMinileagues.push({ name: cleanName, rank: rank });
-        
+        playerData.myMinileagues.push({ 
+            name: cleanName, 
+            creator: playerData.clubName,
+            rank: rank, 
+            played: 0,
+            seasonEndTime: 0 
+        });
+
         saveGame();
         updateTopBarUI();
         
         alert(`Miniliga ${cleanName} byla úspěšně založena!`);
-        renderMinileagueDetail(cleanName); // Přesuneme se do detailu ligy
+        renderMinileague();
 
     } catch (error) {
         console.error("Chyba při zakládání ligy:", error);
@@ -2221,7 +2227,7 @@ window.leaveMinileague = async function(leagueName) {
         });
 
         saveGame();
-        renderMyMinileaguesList(); // Překreslení seznamu
+        renderMinileague();
         alert(`Úspěšně jsi opustil miniligu ${leagueName}.`);
 
     } catch (error) {
@@ -2440,6 +2446,10 @@ window.runMLSimulation = async function(leagueName, league) {
 
     playerData.managerName = originalManagerName;
 
+    // --- GLOBÁLNÍ POČÍTADLO KOL (PŘIČTENÍ) ---
+    // Přičteme 1 kolo, protože se právě odehrál jeden celý "hrací blok"
+    league.globalPlayedRounds = (league.globalPlayedRounds || 0) + 1;
+
     // --- KONEC SEZÓNY (7 DNÍ) ---
     const isSeasonOver = Date.now() >= league.seasonEndTime;
     if (isSeasonOver) {
@@ -2472,6 +2482,10 @@ window.runMLSimulation = async function(leagueName, league) {
         participants.forEach(uid => {
             league.standings[uid] = { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0, byes: 0 };
         });
+
+        // --- GLOBÁLNÍ POČÍTADLO KOL (RESTART NA KONCI SEZÓNY) ---
+        league.globalPlayedRounds = 0;
+
         league.seasonEndTime = Date.now() + (7 * 24 * 60 * 60 * 1000);
     }
 

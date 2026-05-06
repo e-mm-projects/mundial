@@ -596,6 +596,7 @@ function renderPlayerGroup(startIndex, endIndex, role) {
 
         const player = playerData.players[i];
         const posConfig = POSITION_STATS[player.position];
+        const totalStats = posConfig.stats.reduce((sum, s) => sum + player.stats[s], 0);
         const isSelected = selectedPlayerIndex === i ? 'selected' : '';
         const starsHtml = player.stars > 0 ? '⭐'.repeat(player.stars) : '<span>&nbsp;</span>';
         const sellPrice = Math.floor(getPlayerPrice(player) / 2);
@@ -621,9 +622,13 @@ function renderPlayerGroup(startIndex, endIndex, role) {
                             ${statLabels[statKey]}: <span>${player.stats[statKey]}</span>
                         </div>
                     `).join('')}
+                    
+                    <div class="stat-total">
+                        <span>Celková síla:</span> 
+                        <span style="font-weight: bold;">${totalStats}</span>
+                    </div>               
                 </div>
-            </div>
-        `;
+        </div> `;
     }
     return html;
 }
@@ -673,6 +678,7 @@ function renderScouting() {
         const posConfig = POSITION_STATS[player.position];
         const price = getPlayerPrice(player);
         const canAfford = playerData.money >= price;
+        const totalStats = posConfig.stats.reduce((sum, s) => sum + player.stats[s], 0);
 
         return `
             <div class="player-card ${posConfig.colorClass}">
@@ -693,6 +699,12 @@ function renderScouting() {
                             ${statLabels[s]}: <span>${player.stats[s]}</span>
                         </div>
                     `).join('')}
+                    
+                    <div class="stat-total">
+                        <span>Celková síla:</span> 
+                        <span style="font-weight: bold;">${totalStats}</span>
+                    </div> 
+
                 </div>
                 <button class="btn-upgrade" style="width: 100%; margin-top: 10px;" onclick="buyPlayer(${index}, ${price})" ${!canAfford ? 'disabled' : ''}>Koupit</button>
             </div>
@@ -732,6 +744,7 @@ function renderScouting() {
                 const posConfig = POSITION_STATS[player.position];
                 const price = getPlayerPrice(player);
                 const canAfford = playerData.money >= price;
+                const totalStats = posConfig.stats.reduce((sum, s) => sum + player.stats[s], 0);
 
                 return `
                     <div class="player-card ${posConfig.colorClass}" style="transform: scale(0.95);">
@@ -743,7 +756,16 @@ function renderScouting() {
                         <div class="player-nationality">Nár: ${player.nationality}</div>
                         <div class="price-tag buy">Cena: ${price} 💰</div>
                         <div class="player-stats">
-                            ${posConfig.stats.map(s => `<div class="stat-item highlighted">${statLabels[s]}: <span>${player.stats[s]}</span></div>`).join('')}
+                            ${posConfig.stats.map(s => `
+                                <div class="stat-item highlighted">
+                                    ${statLabels[s]}: <span>${player.stats[s]}</span>
+                                </div>
+                            `).join('')}
+                            
+                            <div class="stat-total">
+                                <span>Celková síla:</span> 
+                                <span style="font-weight: bold;">${totalStats}</span>
+                            </div> 
                         </div>
                         <button class="btn-upgrade" style="width: 100%; margin-top: 10px; background: #4f46e5;" onclick="buySideScoutedPlayer(${rankIdx}, ${pIndex}, ${price})" ${!canAfford ? 'disabled' : ''}>Koupit</button>
                     </div>
@@ -840,6 +862,9 @@ function renderScouting() {
 function renderMatches() {
  const mainContent = document.getElementById('main-content');
 
+ const myTeam = playerData.league.find(t => t.isPlayer);
+ const matchesLeft = 36 - myTeam.z; // 36 je celkový počet zápasů
+
  const myTeamIndex = playerData.league.findIndex(t => t.isPlayer);
  if (myTeamIndex !== -1 && playerData.managerName) {
      playerData.league[myTeamIndex].name = `FC ${playerData.managerName}`;
@@ -876,9 +901,9 @@ function renderMatches() {
         <div class="text-center" style="margin-bottom: 20px;">
             <h2 class="section-title">${divName}</h2>
             <br>
-            <div class="season-timer-box">
-                ⏳ DO KONCE SEZÓNY: <span id="topbar-season-timer" class="season-timer-text">--:--</span>
-            </div>
+            <p style="color: #fcd34d; font-weight: bold; margin: 25px 0;">
+                ⏳ Do konce sezóny zbývá: ${matchesLeft} zápasů
+            </p>
         </div>
         
         ${unreadBanner}
@@ -1379,48 +1404,172 @@ window.viewPvEBot = function(dIndex, sIndex) {
     `;
 }
 
-// MINILIGA - ROZCESTNÍK //
+// Pomocná funkce pro výpočet fixních časů zápasů (08:00, 16:00, 00:00)
+window.getGlobalNextMatchTime = function() {
+    const now = new Date();
+    const next = new Date(now);
+    const hours = now.getHours();
+    
+    if (hours < 8) {
+        next.setHours(8, 0, 0, 0);
+    } else if (hours < 16) {
+        next.setHours(16, 0, 0, 0);
+    } else {
+        next.setDate(next.getDate() + 1); // Posun na další den
+        next.setHours(0, 0, 0, 0); // Půlnoc
+    }
+    return next.getTime();
+};
 
 window.renderMinileague = function() {
     const mainContent = document.getElementById('main-content');
-    
-    mainContent.innerHTML = `
-        <button class="help-btn-corner" onclick="showHelp('minileague')">Nápověda</button>
-        <div class="scouting-card minileague-container">
-            <h2 class="section-title">Online Miniligy</h2>
-            <p class="text-muted">Změř své síly s ostatními manažery z celého světa!</p>
+
+    // Vyčistíme starý interval (aby nám na pozadí neběželo více odpočtů najednou)
+    if (window.mlTimersInterval) clearInterval(window.mlTimersInterval);
+
+    // 1. POJISTKY A DATA
+    if (!playerData.myMinileagues) playerData.myMinileagues = [];
+    const MAX_MINILEAGUES = 3;
+    const currentCount = playerData.myMinileagues.length;
+
+    // 2. GENEROVÁNÍ SEZNAMU "MOJE MINILIGY"
+    let myLeaguesHtml = "";
+    if (currentCount === 0) {
+        myLeaguesHtml = `<p style="color: #9ca3af; text-align: center; margin-top: 20px;">Zatím nejsi v žádné minilize.</p>`;
+    } else {
+        myLeaguesHtml = playerData.myMinileagues.map((l, index) => {
+            const lData = typeof l === 'object' ? l : { name: l };
+            const lName = lData.name;
+            const creator = lData.creator || "Neznámý";
             
-            <div class="minileague-menu-wrapper">
-                
-                <div class="minileague-card">
-                    <h3 class="minileague-card-title yellow">Založit novou miniligu</h3>
-                    <p class="minileague-card-desc">Založ vlastní ligu a pozvi ostatní. Cena za založení je 1 💰.</p>
-                    <div class="minileague-btn-group">
-                        <button class="btn-task btn-create-league" onclick="createNewMinileague('Kopyto')">Vytvořit - Kopyto</button>
-                        <button class="btn-task btn-create-league" onclick="alert('Zatím ve vývoji!')">Vytvořit - Amatér</button>
-                        <button class="btn-task btn-create-league" onclick="alert('Zatím ve vývoji!')">Vytvořit - Srdcař</button>
+            const playedMatches = lData.played || 0; 
+            const roundsLeft = Math.max(0, 21 - playedMatches);
+            
+            // Vezmeme čas konce sezóny (pokud ho ještě nemáme, dáme 0)
+            const seasonEndTime = lData.seasonEndTime || 0; 
+            
+            let rankName = "Všechny";
+            if (lData.rank !== undefined && PLAYER_RANKS[lData.rank]) {
+                rankName = PLAYER_RANKS[lData.rank].name;
+            } else if (typeof lData.rank === 'string') {
+                rankName = lData.rank;
+            }
+
+            return `
+                <div class="ml-league-card">
+                    <div style="margin-bottom: 10px;">
+                        <div class="ml-league-header">${lName}</div>
+                        <div class="ml-league-info">👑 Zakladatel: <span style="color:white;">${creator}</span></div>
+                        <div class="ml-league-info">⛔ Omezení: <span style="color:#60a5fa;">${rankName}</span></div>
+                        <div class="ml-league-info">🗓️ Zbývá kol: <span style="color:white; font-weight:bold;">${roundsLeft} / 21</span></div>
+                        <div class="ml-league-info">⏳ Konec ligy za: <span id="ml-season-timer-${index}" data-endtime="${seasonEndTime}" style="color:#fcd34d; font-weight:bold;">Načítám...</span></div>
+                    </div>
+                    
+                    <div class="ml-timer-box">
+                        <div style="font-size: 0.75rem; color: #9ca3af; text-transform: uppercase;">Další zápas za:</div>
+                        <div id="ml-match-timer-${index}" style="font-weight: bold; color: #fcd34d; font-family: monospace; font-size: 1.1rem;">--:--:--</div>
+                    </div>
+
+                    <div class="ml-btn-group">
+                        <button class="btn-upgrade" style="flex: 2; background: #10b981; padding: 8px;" onclick="renderMinileagueDetail('${lName}')">VSTOUPIT</button>
+                        <button class="btn-task" style="flex: 1; background: #991b1b; padding: 8px; font-size: 0.8rem;" onclick="leaveMinileague('${lName}')">OPUSTIT</button>
                     </div>
                 </div>
+            `;
+        }).join('');
+    }
 
-                <div class="minileague-card">
-                    <h3 class="minileague-card-title blue">Připojit se do existující ligy</h3>
-                    <p class="minileague-card-desc">Znáš přesný název miniligy svého kamaráda? Požádej o přijetí!</p>
-                    <div class="minileague-btn-group">
-                        <input type="text" id="join-league-input" class="minileague-input" placeholder="Zadej název miniligy...">
-                        <button onclick="joinMinileague()">Odeslat žádost</button>
+    const rankOptions = PLAYER_RANKS.map((r, i) => `<option value="${i}">${r.name}</option>`).join('');
+
+    mainContent.innerHTML = `
+        <button class="help-btn-corner" onclick="showHelp('minileague')" title="Nápověda">Nápověda</button>
+
+        <div class="text-center">
+            <h2 class="section-title" style="margin-bottom: 5px;">Online Miniligy</h2>
+            <p class="ml-subtitle">Tvé soukromé ligy s přáteli na jednom místě.</p>
+        </div>
+
+        <div class="ml-container">
+            <div class="ml-column">
+                <h3 style="color: #fcd34d; margin-top: 0; border-bottom: 1px solid #4b5563; padding-bottom: 10px; display: flex; justify-content: space-between;">
+                    <span>📋 Moje miniligy</span>
+                    <span style="font-size: 0.9rem; color: #9ca3af;">${currentCount} / ${MAX_MINILEAGUES}</span>
+                </h3>
+                <div style="margin-top: 15px;">
+                    ${myLeaguesHtml}
+                </div>
+            </div>
+
+            <div style="flex: 1; min-width: 320px;">
+                <div class="ml-box">
+                    <h3 style="color: #a78bfa; margin-top: 0; border-bottom: 1px solid #4b5563; padding-bottom: 10px;">Založit novou ligu</h3>
+                    
+                    <div style="margin: 15px 0;">
+                        <label style="display: block; color: #d1d5db; font-size: 0.85rem; margin-bottom: 5px;">Omezení ranku hráčů:</label>
+                        <select id="new-league-rank-select" style="width: 100%; padding: 10px; border-radius: 5px; background: #1f2937; color: white; border: 1px solid #4b5563;">
+                            ${rankOptions}
+                        </select>
+                        <p style="font-size: 0.75rem; color: #9ca3af; margin-top: 5px;">V této lize půjde hrát pouze s hráči tohoto ranku a nižšími.</p>
                     </div>
+
+                    <button class="btn-upgrade" style="width: 100%; background: #7c3aed;" 
+                        onclick="createNewMinileague(parseInt(document.getElementById('new-league-rank-select').value))">
+                        ZALOŽIT LIGU (1 💰)
+                    </button>
                 </div>
 
-                <div class="minileague-card">
-                    <h3 class="minileague-card-title purple">Moje miniligy</h3>
-                    <p class="minileague-card-desc">Zde najdeš rozehrané ligy a můžeš si nastavit svou soupisku.</p>
-                    <button class="btn-task btn-full-width btn-my-leagues" onclick="renderMyMinileaguesList()">Vstoupit do mých minilig</button>
+                <div class="ml-box" style="margin-bottom: 0;">
+                    <h3 style="color: #60a5fa; margin-top: 0; border-bottom: 1px solid #4b5563; padding-bottom: 10px;">Připojit se k minilize</h3>
+                    <p style="font-size: 0.85rem; color: #9ca3af; margin: 10px 0;">Zadej přesný název ligy, do které se chceš připojit.</p>
+                    <input type="text" id="join-league-input" placeholder="Název ligy..." style="width: 100%; padding: 12px; border-radius: 5px; border: 1px solid #4b5563; background: #1f2937; color: white; margin-bottom: 10px; box-sizing: border-box;">
+                    <button class="btn-upgrade" style="width: 100%; background: #2563eb;" onclick="joinMinileague()">ODESLAT ŽÁDOST</button>
                 </div>
-
             </div>
         </div>
     `;
-}
+
+    // --- MOTOR PRO ŽIVÝ ODPOČET ČASU ---
+    window.mlTimersInterval = setInterval(() => {
+        const now = Date.now();
+        const nextMatch = window.getGlobalNextMatchTime(); // Spočítá další 8:00, 16:00 nebo 0:00
+
+        playerData.myMinileagues.forEach((l, index) => {
+            // 1. Aktualizace času do dalšího zápasu
+            const matchEl = document.getElementById(`ml-match-timer-${index}`);
+            if (matchEl) {
+                const diff = nextMatch - now;
+                if (diff <= 0) {
+                    matchEl.innerText = "Simuluji...";
+                } else {
+                    const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                    const m = Math.floor((diff / 1000 / 60) % 60);
+                    const s = Math.floor((diff / 1000) % 60);
+                    // Přidá nulu před čísla menší než 10 (např. 03:05:09)
+                    matchEl.innerText = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                }
+            }
+
+            // 2. Aktualizace času do konce ligy
+            const seasonEl = document.getElementById(`ml-season-timer-${index}`);
+            if (seasonEl) {
+                const endTime = parseInt(seasonEl.getAttribute('data-endtime')) || 0;
+                if (endTime === 0) {
+                    seasonEl.innerText = "Zjistí se po vstupu";
+                } else {
+                    const diff = endTime - now;
+                    if (diff <= 0) {
+                        seasonEl.innerText = "Sezóna končí...";
+                    } else {
+                        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                        const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                        const m = Math.floor((diff / 1000 / 60) % 60);
+                        seasonEl.innerText = `${d} dní, ${h} hod, ${m} min`;
+                    }
+                }
+            }
+        });
+    }, 1000); // 1000 ms = 1 vteřina
+};
 
 // MINILIGA - DETAILY //
 window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
@@ -1444,7 +1593,7 @@ window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
                 playerData.myMinileagues = playerData.myMinileagues.filter(l => (typeof l === 'object' ? l.name : l) !== leagueName);
                 saveGame();
             }
-            renderMyMinileaguesList(); // Vrátíme ho zpět na seznam
+            renderMinileague(); // Vrátíme ho zpět na nový hlavní přehled
             return;
         }
 
@@ -1462,6 +1611,30 @@ window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
         }
 
         window.currentMLNextMatch = league.nextMatchTime;
+
+        // --- SYNCHRONIZACE ODEHRANÝCH ZÁPASŮ (GLOBÁLNÍ POČÍTADLO) ---
+        if (playerData.myMinileagues) {
+            const leagueIndex = playerData.myMinileagues.findIndex(l => 
+                (typeof l === 'object' ? l.name : l) === leagueName
+            );
+
+            if (leagueIndex !== -1) {
+                // Vezmeme oficiální globální počet kol z ligy
+                const officialMatchesPlayed = league.globalPlayedRounds || 0;
+                
+                if (typeof playerData.myMinileagues[leagueIndex] === 'string') {
+                    playerData.myMinileagues[leagueIndex] = {
+                        name: playerData.myMinileagues[leagueIndex],
+                        played: officialMatchesPlayed,
+                        seasonEndTime: league.seasonEndTime
+                    };
+                } else {
+                    playerData.myMinileagues[leagueIndex].played = officialMatchesPlayed;
+                    playerData.myMinileagues[leagueIndex].seasonEndTime = league.seasonEndTime;
+                }
+                saveGame();
+            }
+        }
 
         const myTeam = league.teams[playerData.uid];
         // --- FIREBASE POJISTKA PRO PRÁZDNÉ POLE HRÁČŮ --- //
@@ -1527,7 +1700,7 @@ window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
             <div class="scouting-card minileague-container">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <h2 class="section-title">🏆 ${league.name}</h2>
-                    <button class="btn-task" onclick="renderMyMinileaguesList()" style="background:#4b5563;">Zavřít ligu</button>
+                    <button class="btn-task" onclick="renderMinileague()" style="background:#4b5563;">Zpět na přehled</button>
                 </div>
                 
                 <div class="info-box" style="background: rgba(30, 41, 59, 0.8); border: 1px solid #334155; margin-bottom: 20px;">
@@ -1601,6 +1774,7 @@ function renderMLPlayerCard(player, index, leagueName) {
     const posConfig = POSITION_STATS[player.position];
     const statLabels = { atk: 'Útok', def: 'Obrana', spd: 'Rychlost', str: 'Síla', eng: 'Výdrž', tek: 'Technika', gk: 'Brankář' };
     const starsHtml = player.stars > 0 ? '⭐'.repeat(player.stars) : '<span>&nbsp;</span>';
+    const totalStats = posConfig.stats.reduce((sum, s) => sum + player.stats[s], 0);
 
     // Tlačítko pro návrat do rezervy (pouze pro střídačku)
     const returnHtml = index >= 11 
@@ -1626,6 +1800,11 @@ function renderMLPlayerCard(player, index, leagueName) {
                         ${statLabels[s]}: <span>${player.stats[s]}</span>
                     </div>
                 `).join('')}
+
+                <div class="stat-total">
+                    <span>Celková síla:</span> 
+                    <span style="font-weight: bold;">${totalStats}</span>
+                </div> 
             </div>
         </div>
     `;
@@ -1720,6 +1899,12 @@ function renderMinileaguePlayers(players) {
                 <div class="player-info-line">${player.rank} | Lvl.${player.level}</div>
                 <div class="player-stats">
                     ${posConfig.stats.map(s => `<div class="stat-item">${statLabels[s]}: ${player.stats[s]}</div>`).join('')}
+
+                <div class="stat-total">
+                    <span>Celková síla:</span> 
+                    <span style="font-weight: bold;">${totalStats}</span>
+                </div>
+
                 </div>
                 ${i >= 11 ? `<button class="btn-small-add" style="background:red; width:100%; margin-top:5px;" onclick="alert('Funkce odstranění bude doplněna')">Odstranit</button>` : ''}
             </div>
@@ -1752,6 +1937,7 @@ function renderReservePlayers(filter) {
 
     return players.map(player => {
         const posConfig = POSITION_STATS[player.position];
+        const totalStats = posConfig.stats.reduce((sum, s) => sum + player.stats[s], 0);
         const starsHtml = player.stars > 0 ? '⭐'.repeat(player.stars) : '<span>&nbsp;</span>';
         
         return `
@@ -1774,6 +1960,11 @@ function renderReservePlayers(filter) {
                             ${statLabels[s]}: <span>${player.stats[s]}</span>
                         </div>
                     `).join('')}
+
+                    <div class="stat-total">
+                        <span>Celková síla:</span> 
+                        <span style="font-weight: bold;">${totalStats}</span>
+                    </div>
                 </div>
             </div>
         `;
