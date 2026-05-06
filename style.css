@@ -244,7 +244,7 @@ body {
 
 .pitch-section h3 {
     margin-top: 0;
-    color: #3e2723;
+    color: #f2eae8;
     border-bottom: 1px solid #a1887f;
     padding-bottom: 5px;
 }
@@ -287,6 +287,31 @@ body {
 .player-card:hover {
     transform: translateY(-3px);
     background-color: #fff;
+}
+
+/* Prázdný slot na střídačce a v sestavě */
+.player-card.empty-slot {
+    background: rgba(0, 0, 0, 0.3); /* Tmavší, poloprůhledné pozadí */
+    border: 2px dashed #6b7280; /* Přerušovaná šedá čára */
+    box-shadow: none; /* Odstraníme stín, aby to vypadalo "prázdně" */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px; /* Udržuje výšku stejnou jako reálné karty */
+    transition: all 0.2s ease;
+}
+
+.player-card.empty-slot:hover {
+    background: rgba(0, 0, 0, 0.5);
+    border-color: #9ca3af;
+}
+
+/* Úprava samotného textu uvnitř */
+.player-card.empty-slot div {
+    color: #9ca3af !important; /* Pěkná světle šedá barva textu */
+    font-size: 1rem !important;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 /* --- ŠTÍTKY A KARTY HRÁČŮ --- */
@@ -1366,6 +1391,123 @@ body {
     margin: 5px 0 0 0;
 }
 
+/* =========================================
+   🏟️ INTERAKTIVNÍ MAPA STADIONU
+========================================= */
+/* Neviditelná folie přes celé pozadí */
+.interactive-stadium-container {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    aspect-ratio: auto !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    z-index: 1;
+    pointer-events: none; /* Propustí kliknutí pod sebe (na nadpisy a tlačítka) */
+}
+
+/* Samotné klikací zóny */
+.stadium-click-zone {
+    pointer-events: auto; /* Zóny samotné musí jít kliknout */
+    position: absolute;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.0);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stadium-click-zone:hover {
+    background: rgba(244, 242, 237, 0.15); /* Jemné žluté nasvícení při najetí myši */
+    box-shadow: inset 0 0 20px rgba(252, 211, 77, 0.3);
+}
+
+/* Štítek nad budovou */
+.zone-tag {
+    background: rgba(17, 24, 39, 0.85);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid #4b5563;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+    pointer-events: none; /* Kliknutí projde skrz štítek na zónu */
+}
+
+/* Styly pro mini bar v mapě stadionu */
+.zone-shop-mini-container {
+    margin-top: 8px;
+    padding: 5px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 4px;
+    min-width: 130px;
+}
+
+.zone-shop-label {
+    font-size: 0.65rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 3px;
+    text-align: center;
+}
+
+.zone-shop-bar-bg {
+    width: 100%;
+    height: 6px;
+    background: #1f2937;
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid #374151;
+}
+
+.zone-shop-bar-fill {
+    height: 100%;
+    background: #10b981; /* Pěkná zelená */
+    box-shadow: 0 0 5px rgba(16, 185, 129, 0.5);
+    transition: width 0.3s ease;
+}
+
+.zone-shop-value {
+    font-size: 0.7rem;
+    color: #10b981;
+    margin-top: 2px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.zone-timer {
+    color: #fcd34d;
+    font-family: monospace;
+    font-weight: bold;
+    margin-top: 3px;
+    font-size: 0.9rem;
+}
+
+.zone-ready {
+    color: #10b981;
+    font-weight: bold;
+    margin-top: 3px;
+    animation: pulse 1.5s infinite;
+}
+
+/* Efekt pro rozestavěnou budovu */
+.building-upgrading {
+    background: rgba(0, 0, 0, 0.4);
+    border: 2px dashed #fcd34d;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
 /* --- SKAUTING (ÚKLID) --- */
 .scout-info-box {
     max-width: 700px;
@@ -2218,6 +2360,117 @@ body {
     font-size: 0.9em;
     font-style: italic;
 }
+
+/* =========================================
+   🏆 DESIGN KARTY HRÁČE
+========================================= */
+
+.card-header {
+    position: relative;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.card-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.card-flag {
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+.card-name {
+    font-weight: bold;
+    font-size: 1.05rem;
+    color: #1e3a8a;
+    flex: 1;
+    text-align: center;
+    line-height: 1.1;
+    padding: 0 5px;
+}
+
+/* Kroužek pro Level */
+.card-level {
+    width: 24px;
+    height: 24px;
+    background: #1e3a8a;
+    color: white;
+    border-radius: 50%;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    border: 1px solid #fbbf24;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.card-sub-row {
+    font-size: 0.8rem;
+    color: #4b5563;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+/* Odznáčky Ranků */
+.rank-badge {
+    font-size: 0.7rem;
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 12px;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.rank-bg-0 { background: #6b7280; } /* Kopyto - Šedá */
+.rank-bg-1 { background: #b45309; } /* Amatér - Bronzová */
+.rank-bg-2 { background: #94a3b8; color: #0f172a; } /* Průměr - Stříbrná */
+.rank-bg-3 { background: #eab308; color: #422006; } /* Talent - Zlatá */
+.rank-bg-4 { background: #8b5cf6; } /* Hvězda - Fialová */
+
+/* Kompaktní mřížka pro statistiky (2x2) */
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+    margin-bottom: 8px;
+}
+
+.stat-mini {
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(0,0,0,0.05);
+    border-radius: 4px;
+    padding: 4px 2px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-label {
+    font-size: 0.65rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.stat-val {
+    font-size: 0.95rem;
+    font-weight: bold;
+    color: #1e3a8a;
+}
+
 
 /* ============================================================
    RESPONZIVITA - MOBILNÍ VERZE (Obrazovky pod 768px)

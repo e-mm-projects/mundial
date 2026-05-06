@@ -423,30 +423,49 @@ function gameLoop() {
         playerData.lastEnergyUpdate = now;
     }
 
-    // --- GENEROVÁNÍ PENĚZ V OBCHODĚ ---
+    // --- GENEROVÁNÍ PENĚZ V OBCHODĚ (V gameLoop) ---
     if (playerData.buildings.shop > 0) {
         const now = Date.now();
         const timePassedMs = now - (playerData.lastShopUpdate || now);
         
-        // Výpočet rychlosti: 100 peněz/hod základ + 50 za každý další level
-        const moneyPerHour = 100 + (playerData.buildings.shop - 1) * 50;
+        const shopConfig = buildingsConfig.shop;
+        const currentLevel = playerData.buildings.shop;
+        
+        // Nový exponenciální výpočet z config.js
+        const moneyPerHour = Math.floor(shopConfig.baseIncome * Math.pow(shopConfig.incomeMult, currentLevel - 1));
+        const maxCapacity = Math.floor(shopConfig.baseCap * Math.pow(shopConfig.capMult, currentLevel - 1));
+        
         const moneyPerMs = moneyPerHour / (60 * 60 * 1000);
-        
-        // Výpočet kapacity: 500 základ + 500 za každý další level
-        const maxCapacity = 500 + (playerData.buildings.shop - 1) * 500;
-        
         const generated = timePassedMs * moneyPerMs;
+        
         playerData.shopSafe = Math.min(maxCapacity, (playerData.shopSafe || 0) + generated);
         playerData.lastShopUpdate = now;
+
+        // --- AKTUALIZACE MINI BARU NA MAPĚ ---
+        const shopFill = document.getElementById('zone-shop-fill');
+        const shopText = document.getElementById('zone-shop-text');
+        if (shopFill && shopText) {
+            const percent = (playerData.shopSafe / maxCapacity) * 100;
+            shopFill.style.width = percent + "%";
+            shopText.innerText = Math.floor(playerData.shopSafe) + " / " + maxCapacity + " 💰";
+        }
     }
 
-
-    if (playerData.activeTask && playerData.activeTask.endTime) {
-        if (now >= playerData.activeTask.endTime) {
-            finishTask();
+    // ZÓNY STADIONU // 
+    if (playerData.activeUpgrade && playerData.activeUpgrade.endTime) {
+        if (now >= playerData.activeUpgrade.endTime) {
+            window.finishUpgrade();
             uiNeedsUpdate = true;
         } else {
-            updateTimerUI('task-timer', playerData.activeTask.endTime);
+            // Aktualizace uvnitř vyskakovacího okna
+            updateTimerUI('modal-upgrade-timer', playerData.activeUpgrade.endTime);
+            
+            // Aktualizace přímo nad zónou na mapě stadionu
+            let targetZone = 'center';
+            if (['tribune', 'shop'].includes(playerData.activeUpgrade.buildingId)) targetZone = 'left';
+            if (['scout'].includes(playerData.activeUpgrade.buildingId)) targetZone = 'right';
+            
+            updateTimerUI(`zone-timer-${targetZone}`, playerData.activeUpgrade.endTime);
         }
     }
 
@@ -554,23 +573,6 @@ window.trainPlayerStat = function(playerId, statKey) {
     }
 }
 
-
-// vybírání peněz z budovy pro výběr peněz
-window.collectShopMoney = function() {
-    const amount = Math.floor(playerData.shopSafe || 0);
-    if (amount > 0) {
-        playerData.money += amount;
-        playerData.shopSafe = 0;
-        saveGame();
-        updateTopBarUI();
-        renderStadium(); // Překreslíme, aby se vynulovalo počítadlo
-        alert(`Vybral jsi z obchodu ${amount} 💰!`);
-    } else {
-        alert("Pokladna je prázdná, počkej, až se něco prodá!");
-    }
-}
-
-
 // --- NAVIGACE ---
 function setupNavigation() {
     const navButtons = document.querySelectorAll('.nav-btn');
@@ -671,38 +673,6 @@ function finishTask() {
     }
 }
 
-window.startUpgrade = function(buildingId, cost, timeInSeconds) {
-    if (playerData.money < cost) return;
-
-    playerData.money -= cost;
-    playerData.activeUpgrade = {
-        buildingId: buildingId,
-        endTime: Date.now() + (timeInSeconds * 1000)
-    };
-
-    saveGame();
-    updateTopBarUI();
-    renderStadium();
-}
-
-function finishUpgrade() {
-    const bId = playerData.activeUpgrade.buildingId;
-    playerData.buildings[bId]++;
-    
-    alert(`Stavba dokončena! ${buildingsConfig[bId].name} je nyní na úrovni ${playerData.buildings[bId]}.`);
-    
-    playerData.activeUpgrade = null;
-    saveGame();
-
-    const activeBtn = document.querySelector('.nav-btn.active');
-    if (activeBtn && activeBtn.getAttribute('data-target') === 'stadium') {
-        renderStadium();
-    }
-}
-
-window.skipUpgrade = function() {
-    if(playerData.activeUpgrade) playerData.activeUpgrade.endTime = Date.now();
-}
 
 // --- TESTOVACÍ FUNKCE A UTILITKY ---
 window.resetEnergy = function() {

@@ -1,10 +1,21 @@
 // --- KONFIGURACE HRY ---
 const buildingsConfig = {
-    scout: { name: "Kancelář skauta", baseCost: 100, baseTime: 60, costMult: 1.5, timeMult: 1.3, desc: "Zrychluje skautování a zvyšuje šanci na nalezení lepších talentů." },
-    shop: { name: "Obchod se suvenýry", baseCost: 150, baseTime: 120, costMult: 1.6, timeMult: 1.4, desc: "Pasivně generuje peníze do klubové pokladny. Nezapomeň si je ale vybírat!" },
-    tribune: { name: "Tribuny", baseCost: 200, baseTime: 180, costMult: 1.7, timeMult: 1.5, desc: "Přitáhneš na ten svůj nefotbal více lidí ochotných zaplatit." },
-    pitch: { name: "Trávník", baseCost: 500, baseTime: 300, costMult: 2.0, timeMult: 1.6, desc: "Prvotřídní pažit umožňuje hráčům rychlejší pohyb. Každá úroveň zvyšuje rychlost všech tvých hráčů v zápase o 1 % (Max. úroveň 10)."},
-    training: { name: "Tréninkové centrum", baseCost: 250, baseTime: 200, costMult: 1.6, timeMult: 1.5, desc: "Zvyšuje množství zkušeností, které tvoje kopyta získají z každého zápasu o 5 % za úroveň." }
+    scout: { name: "Kancelář skauta", baseCost: 100, baseTime: 300, costMult: 1.5, timeMult: 1.3, desc: "Zrychluje skautování a zvyšuje šanci na nalezení lepších talentů." },
+    shop: {
+        name: "Klubový Fanshop",
+        desc: "Zajišťuje stálý pasivní příjem. S vyšší úrovní roste rychlost prodeje i velikost pokladny.",
+        baseCost: 500,
+        costMult: 1.6,
+        baseTime: 300,
+        timeMult: 1.5,
+        baseIncome: 100,  // Kolik to vydělává na Lvl 1 za hodinu
+        incomeMult: 1.2,  // Každý level se výdělek zvedne o 20 %
+        baseCap: 500,     // Kapacita pokladny na Lvl 1
+        capMult: 1.5      // Každý level se kapacita zvětší o 50 %
+    },
+    tribune: { name: "Tribuny", baseCost: 200, baseTime: 900, costMult: 1.7, timeMult: 1.5, desc: "Přitáhneš na ten svůj nefotbal více lidí ochotných zaplatit." },
+    pitch: { name: "Trávník", baseCost: 500, baseTime: 1200, costMult: 2.0, timeMult: 1.6, desc: "Prvotřídní pažit umožňuje hráčům rychlejší pohyb. Každá úroveň zvyšuje rychlost všech tvých hráčů v zápase o 1 % (Max. úroveň 10)."},
+    training: { name: "Tréninkové centrum", baseCost: 250, baseTime: 900, costMult: 1.6, timeMult: 1.5, desc: "Zvyšuje množství zkušeností, které tvoje kopyta získají z každého zápasu o 5 % za úroveň." }
 };
 
 
@@ -97,8 +108,8 @@ const FORMATIONS_LAYOUT = {
 
 // Generátory jmen botů pro ligu (rozděleno podle úrovně)
 const BOT_TEAM_NAMES = {
-    village: ["Sokol Horní Lhota", "SK Prdelkovice", "FC Dřeváci", "Tatran Sedlčany", "Dynamo Vesnice", "AFK Bída", "Zoufalci United", "TJ Sokol Pěnčín", "Sokol Brozany", "FK Kolomaz", "SK Holomajzna", "Sokol Řeporyje", "FC Horní Nětčice", "FC Dolní Nětčice", "Mrlínek", "Hlinsko pod Hostýnem"],
-    pro: ["Baník Ostrava (B)", "Slavoj Žižkov", "FK Admira", "SK Slavia (B)", "Meteor Praha", "Slavoj Vyšehrad", "Sokol Hostivice", "FK Jablonec (B)", "SK Kladno", "FK Teplice (B)", "FC Graffin Vlašim", "1.FK Příbram", "FK Viktoria Žižkov"]
+    village: ["Sokol Horní Lhota", "SK Prdelkovice", "FC Dřeváci", "Tatran Sedlčany", "Dynamo Vesnice", "AFK Bída", "Zoufalci United", "TJ Sokol Pěnčín", "Sokol Brozany", "FK Kolomaz", "SK Holomajzna", "Sokol Řeporyje", "FC Horní Nětčice", "FC Dolní Nětčice", "Mrlínek", "Rusava", "Hlinsko pod Hostýnem"],
+    pro: ["Baník Ostrava (B)", "Slavoj Žižkov", "FC Bystřice pod Hostýnem", "FK Admira", "SK Slavia (B)", "Meteor Praha", "Slavoj Vyšehrad", "Sokol Hostivice", "FK Jablonec (B)", "SK Kladno", "FK Teplice (B)", "FC Graffin Vlašim", "1.FK Příbram", "FK Viktoria Žižkov"]
 };
 
 // --- SEZNAM NÁRODNOSTÍ ---

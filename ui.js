@@ -214,125 +214,6 @@ window.renderOffice = function() {
     `;
 }
 
-// --- STADION (BUDOVY) ---
-function renderStadium() {
-    const mainContent = document.getElementById('main-content');
-    let activeBuildHTML = '';
-    
-    // Zobrazení aktuálně probíhající stavby
-    if (playerData.activeUpgrade !== null) {
-        const bId = playerData.activeUpgrade.buildingId;
-        activeBuildHTML = `
-            <div class="active-build-container">
-                <h2>Staví se: ${buildingsConfig[bId].name}</h2>
-                <div class="timer huge-timer" id="upgrade-timer">Počítám...</div>
-                ${window.IS_TEST_MODE ? `<button class="btn-task btn-test" onclick="skipUpgrade()">[TEST] Dokončit stavbu</button>` : ''}
-            </div>
-            <hr style="border-color: #8d6e63; margin-bottom: 20px;">
-        `;
-    }
-
-    // Generování všech kartiček budov
-    const buildingsHTML = Object.keys(buildingsConfig).map(id => {
-        const config = buildingsConfig[id];
-        const currentLevel = playerData.buildings[id];
-        const nextCost = Math.floor(config.baseCost * Math.pow(config.costMult, currentLevel - 1));
-        const nextTime = Math.floor(config.baseTime * Math.pow(config.timeMult, currentLevel - 1));
-
-        const canAfford = playerData.money >= nextCost;
-        const isBuilding = playerData.activeUpgrade !== null;
-        const disabledAttr = (!canAfford || isBuilding) ? 'disabled' : '';
-
-        // --- VÝPOČET BONUSŮ PRO ZOBRAZENÍ ---
-        let bonusText = "";
-        
-        if (id === 'scout') {
-            const timeRed = (currentLevel - 1) * 30;
-            const chanceInc = ((currentLevel - 1) * 0.5).toFixed(1);
-            bonusText = `<div class="building-bonus-text">Aktuální bonus: -${timeRed} min čas, +${chanceInc}% šance na talenty.</div>`;
-        } 
-        else if (id === 'shop') {
-            const moneyPerHour = 100 + (currentLevel - 1) * 50;
-            const maxCap = 500 + (currentLevel - 1) * 500;
-            const currentInSafe = Math.floor(playerData.shopSafe || 0);
-            bonusText = `
-                <div class="building-bonus-text">Příjem: ${moneyPerHour} 💰/hod (Max: ${maxCap})</div>
-                <div class="shop-safe-box">
-                    V pokladně: <span class="shop-safe-amount">${currentInSafe} / ${maxCap} 💰</span>
-                    <button class="btn-task btn-collect-safe" onclick="collectShopMoney()">Vybrat pokladnu</button>
-                </div>`;
-        }
-        else if (id === 'tribune') {
-            const bonus = currentLevel * 5;
-            bonusText = `<div class="building-bonus-text">Aktuální bonus k příjmu: +${bonus}% 💰</div>`;
-        }
-        else if (id === 'training') {
-            const bonus = currentLevel * 5;
-            bonusText = `<div class="building-bonus-text">Aktuální bonus k XP hráčů: +${bonus}% 📈</div>`;
-        }
-        else if (id === 'pitch') {
-            const bonus = currentLevel * 1;
-            bonusText = `<div class="building-bonus-text">Aktuální bonus k rychlosti: +${bonus}% 🏃</div>`;
-        }
-
-        // --- ŘEŠENÍ MAXIMÁLNÍHO LEVELU ---
-        const isPitchMax = (id === 'pitch' && currentLevel >= 10);
-        const isScoutMax = (id === 'scout' && currentLevel >= 32);
-        const isMaxLevel = isPitchMax || isScoutMax; // Pokud je splněna alespoň jedna z podmínek
-        
-        let upgradeSection = "";
-        
-        if (isMaxLevel) {
-            // Určíme si specifický text podle toho, o jakou budovu jde
-            let maxText = "Budova je plně vylepšena.";
-            if (id === 'pitch') maxText = "Trávník je v dokonalém stavu.";
-            if (id === 'scout') maxText = "Skautská síť dosáhla svého vrcholu.";
-
-            upgradeSection = `
-                <div class="building-stats building-stats-maxed">
-                    <span class="maxed-title">🏆 DOSAŽENO MAXIMUM</span>
-                    <p class="maxed-desc">${maxText}</p>
-                </div>`;
-        } else {
-            // Pro všechny ostatní případy vykreslíme klasickou cenu a tlačítko
-            upgradeSection = `
-                <div class="building-stats">
-                    <div>Vylepšení na úroveň ${currentLevel + 1}:</div>
-                    <div class="stat-cost">Cena: ${nextCost} Peněz</div>
-                    <div class="stat-time">Čas: ${formatTime(nextTime)}</div>
-                </div>
-                <button class="btn-upgrade" ${disabledAttr} onclick="startUpgrade('${id}', ${nextCost}, ${nextTime})">Vylepšit</button>
-            `;
-        }
-
-        // Vykreslení samotné kartičky budovy
-        return `
-            <div class="building-card">
-                <div class="building-header">
-                    <h3>${config.name}</h3>
-                    <span class="building-level">Lvl. ${currentLevel}</span>
-                </div>
-                <div class="building-desc">${config.desc}</div>
-                ${bonusText}
-                ${upgradeSection}
-            </div>
-        `;
-    }).join('');
-
-    // Vložení do hlavní části obrazovky
-    mainContent.innerHTML = `
-        <button class="help-btn-corner" onclick="showHelp('stadium')">Nápověda</button>
-        <div style="text-align: center;">
-            <h2 class="section-title">Správa Stadionu</h2>
-        </div>
-        <p class="stadium-subtitle">Vylepšuj zázemí klubu. V jednu chvíli můžeš stavět pouze jednu budovu.</p>
-        ${activeBuildHTML}
-        <div class="stadium-grid">
-            ${buildingsHTML}
-        </div>
-    `;
-}
-
 function renderPvE() {
     const mainContent = document.getElementById('main-content');
     
@@ -374,13 +255,13 @@ function renderPvE() {
 
     const dungeon = PVE_DUNGEONS[dIndex];
     const stage = dungeon.stages[sIndex];
-    const hasSpace = playerData.players.length < 16;
+    const hasSpace = playerData.players.length < 18;
     const now = Date.now();
     const nextTime = playerData.pve.nextMatchTime || 0;
     const isOnCooldown = now < nextTime;
 
     // 3. GENEROVÁNÍ OBSAHU
-    let warningHtml = hasSpace ? '' : `<div class="pve-warning-box">❌ Nemáš místo na střídačce! Běž do Šatny a někoho prodej.</div>`;
+    let warningHtml = hasSpace ? '' : `<div class="pve-warning-box">Nemáš místo na střídačce! Běž do Šatny a někoho prodej.</div>`;
 
     let actionSection = '';
     if (isOnCooldown) {
@@ -443,6 +324,9 @@ function renderPvE() {
 
 function renderLockerRoom() {
     const mainContent = document.getElementById('main-content');
+    const currentScroll = window.scrollY;
+    const reserveBox = document.querySelector('.reserve-content');
+    const wasReserveOpen = reserveBox ? reserveBox.classList.contains('active') : false;
     const layout = FORMATIONS_LAYOUT[playerData.formation];
 
     const formationHints = {
@@ -493,7 +377,7 @@ function renderLockerRoom() {
         
         <div class="pitch-section bench-section">
             <div class="bench-header">
-                <h3 class="bench-title">Střídačka (Kapacita: ${playerData.players.length - 11}/5)</h3>
+                <h3 class="bench-title">Střídačka (Kapacita: ${playerData.players.length - 11}/7)</h3>
                 <button onclick="toggleSellMode()" class="btn-sell-mode ${sellBtnClass}">
                     ${sellBtnText}
                 </button>
@@ -563,7 +447,7 @@ function renderLockerRoom() {
                 <span>📦 REZERVA TÝMU (Hráči mimo aktivní kádr)</span>
                 <span>▼</span>
             </div>
-            <div class="reserve-content" style="display:none; padding: 15px; background: rgba(0,0,0,0.5);">
+            <div class="reserve-content ${wasReserveOpen ? 'active' : ''}" style="display: ${wasReserveOpen ? 'block' : 'none'}; padding: 15px; background: rgba(0,0,0,0.5);">
                 <div class="reserve-filters">
                     <button class="filter-btn active" onclick="filterReserve('all')">Vše</button>
                     ${PLAYER_RANKS.map(r => `<button class="filter-btn" onclick="filterReserve('${r.name}')">${r.name}</button>`).join('')}
@@ -575,62 +459,7 @@ function renderLockerRoom() {
         </div>
     `;
     mainContent.innerHTML += reserveHtml;
-}
-
-function renderPlayerGroup(startIndex, endIndex, role) {
-    let html = '';
-    const statLabels = {
-        atk: 'Útok', def: 'Obrana', spd: 'Rychlost', 
-        str: 'Síla', eng: 'Výdrž', tek: 'Technika', gk: 'Brankář'
-    };
-
-    for (let i = startIndex; i < endIndex; i++) {
-        if (i >= playerData.players.length) {
-            html += `
-                <div class="player-card empty-slot">
-                    <div style="font-weight: bold; font-size: 1.2rem;">Volné místo</div>
-                </div>
-            `;
-            continue;
-        }
-
-        const player = playerData.players[i];
-        const posConfig = POSITION_STATS[player.position];
-        const totalStats = posConfig.stats.reduce((sum, s) => sum + player.stats[s], 0);
-        const isSelected = selectedPlayerIndex === i ? 'selected' : '';
-        const starsHtml = player.stars > 0 ? '⭐'.repeat(player.stars) : '<span>&nbsp;</span>';
-        const sellPrice = Math.floor(getPlayerPrice(player) / 2);
-        
-        html += `
-            <div class="player-card ${posConfig.colorClass} ${isSelected}" onclick="handlePlayerClick(${i})">
-                <div class="player-name">${player.name}</div>
-                
-                <div class="player-position-row">${posConfig.label}</div>
-                
-                <div class="player-info-line">
-                    <span style="font-style: italic; color: #6b7280;">${player.rank}</span> | ${getPlayerLevelText(player)} ${starsHtml}
-                </div>
-                
-                <div class="player-nationality">Národnost: ${player.nationality}</div>
-
-                ${isSellMode ? `<div class="price-tag sell">Prodat za: ${sellPrice} 💰</div>` : ''}
-                ${i >= 11 && !isSellMode ? `<button class="btn-reserve-action btn-to-reserve" onclick="event.stopPropagation(); sendToReserve(${i})">Odeslat do rezervy</button>` : ''}
-
-                <div class="player-stats">
-                    ${posConfig.stats.map(statKey => `
-                        <div class="stat-item highlighted">
-                            ${statLabels[statKey]}: <span>${player.stats[statKey]}</span>
-                        </div>
-                    `).join('')}
-                    
-                    <div class="stat-total">
-                        <span>Celková síla:</span> 
-                        <span style="font-weight: bold;">${totalStats}</span>
-                    </div>               
-                </div>
-        </div> `;
-    }
-    return html;
+    setTimeout(() => window.scrollTo(0, currentScroll), 0);
 }
 
 function renderScouting() {
@@ -1690,7 +1519,7 @@ window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
             return `<div class="ml-pitch-row"><span class="ml-row-title">${title}</span><div class="player-list">${cards}</div></div>`;
         };
 
-        // STŘÍDAČKA - Pevně 5 míst (indexy 11 až 15)
+        // STŘÍDAČKA - Pevně 5 míst (indexy 11 až 16)
         let benchCards = "";
         for (let i = 11; i < 16; i++) {
             benchCards += renderMLPlayerCard(myTeam.players[i], i, leagueName);
