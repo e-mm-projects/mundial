@@ -401,14 +401,17 @@ function saveGame() {
 
 function gameLoop() {
     const now = Date.now();
-    // Kontrola pošty z cloudu každých 60 vteřin
+    
+    // 1. KONTROLA POŠTY
     if (!playerData.lastMailCheck) playerData.lastMailCheck = 0;
     if (now - playerData.lastMailCheck > 60000) {
         playerData.lastMailCheck = now;
         if (playerData.isLoggedIn) fetchCloudMail();
     }
+    
     let uiNeedsUpdate = false;
 
+    // 2. ENERGIE TRENÉRA
     if (playerData.energy < 100) {
         const timePassed = now - playerData.lastEnergyUpdate;
         const energyGained = Math.floor(timePassed / 720000); 
@@ -423,15 +426,13 @@ function gameLoop() {
         playerData.lastEnergyUpdate = now;
     }
 
-    // --- GENEROVÁNÍ PENĚZ V OBCHODĚ (V gameLoop) ---
+    // 3. GENEROVÁNÍ PENĚZ V OBCHODĚ
     if (playerData.buildings.shop > 0) {
-        const now = Date.now();
         const timePassedMs = now - (playerData.lastShopUpdate || now);
         
         const shopConfig = buildingsConfig.shop;
         const currentLevel = playerData.buildings.shop;
         
-        // Nový exponenciální výpočet z config.js
         const moneyPerHour = Math.floor(shopConfig.baseIncome * Math.pow(shopConfig.incomeMult, currentLevel - 1));
         const maxCapacity = Math.floor(shopConfig.baseCap * Math.pow(shopConfig.capMult, currentLevel - 1));
         
@@ -441,7 +442,7 @@ function gameLoop() {
         playerData.shopSafe = Math.min(maxCapacity, (playerData.shopSafe || 0) + generated);
         playerData.lastShopUpdate = now;
 
-        // --- AKTUALIZACE MINI BARU NA MAPĚ ---
+        // Aktualizace mini baru na mapě
         const shopFill = document.getElementById('zone-shop-fill');
         const shopText = document.getElementById('zone-shop-text');
         if (shopFill && shopText) {
@@ -451,33 +452,31 @@ function gameLoop() {
         }
     }
 
-    // ZÓNY STADIONU // 
+    // 4. ÚKOLY V KANCELÁŘI
+    if (playerData.activeTask && playerData.activeTask.endTime) {
+        if (now >= playerData.activeTask.endTime) {
+            finishTask();
+            uiNeedsUpdate = true;
+        } else {
+            updateTimerUI('task-timer', playerData.activeTask.endTime);
+        }
+    }
+
+    // 5. STAVBA BUDOV
     if (playerData.activeUpgrade && playerData.activeUpgrade.endTime) {
         if (now >= playerData.activeUpgrade.endTime) {
             window.finishUpgrade();
             uiNeedsUpdate = true;
         } else {
-            // Aktualizace uvnitř vyskakovacího okna
             updateTimerUI('modal-upgrade-timer', playerData.activeUpgrade.endTime);
-            
-            // Aktualizace přímo nad zónou na mapě stadionu
             let targetZone = 'center';
             if (['tribune', 'shop'].includes(playerData.activeUpgrade.buildingId)) targetZone = 'left';
             if (['scout'].includes(playerData.activeUpgrade.buildingId)) targetZone = 'right';
-            
             updateTimerUI(`zone-timer-${targetZone}`, playerData.activeUpgrade.endTime);
         }
     }
 
-    if (playerData.activeUpgrade && playerData.activeUpgrade.endTime) {
-        if (now >= playerData.activeUpgrade.endTime) {
-            finishUpgrade();
-            uiNeedsUpdate = true;
-        } else {
-            updateTimerUI('upgrade-timer', playerData.activeUpgrade.endTime);
-        }
-    }
-
+    // 6. SKAUTING
     const nextScoutRefresh = playerData.lastScoutRefresh + getScoutInterval();
     if (now >= nextScoutRefresh) {
         const activeBtn = document.querySelector('.nav-btn.active');
@@ -487,17 +486,17 @@ function gameLoop() {
         }
     } else {
         updateTimerUI('scout-timer', nextScoutRefresh);
+        updateTimerUI('side-scout-timer', nextScoutRefresh); 
     }
 
+    // 7. ZÁPASY A MINILIGA
     if (playerData.league && playerData.league.length > 0) {
         updateTimerUI('match-timer', playerData.nextMatchTime);
         updateTimerUI('topbar-season-timer', playerData.seasonEndTime);
 
         if (window.currentMLNextMatch) {
-        updateTimerUI('ml-match-timer', window.currentMLNextMatch);
+            updateTimerUI('ml-match-timer', window.currentMLNextMatch);
         }
-        // Pokud jsme v detailu miniligy, aktualizujeme její odpočet
-        // (Využijeme čas z cloudu, který jsme si uložili do window.currentMLTime při renderu)
         if (now >= playerData.nextMatchTime) {
             processMatch();
         }
