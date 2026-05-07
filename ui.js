@@ -236,18 +236,36 @@ function renderPvE() {
         return;
     }
 
+    // --- TLAČÍTKO RESETU PRO TESTOVÁNÍ ---
+    let testResetHtml = '';
+    if (window.IS_TEST_MODE) {
+        testResetHtml = `
+            <button class="btn-task btn-test" style="position: absolute; top: 10px; right: 10px; z-index: 100;" 
+                onclick="resetDungeonTest()">
+                🔄 [TEST] Reset Podzemí
+            </button>
+        `;
+    }
+
     const dIndex = playerData.pve.dungeonIndex;
     const sIndex = playerData.pve.stageIndex;
 
     // 2. KONTROLA DOKONČENÍ VŠECH DUNGEONŮ
     if (dIndex >= PVE_DUNGEONS.length) {
         mainContent.innerHTML = `
-            <div class="text-center">
+            <div class="text-center" style="padding-top: 20px;">
                 <h2 class="section-title">Fotbalové podzemí</h2>
-                <div class="info-box warning">
+                <div class="info-box warning" style="margin-bottom: 20px;">
                     <h3 class="text-highlight-gold">🏆 Všechna podzemí pokořena! 🏆</h3>
                     <p>Jsi absolutní mistr okresu. Počkej na další aktualizaci s novými bossy!</p>
                 </div>
+                
+                ${window.IS_TEST_MODE ? `
+                <button class="btn-task btn-test" style="font-size: 1.2rem; padding: 15px 30px; background: #991b1b; color: white;" onclick="resetDungeonTest()">
+                    🔄 [TEST] Resetovat Podzemí na začátek
+                </button>
+                ` : ''}
+                
             </div>
         `;
         return;

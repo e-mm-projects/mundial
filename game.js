@@ -1020,7 +1020,7 @@ window.startPvEMatch = function(dIndex, sIndex) {
     const mySectors = calculateSectorStrength(playerData.players, playerData.formation, playerData.isPrepared);
     const botSectors = calculateSectorStrength(botPlayers, botFormation, false);
     
-    // --- NOVINKA: Výpočet ratingu (0.0 - 10.0) pro zobrazení v záznamu ---
+    // ---  Výpočet ratingu (0.0 - 10.0) pro zobrazení v záznamu ---
     const myBaseRating = calculateBaseTeamRating(playerData.players, playerData.formation);
     const botBaseRating = calculateBaseTeamRating(botPlayers, botFormation);
 
@@ -1044,7 +1044,7 @@ window.startPvEMatch = function(dIndex, sIndex) {
         result.log.push({ min: 'Konec', text: `🎁 ZÍSKAL JSI NOVÉHO HRÁČE! Podívej se do Šatny. Jmenuje se ${newPlayer.name}.`, score: `${result.myGoals}:${result.botGoals}`, zone: 50, type: 'goal' });
 
         // --- KONTROLA BOSSE PRO SÍŇ SLÁVY ---
-        if (stage.isBoss) {
+        if (stage.reward && stage.reward.isBoss) {
             window.awardPvETrophy(PVE_DUNGEONS[dIndex].name, stage.name);
         }
 
@@ -1057,7 +1057,7 @@ window.startPvEMatch = function(dIndex, sIndex) {
         result.log.push({ min: 'Konec', text: `Soupeř byl tentokrát příliš silný. Odpočiň si, uprav taktiku a zkus to za hodinu znovu!`, score: `${result.myGoals}:${result.botGoals}`, zone: 50, type: 'bad-goal' });
     }
 
-    // --- NOVINKA: Předání dat o síle týmů do poštovní zprávy ---
+    // --- Předání dat o síle týmů do poštovní zprávy ---
     const matchRewards = {
         homeTeam: `FC ${playerData.managerName}`,
         awayTeam: stage.name,
@@ -1081,6 +1081,17 @@ window.startPvEMatch = function(dIndex, sIndex) {
     renderPvE();
 }
 
+// reset podzemí pro testování //
+window.resetDungeonTest = function() {
+    if (confirm("Opravdu chceš resetovat postup v podzemí pro testování?")) {
+        playerData.pve.dungeonIndex = 0;
+        playerData.pve.stageIndex = 0;
+        playerData.pve.nextMatchTime = 0; // Zrušíme i čekání
+        saveGame();
+        renderPvE();
+        alert("Podzemí bylo resetováno na úplný začátek!");
+    }
+};
 
 // --- ŠATNA ---
 let selectedPlayerIndex = null;
@@ -1480,16 +1491,28 @@ window.processMatch = function() {
         const oldDiv = playerData.division || 10;
         let seasonReportText = "";
         
+        // --- UPRAVENÁ PODMÍNKA PRO POSTUP A POHÁR ---
         if (myFinalRank <= 2 && oldDiv > 1) {
+            
+            // POHÁR DO SÍNĚ SLÁVY (Když je úplně první v jakékoliv divizi od 2 do 10)
+            if (myFinalRank === 1) {
+                window.awardLeagueTitle(oldDiv);
+            }
+
             playerData.division = oldDiv - 1;
             const promotionBonus = 5000 + ((10 - playerData.division) * 2000);
             playerData.money += promotionBonus;
             seasonReportText = `🏆 FANTAZIE! Tvůj tým skončil na krásném ${myFinalRank}. místě a slaví postup do ${playerData.division}. divize! \n\nVedení klubu je nadšeno a posílá postupový bonus ve výši ${promotionBonus} 💰!`;
+        
         } else if (oldDiv === 1 && myFinalRank === 1) {
+            
+            // POHÁR DO SÍNĚ SLÁVY (Obhajoba v 1. divizi)
             window.awardLeagueTitle(oldDiv);
+            
             const champBonus = 50000;
             playerData.money += champBonus;
             seasonReportText = `👑 JSI ABSOLUTNÍ MISTR! Ovládl jsi 1. divizi! \n\nZískáváš titul, slávu a odměnu ${champBonus} 💰. Obhájíš titul i v další sezóně?`;
+        
         } else {
             const survivalBonus = 1000;
             playerData.money += survivalBonus;
@@ -1534,6 +1557,9 @@ window.testSimulateFullSeason = function() {
     
     // 3. LOGIKA VYHODNOCENÍ
     if (myFinalRank <= 2 && oldDiv > 1) {
+        if (myFinalRank === 1) {
+                window.awardLeagueTitle(oldDiv);
+            }
         playerData.division = oldDiv - 1;
         const promotionBonus = 5000 + ((10 - playerData.division) * 2000);
         playerData.money += promotionBonus;
@@ -1764,15 +1790,22 @@ function processSeasonEndOffline() {
     let seasonReportText = "";
     
     if (myFinalRank <= 2 && oldDiv > 1) {
-        playerData.division = oldDiv - 1;
-        const promotionBonus = 5000 + ((10 - playerData.division) * 2000);
-        playerData.money += promotionBonus;
-        seasonReportText = `🏆 FANTAZIE! Tvůj tým skončil na krásném ${myFinalRank}. místě a slaví postup do ${playerData.division}. divize!`;
-    } else if (oldDiv === 1 && myFinalRank === 1) {
-        window.awardLeagueTitle(oldDiv); 
-        playerData.money += 50000;
-         seasonReportText = `👑 JSI ABSOLUTNÍ MISTR! Ovládl jsi 1. divizi!`;
-    } else {
+            
+            // --- Pohár do Síně slávy, pokud byl absolutní vítěz ligy! ---
+            if (myFinalRank === 1) window.awardLeagueTitle(oldDiv);
+
+            playerData.division = oldDiv - 1;
+            const promotionBonus = 5000 + ((10 - playerData.division) * 2000);
+            playerData.money += promotionBonus;
+            seasonReportText = `🏆 FANTAZIE! Tvůj tým skončil na krásném ${myFinalRank}. místě a slaví postup do ${playerData.division}. divize! \n\nVedení klubu je nadšeno a posílá postupový bonus ve výši ${promotionBonus} 💰!`;
+        
+        } else if (oldDiv === 1 && myFinalRank === 1) {
+            // Obhajoba titulu v 1. Divizi
+            window.awardLeagueTitle(oldDiv);
+            const champBonus = 50000;
+            playerData.money += champBonus;
+            seasonReportText = `👑 JSI ABSOLUTNÍ MISTR! Ovládl jsi 1. divizi! \n\nZískáváš titul, slávu a odměnu ${champBonus} 💰. Obhájíš titul i v další sezóně?`;
+        } else {
         playerData.money += 1000;
         seasonReportText = `⚽ Konec sezóny. Skončil jsi na ${myFinalRank}. místě a setrváváš v ${oldDiv}. divizi.`;
     }
