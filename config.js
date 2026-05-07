@@ -66,32 +66,32 @@ const PVE_DUNGEONS = [
             {
                 name: 'FC JZD (Traktoristi)',
                 desc: 'Přijeli na zápas rovnou z pole. Mají obrovskou sílu, ale rychlost a techniku nechali v kabině.',
-                botPower: { att: 3, mid: 5, def: 20, gk: 8 },
+                botPower: { att: 7, mid: 8, def: 11, gk: 8 },
                 reward: { xp: 200, rank: 'Kopyto', minStars: 1, maxStars: 2 }
             },
             {
                 name: 'Hospoda u Zrzavého Psa',
                 desc: 'O poločase do sebe kopli dvě piva. Mají šílenou výdrž, ale z míče mají strach.',
-                botPower: { att: 3, mid: 25, def: 5, gk: 8 },
+                botPower: { att: 8, mid: 12, def: 7, gk: 8 },
                 reward: { xp: 300, rank: 'Kopyto', minStars: 1, maxStars: 2 }
             },
             {
                 name: 'Sokol "Stará Garda"',
                 desc: 'Věkový průměr 55 let. Moc toho nenaběhají, ale jejich obranný beton a zkušený brankář jsou legendární.',
-                botPower: { att: 3, mid: 5, def: 30, gk: 8 },
+                botPower: { att: 6, mid: 6, def: 13, gk: 13 },
                 reward: { xp: 400, rank: 'Kopyto', minStars: 1, maxStars: 2 }
             },
             {
                 name: 'Řezníci z Masokombinátu',
                 desc: 'Hrají ostře a neberou si servítky. Z jejich útočníků jde strach.',
-                botPower: { att: 33, mid: 5, def: 7, gk: 8 },
+                botPower: { att: 14, mid: 8, def: 7, gk: 8 },
                 reward: { xp: 500, rank: 'Kopyto', minStars: 1, maxStars: 2 }
             },
             {
                 name: 'Výběr Okresního Přeboru (BOSS)',
                 desc: 'To nejlepší (rozuměj nejhorší), co místní vesnice nabízí. Tým, který ti nedá nic zadarmo.',
                 botPower: { att: 13, mid: 10, def: 12, gk: 10 },
-                reward: { xp: 1000, rank: 'Slibný Amatér', minStars: 1, maxStars: 1, isBoss: true }
+                reward: { xp: 1000, rank: 'Slibný amatér', minStars: 1, maxStars: 1, isBoss: true }
             }
         ]
     }
