@@ -1331,6 +1331,8 @@ window.filterReserve = function(rank) {
 
 // FUNKCE PRO REZERVU //
 function renderReservePlayers(filter) {
+    // --- POJISTKA PRO NOVÉ ÚČTY ---
+    if (!playerData.reserve) playerData.reserve = [];
     const players = filter === 'all' 
         ? playerData.reserve 
         : playerData.reserve.filter(p => p.rank === filter);
