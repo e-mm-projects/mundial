@@ -322,6 +322,7 @@ function renderPvE() {
     if (isOnCooldown) updateTimerUI('pve-timer', nextTime);
 }
 
+// ---  ŠATNA  ---
 function renderLockerRoom() {
     const mainContent = document.getElementById('main-content');
     const currentScroll = window.scrollY;
@@ -336,7 +337,6 @@ function renderLockerRoom() {
     };
     const currentHint = formationHints[playerData.formation];
 
-    // Logika pro barvu a text tlačítka "Prodej" - využije naše nové CSS třídy
     const sellBtnClass = isSellMode ? 'btn-sell-active' : 'btn-sell-inactive';
     const sellBtnText = isSellMode ? '❌ Zrušit prodej' : '💰 Režim prodeje';
 
@@ -385,63 +385,7 @@ function renderLockerRoom() {
             ${isSellMode ? '<p class="sell-warning-text">Klikni na hráče, kterého chceš vyhodit z klubu.</p>' : ''}
             <div class="player-list">${renderPlayerGroup(11, 18, 'bench')}</div>
         </div>
-    `;
 
-    // --- PŘIDÁME TÝMOVÝ TREZOR NA KONEC ŠATNY ---
-    const renderInventorySlot = (role, label, limit) => {
-        // --- BEZPEČNOSTNÍ POJISTKA PRO NOVÉ ÚČTY ---
-        // Pokud hráč nemá trezor (nebo v něm chybí konkrétní sekce), vytvoříme ho
-        if (!playerData.inventory) {
-            playerData.inventory = { att: [], mid: [], def: [], gk: [] };
-        }
-        
-        // Vezmeme předměty, nebo pokud sekce neexistuje, použijeme prázdné pole
-        const items = playerData.inventory[role] || [];
-        // -------------------------------------------
-
-        let slotsHtml = '';
-        
-        for (let i = 0; i < limit; i++) {
-            const item = items[i];
-            if (item) {
-                slotsHtml += `
-                    <div class="player-card inventory-card">
-                        <div class="inventory-item-name">${item.name}</div>
-                        <div class="inventory-item-duration">⏳ Zbývá: ${item.duration} záp.</div>
-                        <button class="btn-task btn-discard" onclick="discardItem('${role}', ${item.instanceId})">🗑️ Vyhodit</button>
-                    </div>
-                `;
-            } else {
-                slotsHtml += `
-                    <div class="player-card empty-slot inventory-slot-empty">
-                        <div style="font-size: 0.7rem;">Volný slot</div>
-                    </div>
-                `;
-            }
-        }
-        return `
-            <div style="margin-bottom: 15px;">
-                <h4 style="color: #fdf5e6; margin: 0 0 5px 0; font-size: 0.9rem;">${label} (${items.length}/${limit})</h4>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">${slotsHtml}</div>
-            </div>
-        `;
-    };
-
-    mainContent.innerHTML += `
-        <details class="collapsible-box gold">
-            <summary class="collapsible-header" style="color: #fcd34d;">
-                📦 Týmový trezor (Bonusové předměty) ▾
-            </summary>
-            <div style="margin-top: 20px;">
-                ${renderInventorySlot('att', 'Útočné bonusy', 2)}
-                ${renderInventorySlot('mid', 'Záložní bonusy', 2)}
-                ${renderInventorySlot('def', 'Obranné bonusy', 2)}
-                ${renderInventorySlot('gk', 'Brankářské vybavení', 1)}
-            </div>
-        </details>
-    `;
-
-    const reserveHtml = `
         <div class="reserve-accordion">
             <div class="reserve-header" onclick="document.querySelector('.reserve-content').classList.toggle('active')">
                 <span>📦 REZERVA TÝMU (Hráči mimo aktivní kádr)</span>
@@ -458,7 +402,6 @@ function renderLockerRoom() {
             </div>
         </div>
     `;
-    mainContent.innerHTML += reserveHtml;
     setTimeout(() => window.scrollTo(0, currentScroll), 0);
 }
 
@@ -982,59 +925,165 @@ window.toggleReplaySpeed = function() {
 };
 
 // --- KLUBOVÝ FANSHOP ---
-function renderShop() {
+window.renderShop = function() {
     const mainContent = document.getElementById('main-content');
-    
-    if (!playerData.dailyShopItems || playerData.dailyShopItems.length === 0) {
-        mainContent.innerHTML = `
-            <div style="text-align: center;">
-                <h2 class="section-title">Klubový Fanshop</h2>
-                <div class="info-box" style="margin: 30px auto; max-width: 500px;">
-                    <p style="font-style: italic;">"Dneska už máme vyprodáno, trenére. Stavte se zítra."</p>
-                    ${window.IS_TEST_MODE ? `<button class="btn-task btn-skip" style="margin-top: 15px;" onclick="refreshDailyShop(true); renderShop();"> 
-                        📦 [TEST] Obnovit nabídku 
-                    </button>` : ''}
-                </div>
-            </div>`;
-        return;
-    }
-
-    const itemsHtml = playerData.dailyShopItems.map((item, index) => {
-        const canAfford = playerData.money >= item.currentPrice;
-        return `
-            <div class="player-card" style="border-color: #f59e0b; min-height: 320px; display: flex; flex-direction: column; justify-content: space-between; background: #fffdfa;">
-                <div>
-                    <div class="player-name" style="color: #b45309; border-bottom: 1px solid #fed7aa; padding-bottom: 5px;">${item.name}</div>
-                    <p style="font-size: 0.9rem; color: #4b5563; line-height: 1.4; font-style: italic; padding: 10px; text-align: center;">
-                        "${item.desc}"
-                    </p>
-                </div>
-                <div style="background: #fef3c7; padding: 8px; border-radius: 5px; margin: 10px; font-size: 0.85rem; text-align: center; border: 1px solid #fde68a;">
-                    ⏳ Vydrží: <strong>${item.duration} zápasů</strong>
-                </div>
-                <div style="padding: 10px;">
-                    <div class="price-tag buy" style="margin-bottom: 10px; font-size: 1.1rem;">Cena: ${item.currentPrice} 💰</div>
-                    <button class="btn-upgrade" style="width: 100%; padding: 10px;" onclick="buyItem(${index})" ${!canAfford ? 'disabled' : ''}>
-                        ${canAfford ? 'Koupit předmět' : 'Nedostatek peněz'}
-                    </button>
-                    ${window.IS_TEST_MODE ? `<button class="btn-task btn-test" style="width: 100%; padding: 5px; font-size: 0.8rem; margin-top: 5px;" onclick="buyItem(${index}, true)">
-                        [TEST] Koupit ZDARMA
-                    </button>` : ''}
-                </div>
-            </div>
-        `;
-    }).join('');
+    mainContent.style.position = 'relative';
 
     mainContent.innerHTML = `
-        <button class="help-btn-corner" onclick="showHelp('shop')">Nápověda</button>
-        <div style="text-align: center;">
-            <h2 class="section-title">Klubový Fanshop</h2>
+        <div style="position: relative; z-index: 10; text-align: center; margin-bottom: 15px; pointer-events: none;">
+            <button class="help-btn-corner" onclick="showHelp('shop')" style="pointer-events: auto;">Nápověda</button>
+            <h2 class="section-title" style="text-shadow: 2px 2px 5px rgba(0,0,0,0.8);">Klubový Fanshop</h2>
+            <p class="stadium-subtitle" style="text-shadow: 1px 1px 3px black; font-weight: bold; color: #fdf5e6;">Klikni na pult nebo regál pro správu předmětů.</p>
         </div>
-        <div class="player-list" style="justify-content: center; gap: 25px;">
-            ${itemsHtml}
+        
+        <div class="interactive-stadium-container">
+            
+            <div class="stadium-click-zone" 
+                 onclick="openInventoryMenu()" 
+                 style="top: 15%; left: 5%; width: 40%; height: 70%;">
+                <div class="zone-tag">
+                    <strong style="display: block; margin-bottom: 5px;">Tvoje zakoupené předměty</strong>
+                    <div style="font-size: 0.8rem; color: #9ca3af;">Týmový trezor</div>
+                </div>
+            </div>
+
+            <div class="stadium-click-zone" 
+                 onclick="openShopMenu()" 
+                 style="top: 10%; left: 65%; width: 35%; height: 80%;">
+                <div class="zone-tag">
+                    <strong style="display: block; margin-bottom: 5px;">Denní nabídka předmětů</strong>
+                    <div style="font-size: 0.8rem; color: #9ca3af;">Nové zboží za:</div>
+                    <div class="zone-timer" id="zone-timer-shop" style="color: #10b981;">Počítám...</div>
+                </div>
+            </div>
+            
         </div>
     `;
-}
+};
+
+// Vyskakovací okno s předměty
+window.openShopMenu = function() {
+    const oldModal = document.getElementById('shop-modal');
+    if (oldModal) oldModal.remove();
+
+    let itemsHtml = '';
+
+    if (!playerData.dailyShopItems || playerData.dailyShopItems.length === 0) {
+        itemsHtml = `
+            <div class="info-box" style="margin: 30px auto; max-width: 500px; text-align: center; width: 100%;">
+                <p style="font-style: italic; font-size: 1.1rem;">"Dneska už máme vyprodáno, trenére. Stavte se zítra."</p>
+                ${window.IS_TEST_MODE ? `<button class="btn-task btn-test" style="margin-top: 15px;" onclick="refreshDailyShop(true); openShopMenu();"> 
+                    📦 [TEST] Obnovit nabídku ihned 
+                </button>` : ''}
+            </div>
+        `;
+    } else {
+        itemsHtml = playerData.dailyShopItems.map((item, index) => {
+            const canAfford = playerData.money >= item.currentPrice;
+            return `
+                <div class="player-card" style="border-color: #f59e0b; min-height: 320px; display: flex; flex-direction: column; justify-content: space-between; background: #fffdfa;">
+                    <div>
+                        <div class="player-name" style="color: #b45309; border-bottom: 1px solid #fed7aa; padding-bottom: 5px;">${item.name}</div>
+                        <p style="font-size: 0.9rem; color: #4b5563; line-height: 1.4; font-style: italic; padding: 10px; text-align: center;">
+                            "${item.desc}"
+                        </p>
+                    </div>
+                    <div style="background: #fef3c7; padding: 8px; border-radius: 5px; margin: 10px; font-size: 0.85rem; text-align: center; border: 1px solid #fde68a;">
+                        ⏳ Vydrží: <strong>${item.duration} zápasů</strong>
+                    </div>
+                    <div style="padding: 10px;">
+                        <div class="price-tag buy" style="margin-bottom: 10px; font-size: 1.1rem;">Cena: ${item.currentPrice} 💰</div>
+                        <button class="btn-upgrade" style="width: 100%; padding: 10px;" onclick="buyItem(${index})" ${!canAfford ? 'disabled' : ''}>
+                            ${canAfford ? 'Koupit předmět' : 'Nedostatek peněz'}
+                        </button>
+                        ${window.IS_TEST_MODE ? `<button class="btn-task btn-test" style="width: 100%; padding: 5px; font-size: 0.8rem; margin-top: 5px;" onclick="buyItem(${index}, true)">
+                            [TEST] Koupit ZDARMA
+                        </button>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    const modalHtml = `
+        <div id="shop-modal" class="ml-selector-overlay" onclick="this.remove()">
+            <div class="ml-selector-box" style="max-width: 750px; width: 95%; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation()">
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4b5563; padding-bottom: 15px; margin-bottom: 20px;">
+                    <h2 style="color: #fcd34d; margin: 0;">Denní nabídka předmětů</h2>
+                    <button class="btn-task" style="padding: 8px 15px; background: #991b1b; font-weight: bold;" onclick="document.getElementById('shop-modal').remove()">Zavřít</button>
+                </div>
+                
+                <div class="stadium-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
+                    ${itemsHtml}
+                </div>
+                
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
+// --- NOVÉ OKNO TREZORU ---
+window.openInventoryMenu = function() {
+    const oldModal = document.getElementById('inventory-modal');
+    if (oldModal) oldModal.remove();
+
+    if (!playerData.inventory) {
+        playerData.inventory = { att: [], mid: [], def: [], gk: [] };
+    }
+
+    const renderCompactSlot = (role, label, limit) => {
+        const items = playerData.inventory[role] || [];
+        let slotsHtml = '';
+        
+        for (let i = 0; i < limit; i++) {
+            const item = items[i];
+            if (item) {
+                slotsHtml += `
+                    <div class="inventory-card compact" style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; min-width: 140px; flex: 1;">
+                        <div style="font-weight: bold; color: #1e293b; font-size: 0.85rem; margin-bottom: 4px;">${item.name}</div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 8px;">⏳ ${item.duration} záp.</div>
+                        <button class="btn-task" style="width: 100%; padding: 4px; font-size: 0.7rem; background: #991b1b;" onclick="discardItem('${role}', ${item.instanceId})">Vyhodit</button>
+                    </div>
+                `;
+            } else {
+                slotsHtml += `
+                    <div class="inventory-slot-empty compact" style="border: 1px dashed #cbd5e1; border-radius: 6px; padding: 8px; min-width: 140px; flex: 1; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.3);">
+                        <div style="font-size: 0.7rem; color: #94a3b8;">Volný slot</div>
+                    </div>
+                `;
+            }
+        }
+        return `
+            <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+                <h4 style="color: #fcd34d; margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">${label}</h4>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">${slotsHtml}</div>
+            </div>
+        `;
+    };
+
+    const modalHtml = `
+        <div id="inventory-modal" class="ml-selector-overlay" onclick="this.remove()">
+            <div class="ml-selector-box" style="max-width: 600px; width: 95%; max-height: 85vh; overflow-y: auto;" onclick="event.stopPropagation()">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4b5563; padding-bottom: 15px; margin-bottom: 20px;">
+                    <h2 style="color: #fcd34d; margin: 0;">Týmový trezor</h2>
+                    <button class="btn-task" style="padding: 8px 15px; background: #991b1b;" onclick="document.getElementById('inventory-modal').remove()">Zavřít</button>
+                </div>
+                
+                <div style="text-align: left;">
+                    ${renderCompactSlot('att', '⚔️ Útočné bonusy', 2)}
+                    ${renderCompactSlot('mid', '🧭 Záložní bonusy', 2)}
+                    ${renderCompactSlot('def', '🛡️ Obranné bonusy', 2)}
+                    ${renderCompactSlot('gk', '🧤 Brankářské vybavení', 1)}
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
 
 // --- DETAIL ZÁPASU (Záznam utkání) ---
 window.openMatchReport = function(index) {

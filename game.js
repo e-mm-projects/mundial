@@ -189,8 +189,8 @@ window.refreshDailyShop = function(force = false) {
     const now = Date.now();
     const oneDay = 24 * 60 * 60 * 1000;
 
-    // Obnovíme jen pokud uplynul den, nebo pokud je to vynucené (tlačítkem/startem hry)
-    if (force || (now - playerData.lastItemShopRefresh > oneDay)) {
+    // Obnovíme jen pokud uplynul den, nebo pokud je to vynucené (tlačítkem/startem hry) NEBO pokud jsme už překročili uloženou půlnoc
+    if (force || !playerData.nextShopRefresh || now >= playerData.nextShopRefresh) {
         const shuffled = [...ITEM_CATALOG].sort(() => 0.5 - Math.random());
         const selected = shuffled.slice(0, 2); // Vybereme 2 náhodné
 
@@ -200,10 +200,14 @@ window.refreshDailyShop = function(force = false) {
 
         playerData.dailyShopItems = selected.map(item => ({
             ...item,
-            currentPrice: Math.floor(600 * mult) // 10x odměna za 1:0
+            currentPrice: Math.floor(600 * mult)
         }));
 
-        playerData.lastItemShopRefresh = now;
+        // --- VÝPOČET DALŠÍ PŮLNOCI ---
+        const nextMidnight = new Date();
+        nextMidnight.setHours(24, 0, 0, 0); // Bezpečně přeskočí na 00:00:00 nadcházejícího dne
+        playerData.nextShopRefresh = nextMidnight.getTime();
+        
         saveGame();
     }
 }
@@ -243,7 +247,13 @@ window.buyItem = function(index, forceFree = false) {
 
     saveGame();
     updateTopBarUI();
-    renderShop(); // Překreslíme obchod
+    
+    // Překreslíme okno obchodu, aby z něj předmět zmizel, aniž by se zavřelo
+    if (document.getElementById('shop-modal')) {
+        openShopMenu();
+    } else {
+        renderShop(); 
+    }
     
     if (forceFree) alert(`[TEST] Získal jsi ${item.name} ZDARMA! Najdeš ho v Šatně.`);
     else alert(`Koupil jsi ${item.name}! Najdeš ho v Týmovém trezoru v Šatně.`);
@@ -253,7 +263,13 @@ window.discardItem = function(role, instanceId) {
     if (confirm("Opravdu chceš tento předmět vyhodit do koše? Nedostaneš za něj nic zpět.")) {
         playerData.inventory[role] = playerData.inventory[role].filter(i => i.instanceId !== instanceId);
         saveGame();
-        renderLockerRoom(); // Překreslíme šatnu
+        
+        // --- AKTUALIZACE UI ---
+        if (document.getElementById('inventory-modal')) {
+            openInventoryMenu(); // Znovu vykreslí modální okno trezoru
+        } else {
+            renderShop(); // Záložní překreslení hlavního fanshopu
+        }
     }
 }
 
@@ -476,8 +492,9 @@ function gameLoop() {
         }
     }
 
-    // 6. SKAUTING
+    // 6. SKAUTING A OBCHOD
     const nextScoutRefresh = playerData.lastScoutRefresh + getScoutInterval();
+
     if (now >= nextScoutRefresh) {
         const activeBtn = document.querySelector('.nav-btn.active');
         if (activeBtn && activeBtn.getAttribute('data-target') === 'scouting') {
@@ -487,6 +504,21 @@ function gameLoop() {
     } else {
         updateTimerUI('scout-timer', nextScoutRefresh);
         updateTimerUI('side-scout-timer', nextScoutRefresh); 
+    }
+
+    // Čas vezmeme rovnou z uložené půlnoci
+    const nextShopRefresh = playerData.nextShopRefresh;
+
+    if (nextShopRefresh && now >= nextShopRefresh) {
+        refreshDailyShop();
+        const activeBtn = document.querySelector('.nav-btn.active');
+        if (activeBtn && activeBtn.getAttribute('data-target') === 'shop') {
+            renderShop();
+            if (document.getElementById('shop-modal')) openShopMenu();
+            uiNeedsUpdate = true;
+        }
+    } else if (nextShopRefresh) {
+        updateTimerUI('zone-timer-shop', nextShopRefresh); 
     }
 
     // 7. ZÁPASY A MINILIGA
