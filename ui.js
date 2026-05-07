@@ -1299,497 +1299,6 @@ window.getGlobalNextMatchTime = function() {
     return next.getTime();
 };
 
-window.renderMinileague = function() {
-    const mainContent = document.getElementById('main-content');
-
-    // Vyčistíme starý interval (aby nám na pozadí neběželo více odpočtů najednou)
-    if (window.mlTimersInterval) clearInterval(window.mlTimersInterval);
-
-    // 1. POJISTKY A DATA
-    if (!playerData.myMinileagues) playerData.myMinileagues = [];
-    const MAX_MINILEAGUES = 3;
-    const currentCount = playerData.myMinileagues.length;
-
-    // 2. GENEROVÁNÍ SEZNAMU "MOJE MINILIGY"
-    let myLeaguesHtml = "";
-    if (currentCount === 0) {
-        myLeaguesHtml = `<p style="color: #9ca3af; text-align: center; margin-top: 20px;">Zatím nejsi v žádné minilize.</p>`;
-    } else {
-        myLeaguesHtml = playerData.myMinileagues.map((l, index) => {
-            const lData = typeof l === 'object' ? l : { name: l };
-            const lName = lData.name;
-            const creator = lData.creator || "Neznámý";
-            
-            const playedMatches = lData.played || 0; 
-            const roundsLeft = Math.max(0, 21 - playedMatches);
-            
-            // Vezmeme čas konce sezóny (pokud ho ještě nemáme, dáme 0)
-            const seasonEndTime = lData.seasonEndTime || 0; 
-            
-            let rankName = "Všechny";
-            if (lData.rank !== undefined && PLAYER_RANKS[lData.rank]) {
-                rankName = PLAYER_RANKS[lData.rank].name;
-            } else if (typeof lData.rank === 'string') {
-                rankName = lData.rank;
-            }
-
-            return `
-                <div class="ml-league-card">
-                    <div style="margin-bottom: 10px;">
-                        <div class="ml-league-header">${lName}</div>
-                        <div class="ml-league-info">👑 Zakladatel: <span style="color:white;">${creator}</span></div>
-                        <div class="ml-league-info">⛔ Omezení: <span style="color:#60a5fa;">${rankName}</span></div>
-                        <div class="ml-league-info">🗓️ Zbývá kol: <span style="color:white; font-weight:bold;">${roundsLeft} / 21</span></div>
-                        <div class="ml-league-info">⏳ Konec ligy za: <span id="ml-season-timer-${index}" data-endtime="${seasonEndTime}" style="color:#fcd34d; font-weight:bold;">Načítám...</span></div>
-                    </div>
-                    
-                    <div class="ml-timer-box">
-                        <div style="font-size: 0.75rem; color: #9ca3af; text-transform: uppercase;">Další zápas za:</div>
-                        <div id="ml-match-timer-${index}" style="font-weight: bold; color: #fcd34d; font-family: monospace; font-size: 1.1rem;">--:--:--</div>
-                    </div>
-
-                    <div class="ml-btn-group">
-                        <button class="btn-upgrade" style="flex: 2; background: #10b981; padding: 8px;" onclick="renderMinileagueDetail('${lName}')">VSTOUPIT</button>
-                        <button class="btn-task" style="flex: 1; background: #991b1b; padding: 8px; font-size: 0.8rem;" onclick="leaveMinileague('${lName}')">OPUSTIT</button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    const rankOptions = PLAYER_RANKS.map((r, i) => `<option value="${i}">${r.name}</option>`).join('');
-
-    mainContent.innerHTML = `
-        <button class="help-btn-corner" onclick="showHelp('minileague')" title="Nápověda">Nápověda</button>
-
-        <div class="text-center">
-            <h2 class="section-title" style="margin-bottom: 5px;">Online Miniligy</h2>
-            <p class="ml-subtitle">Tvé soukromé ligy s přáteli na jednom místě.</p>
-        </div>
-
-        <div class="ml-container">
-            <div class="ml-column">
-                <h3 style="color: #fcd34d; margin-top: 0; border-bottom: 1px solid #4b5563; padding-bottom: 10px; display: flex; justify-content: space-between;">
-                    <span>📋 Moje miniligy</span>
-                    <span style="font-size: 0.9rem; color: #9ca3af;">${currentCount} / ${MAX_MINILEAGUES}</span>
-                </h3>
-                <div style="margin-top: 15px;">
-                    ${myLeaguesHtml}
-                </div>
-            </div>
-
-            <div style="flex: 1; min-width: 320px;">
-                <div class="ml-box">
-                    <h3 style="color: #a78bfa; margin-top: 0; border-bottom: 1px solid #4b5563; padding-bottom: 10px;">Založit novou ligu</h3>
-                    
-                    <div style="margin: 15px 0;">
-                        <label style="display: block; color: #d1d5db; font-size: 0.85rem; margin-bottom: 5px;">Omezení ranku hráčů:</label>
-                        <select id="new-league-rank-select" style="width: 100%; padding: 10px; border-radius: 5px; background: #1f2937; color: white; border: 1px solid #4b5563;">
-                            ${rankOptions}
-                        </select>
-                        <p style="font-size: 0.75rem; color: #9ca3af; margin-top: 5px;">V této lize půjde hrát pouze s hráči tohoto ranku a nižšími.</p>
-                    </div>
-
-                    <button class="btn-upgrade" style="width: 100%; background: #7c3aed;" 
-                        onclick="createNewMinileague(parseInt(document.getElementById('new-league-rank-select').value))">
-                        ZALOŽIT LIGU (1 💰)
-                    </button>
-                </div>
-
-                <div class="ml-box" style="margin-bottom: 0;">
-                    <h3 style="color: #60a5fa; margin-top: 0; border-bottom: 1px solid #4b5563; padding-bottom: 10px;">Připojit se k minilize</h3>
-                    <p style="font-size: 0.85rem; color: #9ca3af; margin: 10px 0;">Zadej přesný název ligy, do které se chceš připojit.</p>
-                    <input type="text" id="join-league-input" placeholder="Název ligy..." style="width: 100%; padding: 12px; border-radius: 5px; border: 1px solid #4b5563; background: #1f2937; color: white; margin-bottom: 10px; box-sizing: border-box;">
-                    <button class="btn-upgrade" style="width: 100%; background: #2563eb;" onclick="joinMinileague()">ODESLAT ŽÁDOST</button>
-                </div>
-            </div>
-        </div>
-    `;
-
-    // --- MOTOR PRO ŽIVÝ ODPOČET ČASU ---
-    window.mlTimersInterval = setInterval(() => {
-        const now = Date.now();
-        const nextMatch = window.getGlobalNextMatchTime(); // Spočítá další 8:00, 16:00 nebo 0:00
-
-        playerData.myMinileagues.forEach((l, index) => {
-            // 1. Aktualizace času do dalšího zápasu
-            const matchEl = document.getElementById(`ml-match-timer-${index}`);
-            if (matchEl) {
-                const diff = nextMatch - now;
-                if (diff <= 0) {
-                    matchEl.innerText = "Simuluji...";
-                } else {
-                    const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
-                    const m = Math.floor((diff / 1000 / 60) % 60);
-                    const s = Math.floor((diff / 1000) % 60);
-                    // Přidá nulu před čísla menší než 10 (např. 03:05:09)
-                    matchEl.innerText = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-                }
-            }
-
-            // 2. Aktualizace času do konce ligy
-            const seasonEl = document.getElementById(`ml-season-timer-${index}`);
-            if (seasonEl) {
-                const endTime = parseInt(seasonEl.getAttribute('data-endtime')) || 0;
-                if (endTime === 0) {
-                    seasonEl.innerText = "Zjistí se po vstupu";
-                } else {
-                    const diff = endTime - now;
-                    if (diff <= 0) {
-                        seasonEl.innerText = "Sezóna končí...";
-                    } else {
-                        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-                        const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
-                        const m = Math.floor((diff / 1000 / 60) % 60);
-                        seasonEl.innerText = `${d} dní, ${h} hod, ${m} min`;
-                    }
-                }
-            }
-        });
-    }, 1000); // 1000 ms = 1 vteřina
-};
-
-// MINILIGA - DETAILY //
-window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
-    const mainContent = document.getElementById('main-content');
-    const currentScroll = window.scrollY; // Zapamatujeme si, kde uživatel je
-
-    if (!skipLoader) {
-        mainContent.innerHTML = `<div class="loader">Načítám data z ligy...</div>`;
-    }
-
-    try {
-        const dbRef = window.dbRef(window.db);
-        const snapshot = await window.dbGet(window.dbChild(dbRef, `minileagues/${leagueName}`));
-        let league = snapshot.val();
-
-        // --- ZÁCHRANNÝ ŠTÍT: HRÁČ UŽ V LIZE NENÍ NEBO LIGA NEEXISTUJE ---
-        if (!league || !league.participants || !league.participants[playerData.uid]) {
-            alert("Do této miniligy už nemáš přístup (byla zrušena, nebo jsi byl vyhozen).");
-            // Rovnou mu ji lokálně smažeme, ať ho to nemate
-            if (playerData.myMinileagues) {
-                playerData.myMinileagues = playerData.myMinileagues.filter(l => (typeof l === 'object' ? l.name : l) !== leagueName);
-                saveGame();
-            }
-            renderMinileague(); // Vrátíme ho zpět na nový hlavní přehled
-            return;
-        }
-
-        // --- SPOUŠTĚČ SIMULACE ---
-        if (Date.now() >= league.nextMatchTime) {
-            let loops = 0; // Bezpečnostní pojistka (max 10 kol najednou)
-            
-            while (Date.now() >= league.nextMatchTime && loops < 10) {
-                await window.runMLSimulation(leagueName, league);
-                // Po každém kole načteme nová data, abychom měli aktuální čas nextMatchTime
-                const newSnap = await window.dbGet(window.dbChild(dbRef, `minileagues/${leagueName}`));
-                league = newSnap.val();
-                loops++;
-            }
-        }
-
-        window.currentMLNextMatch = league.nextMatchTime;
-
-        // --- SYNCHRONIZACE ODEHRANÝCH ZÁPASŮ (GLOBÁLNÍ POČÍTADLO) ---
-        if (playerData.myMinileagues) {
-            const leagueIndex = playerData.myMinileagues.findIndex(l => 
-                (typeof l === 'object' ? l.name : l) === leagueName
-            );
-
-            if (leagueIndex !== -1) {
-                // Vezmeme oficiální globální počet kol z ligy
-                const officialMatchesPlayed = league.globalPlayedRounds || 0;
-                
-                if (typeof playerData.myMinileagues[leagueIndex] === 'string') {
-                    playerData.myMinileagues[leagueIndex] = {
-                        name: playerData.myMinileagues[leagueIndex],
-                        played: officialMatchesPlayed,
-                        seasonEndTime: league.seasonEndTime
-                    };
-                } else {
-                    playerData.myMinileagues[leagueIndex].played = officialMatchesPlayed;
-                    playerData.myMinileagues[leagueIndex].seasonEndTime = league.seasonEndTime;
-                }
-                saveGame();
-            }
-        }
-
-        const myTeam = league.teams[playerData.uid];
-        // --- FIREBASE POJISTKA PRO PRÁZDNÉ POLE HRÁČŮ --- //
-        if (myTeam && !myTeam.players) {
-            myTeam.players = new Array(16).fill(null);
-        }
-        const layout = FORMATIONS_LAYOUT['4-4-2'];
-        // --- GENEROVÁNÍ NOVÉ TABULKY --- //
-        const isOwner = league.owner === playerData.uid; // Zjistíme, jestli jsi zakladatel
-
-        let standingsHtml = Object.keys(league.standings)
-            .sort((a,b) => {
-                // Nejprve třídíme podle bodů
-                if (league.standings[b].pts !== league.standings[a].pts) {
-                    return league.standings[b].pts - league.standings[a].pts;
-                }
-                // Pokud je shoda bodů, rozhoduje rozdíl skóre
-                const diffB = league.standings[b].gf - league.standings[b].ga;
-                const diffA = league.standings[a].gf - league.standings[a].ga;
-                return diffB - diffA;
-            })
-            .map((uid, i) => {
-                const s = league.standings[uid];
-                // Zvýrazníme řádek, pokud je to tvůj tým
-                const isMyTeam = uid === playerData.uid ? 'class="my-team-row"' : '';
-                const participantName = league.participants[uid];
-
-                // Generování tlačítka pro vyhození (jen pro majitele a ne pro něj samotného)
-                let actionButton = "";
-                if (isOwner && uid !== playerData.uid) {
-                    actionButton = `<button class="btn-task" style="background:#991b1b; padding: 2px 8px; font-size: 0.7rem; margin-left: 10px; border-radius: 4px;" onclick="kickFromMinileague('${leagueName}', '${uid}', '${participantName}')">Vyhodit</button>`;
-                }
-                
-                return `
-                <tr ${isMyTeam}>
-                    <td style="color: #10b981; font-weight: bold;">${i+1}.</td>
-                    <td style="text-align:left; display: flex; align-items: center; justify-content: space-between;">
-                        <span class="ml-team-name">${participantName}</span>
-                        ${actionButton}
-                    </td>
-                    <td>${s.p}</td>
-                    <td style="color: #6b7280;">${s.gf}:${s.ga}</td>
-                    <td>${s.w}</td>
-                    <td>${s.d}</td>
-                    <td>${s.l}</td>
-                    <td style="font-weight:bold; font-size:1.1rem;">${s.pts}</td>
-                </tr>`;
-            }).join('');
-
-        const renderMLRow = (start, end, title) => {
-            let cards = "";
-            for (let i = start; i < end; i++) cards += renderMLPlayerCard(myTeam.players[i], i, leagueName);
-            return `<div class="ml-pitch-row"><span class="ml-row-title">${title}</span><div class="player-list">${cards}</div></div>`;
-        };
-
-        // STŘÍDAČKA - Pevně 5 míst (indexy 11 až 16)
-        let benchCards = "";
-        for (let i = 11; i < 16; i++) {
-            benchCards += renderMLPlayerCard(myTeam.players[i], i, leagueName);
-        }
-
-        mainContent.innerHTML = `
-            <div class="scouting-card minileague-container">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h2 class="section-title">🏆 ${league.name}</h2>
-                    <button class="btn-task" onclick="renderMinileague()" style="background:#4b5563;">Zpět na přehled</button>
-                </div>
-                
-                <div class="info-box" style="background: rgba(30, 41, 59, 0.8); border: 1px solid #334155; margin-bottom: 20px;">
-                    <h3 style="margin: 0 0 10px 0; font-size: 1rem; color: #fcd34d;">⚽ Příští hrací kolo miniligy</h3>
-                    <div id="ml-match-timer" style="font-family: 'Courier New', monospace; font-size: 1.8rem; font-weight: bold; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.3);">
-                        00:00:00
-                    </div>
-                    <p style="margin: 5px 0 0 0; font-size: 0.8rem; color: #9ca3af;">Zápasy se hrají automaticky každých 8 hodin.</p>
-                </div>
-
-                <table class="minileague-table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th style="text-align:left;">Manažer</th>
-                            <th>Z</th>
-                            <th>SKÓRE</th>
-                            <th>V</th>
-                            <th>R</th>
-                            <th>P</th>
-                            <th>B</th>
-                        </tr>
-                    </thead>
-                    <tbody>${standingsHtml}</tbody>
-                </table>
-                <button class="btn-task" style="background:#6366f1; margin-bottom: 15px;" 
-                    onclick="showMLHistory('${leagueName}')">📊 Výsledky poslední sezóny</button>
-
-                <div class="minileague-locker-accordion">
-                    <div class="locker-header" onclick="document.querySelector('.locker-content').classList.toggle('active')">
-                        <span>👕 ŠATNA MINILIGY (Klikni pro sbalení/rozbalení)</span>
-                        <span>▼</span>
-                    </div>
-                    <div class="locker-content active">
-                        <div class="ml-pitch-area">
-                            ${renderMLRow(layout.att[0], layout.att[1], "Útočníci")}
-                            ${renderMLRow(layout.mid[0], layout.mid[1], "Záložníci")}
-                            ${renderMLRow(layout.def[0], layout.def[1], "Obránci")}
-                            ${renderMLRow(layout.gk[0], layout.gk[1], "Brankář")}
-                        </div>
-                        <div class="ml-bench-area">
-                            <span class="ml-row-title">Střídačka (max 5 míst)</span>
-                            <div class="player-list">${benchCards}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // Vrátíme hráče tam, kam kliknul, bez trhnutí obrazovky
-        if (skipLoader) {
-            setTimeout(() => window.scrollTo(0, currentScroll), 0);
-        }
-
-    } catch (e) { 
-        console.error("Chyba miniligy:", e);
-        renderMinileague(); 
-    }
-}
-
-// Funkce pro karty - je nyní 100% identická s hlavní šatnou
-function renderMLPlayerCard(player, index, leagueName) {
-    const isSelected = window.selectedMLIndex === index ? 'ml-selected' : '';
-    
-    if (!player) {
-        return `<div class="player-card empty-slot ${isSelected}" onclick="handleMLPlayerClick('${leagueName}', ${index})">
-                    <div class="empty-text">Volné místo</div>
-                </div>`;
-    }
-    
-    const posConfig = POSITION_STATS[player.position];
-    const statLabels = { atk: 'Útok', def: 'Obrana', spd: 'Rychlost', str: 'Síla', eng: 'Výdrž', tek: 'Technika', gk: 'Brankář' };
-    const starsHtml = player.stars > 0 ? '⭐'.repeat(player.stars) : '<span>&nbsp;</span>';
-    const totalStats = posConfig.stats.reduce((sum, s) => sum + player.stats[s], 0);
-
-    // Tlačítko pro návrat do rezervy (pouze pro střídačku)
-    const returnHtml = index >= 11 
-        ? `<button class="btn-reserve-action btn-to-reserve" onclick="event.stopPropagation(); returnFromMLToReserve('${leagueName}', ${index})" style="margin-top:5px; background-color: #3b82f6;">Vrátit do rezervy</button>` 
-        : '';
-
-    return `
-        <div class="player-card ${posConfig.colorClass} ${isSelected}" onclick="handleMLPlayerClick('${leagueName}', ${index})">
-            <div class="player-name">${player.name}</div>
-            <div class="player-position-row">${posConfig.label}</div>
-            
-            <div class="player-info-line">
-                <span style="font-style: italic; color: #6b7280;">${player.rank}</span> | ${getPlayerLevelText(player)} ${starsHtml}
-            </div>
-            
-            <div class="player-nationality">Národnost: ${player.nationality}</div>
-
-            ${returnHtml}
-
-            <div class="player-stats" style="margin-top: 10px;">
-                ${posConfig.stats.map(s => `
-                    <div class="stat-item highlighted">
-                        ${statLabels[s]}: <span>${player.stats[s]}</span>
-                    </div>
-                `).join('')}
-
-                <div class="stat-total">
-                    <span>Celková síla:</span> 
-                    <span style="font-weight: bold;">${totalStats}</span>
-                </div> 
-            </div>
-        </div>
-    `;
-}
-
-window.renderMyMinileaguesList = async function() {
-    const mainContent = document.getElementById('main-content');
-    const myLeagues = playerData.myMinileagues || [];
-
-    if (myLeagues.length === 0) {
-        mainContent.innerHTML = `
-            <div class="scouting-card minileague-container">
-                <h2 class="section-title">Moje miniligy (0/3)</h2>
-                <div style="margin-top:20px; text-align:center;">
-                    <p class="text-muted">Zatím nejsi v žádné minilize.<br>Můžeš být maximálně ve 3 současně.</p>
-                </div>
-                <button class="btn-task btn-full-width" style="margin-top:20px; background:#4b5563;" onclick="renderMinileague()">Zpět na rozcestník</button>
-            </div>`;
-        return;
-    }
-
-    // Loader, protože teď taháme data z cloudu
-    mainContent.innerHTML = `<div class="loader">Načítám tvé miniligy z cloudu...</div>`;
-
-    let leaguesHtml = '';
-    const dbRef = window.dbRef(window.db);
-
-    for (const leagueData of myLeagues) {
-        const leagueName = typeof leagueData === 'object' ? leagueData.name : leagueData;
-        const leagueRank = typeof leagueData === 'object' ? `(${leagueData.rank})` : '';
-
-        // Stažení detailů ligy
-        const snapshot = await window.dbGet(window.dbChild(dbRef, `minileagues/${leagueName}`));
-        
-        // Proměnné definujeme nahoře, aby byly dostupné i pro HTML výpis níže
-        let timeText = "Status neznámý";
-        let ownerName = "Neznámý"; 
-
-        if (snapshot.exists()) {
-            const leagueInfo = snapshot.val();
-            
-            // Bezpečné načtení jména majitele
-            if (leagueInfo.participants && leagueInfo.owner) {
-                ownerName = leagueInfo.participants[leagueInfo.owner] || "Neznámý";
-            }
-
-            const timeLeft = leagueInfo.seasonEndTime - Date.now();
-            
-            if (timeLeft > 0) {
-                const d = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-                const h = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const m = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-                timeText = `⏳ Konec za: <strong>${d}d ${h}h ${m}m</strong>`;
-            } else {
-                timeText = `✅ Sezóna končí, probíhá vyhodnocení`;
-            }
-        }
-
-        leaguesHtml += `
-        <div style="background: rgba(0,0,0,0.3); border: 1px solid #4b5563; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-            <div>
-                <strong style="color: #fcd34d; font-size: 1.1rem;">🏆 ${leagueName}</strong> 
-                <span style="color: #ccc; font-size: 0.9rem;">${leagueRank}</span>
-                <div style="font-size: 0.85rem; color: #9ca3af; margin-top: 4px;">Zakladatel: <span style="color: #60a5fa;">${ownerName}</span></div>
-                <div style="font-size: 0.85rem; color: #9ca3af; margin-top: 4px;">${timeText}</div>
-            </div>
-            <div style="display: flex; gap: 10px;">
-                <button class="btn-task" style="background:#2563eb; padding: 8px 15px;" onclick="renderMinileagueDetail('${leagueName}')">Vstoupit</button>
-                <button class="btn-task" style="background:#991b1b; padding: 8px 15px;" onclick="leaveMinileague('${leagueName}')">Opustit</button>
-            </div>
-        </div>`;
-    }
-
-    mainContent.innerHTML = `
-        <div class="scouting-card minileague-container">
-            <h2 class="section-title">Moje miniligy (${myLeagues.length}/3)</h2>
-            <div style="margin-top:20px;">${leaguesHtml}</div>
-            <button class="btn-task btn-full-width" style="margin-top:20px; background:#4b5563;" onclick="renderMinileague()">Zpět na rozcestník</button>
-        </div>
-    `;
-}
-
-// Pomocná funkce pro vykreslení karet v minilize
-function renderMinileaguePlayers(players) {
-    const statLabels = { atk: 'Útok', def: 'Obrana', spd: 'Rychlost', str: 'Síla', eng: 'Výdrž', tek: 'Technika', gk: 'Brankář' };
-    return players.map((player, i) => {
-        const posConfig = POSITION_STATS[player.position];
-        return `
-            <div class="player-card ${posConfig.colorClass}" style="width:180px; font-size:0.8rem;">
-                <div class="player-name">${player.name}</div>
-                <div class="player-position-row">${posConfig.label}</div>
-                <div class="player-info-line">${player.rank} | Lvl.${player.level}</div>
-                <div class="player-stats">
-                    ${posConfig.stats.map(s => `<div class="stat-item">${statLabels[s]}: ${player.stats[s]}</div>`).join('')}
-
-                <div class="stat-total">
-                    <span>Celková síla:</span> 
-                    <span style="font-weight: bold;">${totalStats}</span>
-                </div>
-
-                </div>
-                ${i >= 11 ? `<button class="btn-small-add" style="background:red; width:100%; margin-top:5px;" onclick="alert('Funkce odstranění bude doplněna')">Odstranit</button>` : ''}
-            </div>
-        `;
-    }).join('');
-}
-
 window.currentReserveFilter = 'all';
 
 window.filterReserve = function(rank) {
@@ -1848,63 +1357,6 @@ function renderReservePlayers(filter) {
         `;
     }).join('');
 }
-
-window.openMLSelector = function(playerId) {
-    const player = playerData.reserve.find(p => p.id === playerId);
-    if (!player) return;
-
-    // Filtrujeme ligy podle ranku
-    const compatibleLeagues = (playerData.myMinileagues || []).filter(l => {
-        if (typeof l === 'object') return l.rank === player.rank;
-        return false;
-    });
-
-    if (compatibleLeagues.length === 0) {
-        alert(`Nemáš žádnou aktivní miniligu pro rank: ${player.rank}`);
-        return;
-    }
-
-    // Vytvoříme HTML pro overlay
-    const overlay = document.createElement('div');
-    overlay.className = 'ml-selector-overlay';
-    overlay.id = 'ml-selector-modal';
-
-    const listHtml = compatibleLeagues.map(l => `
-        <div class="ml-select-item" onclick="executeMLTransfer('${playerId}', '${l.name}')">
-            🏆 ${l.name}
-        </div>
-    `).join('');
-
-    overlay.innerHTML = `
-        <div class="ml-selector-box">
-            <h3 style="color: #fcd34d; margin-top:0;">Odeslat do miniligy</h3>
-            <p style="font-size: 0.85rem; color: #ccc;">
-                Hráč <strong>${player.name}</strong> (${player.rank})<br>
-                bude odeslán do vybrané ligy:
-            </p>
-            <div class="ml-selector-list">${listHtml}</div>
-            <button class="btn-close-selector" onclick="document.getElementById('ml-selector-modal').remove()">Zavřít</button>
-        </div>
-    `;
-
-    document.body.appendChild(overlay);
-}
-
-// FUNKCE KTERÁ UKÁŽE VÝSLEDKY POSLEDNÍ MINILIGY //
-window.showMLHistory = async function(leagueName) {
-    const dbRef = window.dbRef(window.db);
-    const snap = await window.dbGet(window.dbChild(dbRef, `minileagues/${leagueName}/lastResults`));
-    const results = snap.val();
-
-    if (!results) {
-        alert("Zatím nebyly odehrány žádné sezóny.");
-        return;
-    }
-
-    const resText = results.map((r, i) => `${i+1}. ${r.name} - ${r.pts} bodů`).join('\n');
-    alert(`🏆 POSLEDNÍ VÍTĚZOVÉ LIGY ${leagueName}:\n\n${resText}`);
-};
-
 
 // --- SYSTÉM NÁPOVĚDY ---
 const HELP_TEXTS = {
@@ -2004,6 +1456,119 @@ window.showHelp = function(sectionKey) {
                 </div>
                 <div style="text-align: center; margin-top: 25px;">
                     <button class="btn-upgrade" style="background: #4b5563; padding: 8px 25px;" onclick="document.getElementById('help-modal').remove()">Jasná věc, díky!</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
+// --- SÍŇ SLÁVY ---
+window.renderHallOfFame = function() {
+    const mainContent = document.getElementById('main-content');
+    mainContent.style.position = 'relative';
+
+    if (!playerData.hallOfFame) playerData.hallOfFame = { league: [], pve: [] };
+
+    // Používáme obrázek sin_slavy1.png (z dřívějšího kódu navigace)
+    mainContent.innerHTML = `
+        <div style="position: relative; z-index: 10; text-align: center; margin-bottom: 15px; pointer-events: none;">
+            <button class="help-btn-corner" onclick="showHelp('hall-of-fame')" style="pointer-events: auto;">Nápověda</button>
+            <h2 class="section-title" style="text-shadow: 2px 2px 5px rgba(0,0,0,0.8);">Síň Slávy</h2>
+            <p class="stadium-subtitle" style="text-shadow: 1px 1px 3px black; font-weight: bold; color: #fdf5e6;">Historie tvých největších manažerských triumfů.</p>
+        </div>
+        
+        <div class="interactive-stadium-container">
+            
+            <div class="stadium-click-zone" 
+                 onclick="openHoFMenu('league')" 
+                 style="top: 15%; left: 10%; width: 35%; height: 70%;">
+                <div class="zone-tag">
+                    <strong style="display: block; margin-bottom: 5px;">🏆 Zlaté poháry</strong>
+                    <div style="font-size: 0.8rem; color: #9ca3af;">Ligové tituly (${playerData.hallOfFame.league.length})</div>
+                </div>
+            </div>
+
+            <div class="stadium-click-zone" 
+                 onclick="openHoFMenu('pve')" 
+                 style="top: 15%; left: 55%; width: 35%; height: 70%;">
+                <div class="zone-tag">
+                    <strong style="display: block; margin-bottom: 5px;">☠️ Trofeje bossů</strong>
+                    <div style="font-size: 0.8rem; color: #9ca3af;">Pokořená podzemí (${playerData.hallOfFame.pve.length})</div>
+                </div>
+            </div>
+            
+        </div>
+    `;
+};
+
+window.openHoFMenu = function(type) {
+    const oldModal = document.getElementById('hof-modal');
+    if (oldModal) oldModal.remove();
+
+    let itemsHtml = '';
+    let titleText = '';
+
+    if (type === 'league') {
+        titleText = '🏆 Získané ligové tituly';
+        const titles = playerData.hallOfFame.league || [];
+        
+        if (titles.length === 0) {
+            itemsHtml = `<p class="text-muted" style="text-align:center; width:100%;">Zatím jsi nevyhrál žádnou divizi. Zabojuj na hřišti!</p>`;
+        } else {
+            itemsHtml = titles.map(t => {
+                // Sestavení rosteru
+                const posLabels = { gk: 'BR', def: 'OB', mid: 'ZÁ', att: 'ÚT' };
+                const rosterHtml = t.roster.map(p => `
+                    <div style="display:flex; justify-content:space-between; border-bottom: 1px solid #4b5563; padding: 4px 0;">
+                        <span style="color:#d1d5db;">${p.name} <span style="color:#9ca3af; font-size:0.75rem;">(${p.rank})</span></span>
+                        <span style="color:#fcd34d; font-weight:bold; font-size:0.8rem;">${posLabels[p.position]}</span>
+                    </div>
+                `).join('');
+
+                return `
+                    <div class="inventory-card" style="background: rgba(0,0,0,0.3); border: 2px solid #f59e0b; padding: 15px; border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #f59e0b; padding-bottom: 10px; margin-bottom: 10px;">
+                            <h3 style="color: #fcd34d; margin: 0;">Mistr ${t.div}. Divize</h3>
+                            <span style="color: #9ca3af; font-size: 0.85rem;">🗓️ ${t.date}</span>
+                        </div>
+                        <details style="cursor: pointer;">
+                            <summary style="color: #60a5fa; outline: none; font-weight: bold; margin-bottom: 5px;">Zobrazit vítěznou sestavu</summary>
+                            <div style="background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; font-size: 0.9rem; margin-top: 10px;">
+                                ${rosterHtml}
+                            </div>
+                        </details>
+                    </div>
+                `;
+            }).join('');
+        }
+    } else {
+        titleText = '☠️ Trofeje z Fotbalového podzemí';
+        const trophies = playerData.hallOfFame.pve || [];
+        
+        if (trophies.length === 0) {
+            itemsHtml = `<p class="text-muted" style="text-align:center; width:100%;">Zatím jsi neporazil žádného bosse v podzemí.</p>`;
+        } else {
+            itemsHtml = trophies.map(t => `
+                <div class="inventory-card" style="background: rgba(30, 41, 59, 0.8); border: 2px solid #64748b; padding: 15px; border-radius: 8px;">
+                    <h3 style="color: #f87171; margin: 0 0 5px 0;">Hlava: ${t.boss}</h3>
+                    <div style="color: #9ca3af; font-size: 0.9rem;">Lokace: ${t.dungeon}</div>
+                    <div style="color: #64748b; font-size: 0.8rem; margin-top: 10px; text-align: right;">🗓️ Získáno: ${t.date}</div>
+                </div>
+            `).join('');
+        }
+    }
+
+    const modalHtml = `
+        <div id="hof-modal" class="ml-selector-overlay" onclick="this.remove()">
+            <div class="ml-selector-box" style="max-width: 600px; width: 95%; max-height: 85vh; overflow-y: auto;" onclick="event.stopPropagation()">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4b5563; padding-bottom: 15px; margin-bottom: 20px;">
+                    <h2 style="color: #fcd34d; margin: 0;">${titleText}</h2>
+                    <button class="btn-task" style="padding: 8px 15px; background: #991b1b;" onclick="document.getElementById('hof-modal').remove()">Zavřít</button>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 15px; text-align: left;">
+                    ${itemsHtml}
                 </div>
             </div>
         </div>
