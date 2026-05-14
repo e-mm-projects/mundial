@@ -468,8 +468,11 @@ window.runMLSimulation = async function(leagueName, league) {
                 const [gA, gB] = newAct.score.split(':');
                 newAct.score = `${gB}:${gA}`;
             }
+            // --- OTOČENÍ TYPŮ AKCÍ (BAREV V KOMENTÁŘI) ---
             if (newAct.type === 'goal') newAct.type = 'bad-goal';
             else if (newAct.type === 'bad-goal') newAct.type = 'goal';
+            else if (newAct.type === 'chance') newAct.type = 'danger'; // NOVÉ
+            else if (newAct.type === 'danger') newAct.type = 'chance'; // NOVÉ
 
             // Otočení pozice míče! (Pokud je míč na 80%, host ho vidí na 20%)
             if (typeof newAct.zone === 'number') {

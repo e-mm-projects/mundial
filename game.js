@@ -397,6 +397,31 @@ function initGame() {
         refreshDailyShop(); 
         
         startGameUI();
+
+        // --- PAMĚŤ POSLEDNÍ ZÁLOŽKY PŘI REFRESHI ---
+        
+        // 1. Najdeme všechna tlačítka v menu
+        const navButtons = document.querySelectorAll('.nav-btn');
+        
+        // 2. Každému tlačítku přidáme "odposlech"
+        navButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.currentTarget.getAttribute('data-target');
+                if (target) {
+                    // Uložíme název záložky do paměti prohlížeče
+                    localStorage.setItem('lastActiveTab', target);
+                }
+            });
+        });
+
+        // 3. OKAMŽITÉ KLIKNUTÍ (Žádné čekání)
+        const lastTab = localStorage.getItem('lastActiveTab');
+        if (lastTab) {
+            const tabToClick = document.querySelector(`.nav-btn[data-target="${lastTab}"]`);
+            if (tabToClick) {
+                tabToClick.click(); // Přepne se ještě dřív, než monitor cokoliv zobrazí
+            }
+        }
     }
 }
 
