@@ -1301,7 +1301,7 @@ body {
 .inventory-card {
     border-style: solid;
     border-color: #8d6e63;
-    background: #fffbeb;
+    background: #000000;
     width: 180px;
 }
 
@@ -1508,7 +1508,154 @@ body {
     100% { transform: scale(1); }
 }
 
-/* --- SKAUTING (ÚKLID) --- */
+/* ------ FANSHOP ---------*/
+
+/* Kontejner pro obrázek ve Fanshopu */
+.shop-img-container {
+    position: relative;
+    display: inline-block;
+    cursor: help;
+    margin: 15px 0;
+}
+
+/* Zvětšení obrázku ve Fanshopu */
+.shop-img-container img {
+    width: 100px; /* Zvětšeno z 80px */
+    height: 100px; /* Zvětšeno z 80px */
+    object-fit: contain;
+    filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5));
+    transition: transform 0.2s ease; /* Pro efekt přiblížení */
+}
+
+/* Jemný zoom obrázku při najetí myši */
+.shop-item-card:hover .shop-img-container img {
+    transform: scale(1.1);
+}
+
+/* Zvětšení obrázku v Trezoru */
+.shop-item-card.compact .shop-img-container img {
+    width: 70px; /* Zvětšeno z 50px */
+    height: 70px; /* Zvětšeno z 50px */
+}
+
+/* Zmenšení mezer v Trezoru kolem textu "Zbývá" */
+.shop-item-card.compact .shop-item-duration {
+    margin: 2px 0 6px 0; /* Menší mezery nahoře i dole */
+    padding: 4px; /* Tenčí rámeček */
+    font-size: 0.75rem;
+}
+
+/* Vyskakovací bublina (Tooltip) */
+.shop-item-tooltip {
+    visibility: hidden;
+    width: 200px;
+    background-color: rgba(15, 23, 42, 0.95);
+    color: #f8fafc;
+    text-align: center;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+    padding: 10px;
+    position: absolute;
+    z-index: 100;
+    bottom: 110%; /* Zobrazí se kousek nad obrázkem */
+    left: 50%;
+    transform: translateX(-50%); /* Vycentrování přesně na střed */
+    font-size: 0.85rem;
+    line-height: 1.4;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    pointer-events: none; /* Aby tooltip neblokoval klikání na obrázek */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.8);
+}
+
+/* Zobrazení bubliny při najetí myší na kontejner */
+.shop-img-container:hover .shop-item-tooltip {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* --- KARTA PŘEDMĚTU (FANSHOP I TREZOR) --- */
+.shop-item-card {
+    background-color: #000000; /* Krásná temně černá/modrá barva */
+    border: 2px solid #f59e0b; /* Zlatý rámeček */
+    border-radius: 8px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-align: center;
+    color: #e5e7eb; /* Světle šedý text pro popisky */
+    min-height: 250px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+    transition: transform 0.2s;
+}
+
+.shop-item-card:hover {
+    transform: translateY(-2px); /* Jemné povyskočení při najetí myši */
+}
+
+/* Nadpis předmětu na kartě */
+.shop-item-title {
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 1.1rem;
+    border-bottom: 1px solid #374151;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+    /* NOVÉ: Pevná výška, aby 1 a 2 řádky zabíraly stejně místa */
+    min-height: 50px; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* --- TÝMOVÝ TREZOR (Pevně uzamčené rozměry) --- */
+.shop-item-card.compact, 
+.inventory-slot-empty.compact {
+    box-sizing: border-box;
+    flex: 1 1 160px; /* Flexbox základ */
+    max-width: 220px; /* Karta u gólmana se už neroztáhne přes celou šířku */
+    height: 230px !important; /* TVRDÝ ZÁMEK VÝŠKY */
+    padding: 12px;
+    margin: 0;
+}
+
+/* Styl prázdného slotu v trezoru */
+.inventory-slot-empty.compact {
+    border: 1px dashed #4b5563;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.4);
+    color: #6b7280;
+    font-size: 0.85rem;
+}
+
+/* Nadpisy v trezoru držíme vždy přesně stejně vysoké (i když je text krátký) */
+.shop-item-card.compact .shop-item-title {
+    font-size: 0.9rem;
+    padding-bottom: 5px;
+    margin-bottom: 5px;
+    min-height: 40px; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.2;
+}
+
+/* Zarovnání obrázku doprostřed zbytku prostoru */
+.shop-item-card.compact .shop-img-container {
+    margin: auto 0;
+}
+
+.shop-item-card.compact .shop-item-duration {
+    margin: 5px 0 10px 0;
+    padding: 6px;
+    font-size: 0.75rem;
+}
+
+/* --- SKAUTING  --- */
 .scout-info-box {
     max-width: 700px;
 }

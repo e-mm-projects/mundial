@@ -979,7 +979,7 @@ window.renderShop = function() {
     `;
 };
 
-// Vyskakovací okno s předměty
+// Vyskakovací okno s předměty (Fanshop)
 window.openShopMenu = function() {
     const oldModal = document.getElementById('shop-modal');
     if (oldModal) oldModal.remove();
@@ -998,23 +998,37 @@ window.openShopMenu = function() {
     } else {
         itemsHtml = playerData.dailyShopItems.map((item, index) => {
             const canAfford = playerData.money >= item.currentPrice;
+
+            const roleLabels = { att: '⚔️ Útočníky', mid: '🧭 Záložníky', def: '🛡️ Obránce', gk: '🧤 Brankáře' };
+            const roleText = roleLabels[item.role] || 'Neznámé';
+
             return `
-                <div class="player-card" style="border-color: #f59e0b; min-height: 320px; display: flex; flex-direction: column; justify-content: space-between; background: #fffdfa;">
+                <div class="shop-item-card">
                     <div>
-                        <div class="player-name" style="color: #b45309; border-bottom: 1px solid #fed7aa; padding-bottom: 5px;">${item.name}</div>
-                        <p style="font-size: 0.9rem; color: #4b5563; line-height: 1.4; font-style: italic; padding: 10px; text-align: center;">
-                            "${item.desc}"
-                        </p>
+                        <div class="shop-item-title">${item.name}</div>
+                        
+                        <div style="font-size: 0.8rem; color: #60a5fa; margin-bottom: 5px; font-weight: bold; text-transform: uppercase;">
+                            Pro: ${roleText}
+                        </div>
+                        
+                        <div class="shop-img-container">
+                            <!-- AUTOMATICKÉ NAČÍTÁNÍ OBRÁZKU PODLE ID -->
+                            <img src="images/items/${item.id}.png" alt="${item.name}" onerror="this.onerror=null; this.src='images/items/triko.png';">
+                            <span class="shop-item-tooltip">${item.desc}</span>
+                        </div>
                     </div>
-                    <div style="background: #fef3c7; padding: 8px; border-radius: 5px; margin: 10px; font-size: 0.85rem; text-align: center; border: 1px solid #fde68a;">
-                        ⏳ Vydrží: <strong>${item.duration} zápasů</strong>
-                    </div>
-                    <div style="padding: 10px;">
-                        <div class="price-tag buy" style="margin-bottom: 10px; font-size: 1.1rem;">Cena: ${item.currentPrice} 💰</div>
-                        <button class="btn-upgrade" style="width: 100%; padding: 10px;" onclick="buyItem(${index})" ${!canAfford ? 'disabled' : ''}>
-                            ${canAfford ? 'Koupit předmět' : 'Nedostatek peněz'}
+                    
+                    <div>
+                        <div class="shop-item-duration" style="margin-bottom: 10px;">
+                            ⏳ Vydrží: <strong>${item.duration} zápasů</strong>
+                        </div>
+                        
+                        <button class="btn-upgrade" style="width: 100%; padding: 12px 5px; font-size: 0.95rem; display: flex; justify-content: center; align-items: center; gap: 6px;" onclick="buyItem(${index})" ${!canAfford ? 'disabled' : ''}>
+                            <span>${canAfford ? 'Koupit za' : 'Nedostatek:'}</span>
+                            <strong style="color: #fcd34d; font-size: 1.1rem;">${item.currentPrice} 💰</strong>
                         </button>
-                        ${window.IS_TEST_MODE ? `<button class="btn-task btn-test" style="width: 100%; padding: 5px; font-size: 0.8rem; margin-top: 5px;" onclick="buyItem(${index}, true)">
+                        
+                        ${window.IS_TEST_MODE ? `<button class="btn-task btn-test" style="width: 100%; padding: 5px; font-size: 0.75rem; margin-top: 5px;" onclick="buyItem(${index}, true)">
                             [TEST] Koupit ZDARMA
                         </button>` : ''}
                     </div>
@@ -1032,7 +1046,7 @@ window.openShopMenu = function() {
                     <button class="btn-task" style="padding: 8px 15px; background: #991b1b; font-weight: bold;" onclick="document.getElementById('shop-modal').remove()">Zavřít</button>
                 </div>
                 
-                <div class="stadium-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
+                <div class="stadium-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
                     ${itemsHtml}
                 </div>
                 
@@ -1060,31 +1074,38 @@ window.openInventoryMenu = function() {
             const item = items[i];
             if (item) {
                 slotsHtml += `
-                    <div class="inventory-card compact" style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; min-width: 140px; flex: 1;">
-                        <div style="font-weight: bold; color: #1e293b; font-size: 0.85rem; margin-bottom: 4px;">${item.name}</div>
-                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 8px;">⏳ ${item.duration} záp.</div>
-                        <button class="btn-task" style="width: 100%; padding: 4px; font-size: 0.7rem; background: #991b1b;" onclick="discardItem('${role}', ${item.instanceId})">Vyhodit</button>
+                    <div class="shop-item-card compact">
+                        <div class="shop-item-title">${item.name}</div>
+                        
+                        <div class="shop-img-container">
+                            <!-- AUTOMATICKÉ NAČÍTÁNÍ OBRÁZKU PODLE ID -->
+                            <img src="images/items/${item.id}.png" alt="${item.name}" onerror="this.onerror=null; this.src='images/items/triko.png';">
+                            <span class="shop-item-tooltip">${item.desc}</span>
+                        </div>
+
+                        <div class="shop-item-duration">⏳ Zbývá: ${item.duration} záp.</div>
+                        <button class="btn-task" style="width: 100%; padding: 4px; font-size: 0.7rem; background: #7f1d1d; border: 1px solid #450a0a; color: #fca5a5;" onclick="discardItem('${role}', ${item.instanceId})">Vyhodit</button>
                     </div>
                 `;
             } else {
                 slotsHtml += `
-                    <div class="inventory-slot-empty compact" style="border: 1px dashed #cbd5e1; border-radius: 6px; padding: 8px; min-width: 140px; flex: 1; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.3);">
-                        <div style="font-size: 0.7rem; color: #94a3b8;">Volný slot</div>
+                    <div class="inventory-slot-empty compact">
+                        <div>Volný slot</div>
                     </div>
                 `;
             }
         }
         return `
-            <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px;">
-                <h4 style="color: #fcd34d; margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">${label}</h4>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">${slotsHtml}</div>
+            <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #374151;">
+                <h4 style="color: #fcd34d; margin: 0 0 10px 0; font-size: 1rem; text-transform: uppercase;">${label}</h4>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">${slotsHtml}</div>
             </div>
         `;
     };
 
     const modalHtml = `
         <div id="inventory-modal" class="ml-selector-overlay" onclick="this.remove()">
-            <div class="ml-selector-box" style="max-width: 600px; width: 95%; max-height: 85vh; overflow-y: auto;" onclick="event.stopPropagation()">
+            <div class="ml-selector-box" style="max-width: 650px; width: 95%; max-height: 85vh; overflow-y: auto; background: #1f2937;" onclick="event.stopPropagation()">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4b5563; padding-bottom: 15px; margin-bottom: 20px;">
                     <h2 style="color: #fcd34d; margin: 0;">Týmový trezor</h2>
                     <button class="btn-task" style="padding: 8px 15px; background: #991b1b;" onclick="document.getElementById('inventory-modal').remove()">Zavřít</button>

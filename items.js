@@ -24,7 +24,7 @@ const ITEM_CATALOG = [
     { id: 'ovladac_meruna', name: 'Dálkový ovladač na merunu', role: 'mid', duration: 3, type: 'event', tag: 'remote_ball', desc: 'Míč poslechne na slovo. Průniky +40 %.' },
 
     // --- OBRANA ---
-    { id: 'zednik_lziha', name: 'Zednická lžíce a malta', role: 'def', duration: 10, type: 'stat', stat: 'def', value: 1.25, desc: 'Postaví neprostupnou zeď. Obrana +25 %.' },
+    { id: 'zednik_lzice', name: 'Zednická lžíce a malta', role: 'def', duration: 10, type: 'stat', stat: 'def', value: 1.25, desc: 'Postaví neprostupnou zeď. Obrana +25 %.' },
     { id: 'krvave_chranice', name: 'Krvavé chrániče', role: 'def', duration: 10, type: 'stat', stat: 'str', value: 1.30, desc: 'Soupeř má strach. Síla +30 %.' },
     { id: 'vidle', name: 'Vidle na odklízení míčů', role: 'def', duration: 8, type: 'event', tag: 'long_clear', desc: 'Žádné složité rozehrávky, prostě odkop na tribunu.' },
     { id: 'titan_koliky', name: 'Titanové kolíky', role: 'def', duration: 6, type: 'event', tag: 'injury_maker', desc: 'Šance vyřadit soupeře, ale snižuje rychlost.' },
