@@ -2051,6 +2051,138 @@ body {
     border-color: #f87171;
 }
 
+/* --- PVE MAPA POSTUPU (Kreslený / Papírový styl) --- */
+.pve-timeline-wrapper {
+    position: relative;
+    max-width: 600px;
+    margin: 15px auto 40px auto;
+    padding: 10px 0;
+}
+
+/* Kreslená cesta (přerušovaná čára jako na mapě k pokladu) */
+.pve-timeline-line {
+    position: absolute;
+    top: 50%;
+    left: 15px;
+    right: 15px;
+    height: 0;
+    border-top: 4px dashed #8d6e63; /* Hnědá čára jako nakreslená fixou */
+    z-index: 1;
+    opacity: 0.6;
+}
+
+/* Plná čára pro už ušlou cestu (červená fixa) */
+.pve-timeline-progress {
+    position: absolute;
+    top: 50%;
+    left: 15px;
+    height: 0;
+    border-top: 4px solid #b91c1c; /* Tlustá červená čára */
+    z-index: 2;
+    transition: width 0.5s ease;
+    transform: translateY(-2px); /* Drobné posunutí, aby to vypadalo ručně kresleně */
+}
+
+.pve-timeline-nodes {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    z-index: 3;
+}
+
+/* "Papírky" / Nákresy - nepravidelný tvar */
+.pve-node {
+    width: 32px;
+    height: 32px;
+    background: #fdf5e6; /* Barva papíru */
+    border: 3px solid #8d6e63;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #4e342e;
+    position: relative;
+    cursor: help;
+    transition: all 0.3s ease;
+    /* Tady je ta magie - nepravidelný tvar připomínající ruční kresbu! */
+    border-radius: 255px 15px 225px 15px/15px 225px 15px 255px; 
+    box-shadow: 2px 3px 0 rgba(0,0,0,0.3);
+}
+
+/* Zamčený (Budoucí) pohár - šedý nákres tužkou */
+.pve-node.locked {
+    background: #d1d5db;
+    border: 3px dashed #9ca3af;
+    color: #6b7280;
+    box-shadow: none;
+}
+
+/* Splněný pohár - červené razítko */
+.pve-node.completed {
+    background: #fdf5e6;
+    border-color: #b91c1c;
+    color: #b91c1c;
+    font-size: 1.1rem;
+    transform: rotate(-10deg); /* Křivě otištěné razítko */
+}
+
+/* Aktuální pohár - žlutý zvýrazněný, poskakuje */
+.pve-node.current {
+    background: #fef08a; /* Výrazný žlutý papír */
+    border-color: #b45309;
+    color: #b45309;
+    transform: scale(1.2) rotate(5deg);
+    box-shadow: 3px 4px 0 rgba(0,0,0,0.4);
+    animation: bounce-pin 1.5s infinite;
+}
+
+/* Kreslené poskakování (místo moderního pulzování) */
+@keyframes bounce-pin {
+    0%, 100% { transform: scale(1.2) rotate(5deg) translateY(0); }
+    50% { transform: scale(1.2) rotate(10deg) translateY(-6px); }
+}
+
+/* Tooltip (Bublina z komiksu) */
+.pve-node .tooltip-text {
+    visibility: hidden;
+    background-color: #fdf5e6;
+    color: #4e342e;
+    text-align: center;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 2px solid #8d6e63;
+    position: absolute;
+    z-index: 10;
+    bottom: 160%;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    font-size: 0.9rem;
+    font-weight: bold;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+}
+
+/* Zobáček bubliny */
+.pve-node .tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -6px;
+    border-width: 6px;
+    border-style: solid;
+    border-color: #8d6e63 transparent transparent transparent;
+}
+
+.pve-node:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
 /* --- SKAUTING SOUPEŘE V LIZE --- */
 .opponent-scout-header {
     text-align: center;
@@ -2759,6 +2891,97 @@ body {
     font-size: 0.95rem;
     font-weight: bold;
     color: #1e3a8a;
+}
+
+/* --- SÍŇ SLÁVY - PVE TROFEJE --- */
+.trophy-cabinet {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.4); /* Lehké ztmavení pozadí jako "polička" */
+    border: 3px solid #8d6e63;
+    border-radius: 12px;
+    margin-top: 20px;
+}
+
+/* Samotná plaketa pro jeden pohár */
+.trophy-plaque {
+    background: #fdf5e6; /* Papírový vzhled */
+    border: 2px solid #5d4037; /* Tmavé dřevo */
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+    position: relative;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.trophy-plaque:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 12px rgba(0,0,0,0.5);
+}
+
+/* Zamčená plaketa */
+.trophy-plaque.locked {
+    background: #d7ccc8; /* Šedohnědá barva pro zamčené */
+    border-color: #8d6e63;
+}
+
+.trophy-img-container {
+    height: 130px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.trophy-img {
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+    filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.4));
+    transition: filter 0.3s;
+}
+
+/* Zšednutí obrázku u zamčených */
+.trophy-plaque.locked .trophy-img {
+    filter: grayscale(100%) opacity(0.3) drop-shadow(0 0 0 transparent);
+}
+
+/* Velký zámek přes zamčenou trofej */
+.trophy-lock-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 3.5rem;
+    text-shadow: 2px 2px 5px rgba(0,0,0,0.7);
+    z-index: 2;
+}
+
+.trophy-title {
+    font-weight: bold;
+    color: #4e342e; /* Tmavě hnědý text */
+    font-size: 1.1rem;
+    margin-bottom: 5px;
+    line-height: 1.2;
+}
+
+.trophy-plaque.locked .trophy-title {
+    color: #795548; /* Světlejší hnědá pro text u zamčených */
+}
+
+.trophy-status {
+    font-size: 0.9rem;
+    color: #10b981; /* Zelená pro získáno */
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.trophy-plaque.locked .trophy-status {
+    color: #ef4444; /* Červená pro zamčeno */
 }
 
 

@@ -304,14 +304,51 @@ function renderPvE() {
     // Příprava na budoucí obrázek na pozadí z dat configu (pokud tam vlastnost "bgImage" přidáš)
     const bgImageStyle = stage.bgImage ? `style="background-image: url('images/pve/${stage.bgImage}');"` : '';
 
+    // --- GENEROVÁNÍ KRESLENÉ MAPY POSTUPU ---
+    const totalDungeons = PVE_DUNGEONS.length;
+    // Výpočet pro červenou fixu na čáře
+    const progressPercent = (dIndex / (totalDungeons - 1)) * 100;
+
+    const timelineNodesHtml = PVE_DUNGEONS.map((d, idx) => {
+        let nodeClass = 'locked';
+        let icon = idx + 1; // Čísla pro zamčené
+        
+        if (idx < dIndex) {
+            nodeClass = 'completed';
+            icon = '✓'; 
+        } else if (idx === dIndex) {
+            nodeClass = 'current';
+            icon = '⚽';
+        }
+        
+        return `
+            <div class="pve-node ${nodeClass}">
+                ${icon}
+                <span class="tooltip-text">${d.name}</span>
+            </div>
+        `;
+    }).join('');
+
+    const timelineHtml = `
+        <div class="pve-timeline-wrapper">
+            <div class="pve-timeline-line"></div>
+            <div class="pve-timeline-progress" style="width: ${progressPercent}%;"></div>
+            <div class="pve-timeline-nodes">
+                ${timelineNodesHtml}
+            </div>
+        </div>
+    `;
+
     mainContent.innerHTML = `
         <div style="position: relative;">
-            ${testResetHtml} <!-- Testovací tlačítko -->
+            ${testResetHtml} 
             <button class="help-btn-corner" onclick="showHelp('pve')">Nápověda</button>
             <div class="text-center">
                 <h2 class="section-title">${dungeon.name}</h2>
                 <p class="pve-dungeon-description">"${dungeon.desc}"</p>
             </div>
+
+            ${timelineHtml}
 
             <div class="pve-stage-card ${stage.isBoss ? 'is-boss' : ''}">
                 
@@ -1633,6 +1670,7 @@ window.openHoFMenu = function(type) {
 
     let itemsHtml = '';
     let titleText = '';
+    let modalWidth = '600px'; // Výchozí šířka pro ligu
 
     if (type === 'league') {
         titleText = '🏆 Získané ligové tituly';
@@ -1668,30 +1706,47 @@ window.openHoFMenu = function(type) {
             }).join('');
         }
     } else {
+        // --- NOVÁ SEKCE PRO PVE TROFEJE ---
         titleText = '☠️ Trofeje z Fotbalového podzemí';
-        const trophies = playerData.hallOfFame.pve || [];
+        modalWidth = '800px'; // Zvětšíme okno, aby se trofeje hezky poskládaly vedle sebe
         
-        if (trophies.length === 0) {
-            itemsHtml = `<p class="text-muted" style="text-align:center; width:100%;">Zatím jsi neporazil žádného bosse v podzemí.</p>`;
-        } else {
-            itemsHtml = trophies.map(t => `
-                <div class="inventory-card" style="background: rgba(30, 41, 59, 0.8); border: 2px solid #64748b; padding: 15px; border-radius: 8px;">
-                    <h3 style="color: #f87171; margin: 0 0 5px 0;">Hlava: ${t.boss}</h3>
-                    <div style="color: #9ca3af; font-size: 0.9rem;">Lokace: ${t.dungeon}</div>
-                    <div style="color: #64748b; font-size: 0.8rem; margin-top: 10px; text-align: right;">🗓️ Získáno: ${t.date}</div>
+        // PVE_DUNGEONS je naše nové pole 10 pohárů z configu
+        const pveTrophiesHtml = PVE_DUNGEONS.map((dungeon, index) => {
+            // Kontrola, jestli už hráč postoupil za tento index
+            const isUnlocked = playerData.pve.dungeonIndex > index;
+            
+            const statusText = isUnlocked ? '🏆 Získáno' : '🔒';
+            const lockedClass = isUnlocked ? '' : 'locked';
+            const lockIcon = isUnlocked ? '' : '<div class="trophy-lock-icon">🔒</div>';
+            
+            // Hra se pokusí načíst např. kopyta.png. Pokud soubor neexistuje, použije tvůj trophy.jpg!
+            return `
+                <div class="trophy-plaque ${lockedClass}">
+                    <div class="trophy-img-container">
+                        <img src="images/trophies/${dungeon.id}.png" alt="${dungeon.name}" class="trophy-img" onerror="this.onerror=null; this.src='images/trophies/trophy.jpg';">
+                        ${lockIcon}
+                    </div>
+                    <div class="trophy-title">${dungeon.name}</div>
+                    <div class="trophy-status">${statusText}</div>
                 </div>
-            `).join('');
-        }
+            `;
+        }).join('');
+
+        itemsHtml = `
+            <div class="trophy-cabinet">
+                ${pveTrophiesHtml}
+            </div>
+        `;
     }
 
     const modalHtml = `
         <div id="hof-modal" class="ml-selector-overlay" onclick="this.remove()">
-            <div class="ml-selector-box" style="max-width: 600px; width: 95%; max-height: 85vh; overflow-y: auto;" onclick="event.stopPropagation()">
+            <div class="ml-selector-box" style="max-width: ${modalWidth}; width: 95%; max-height: 85vh; overflow-y: auto;" onclick="event.stopPropagation()">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4b5563; padding-bottom: 15px; margin-bottom: 20px;">
                     <h2 style="color: #fcd34d; margin: 0;">${titleText}</h2>
                     <button class="btn-task" style="padding: 8px 15px; background: #991b1b;" onclick="document.getElementById('hof-modal').remove()">Zavřít</button>
                 </div>
-                <div style="display: flex; flex-direction: column; gap: 15px; text-align: left;">
+                <div style="${type === 'league' ? 'display: flex; flex-direction: column; gap: 15px; text-align: left;' : ''}">
                     ${itemsHtml}
                 </div>
             </div>
