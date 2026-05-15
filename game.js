@@ -645,8 +645,8 @@ function setupNavigation() {
         'locker-room': 'images/satna1.png',    
         'pve': 'images/podzemi1.png',          
         'hall-of-fame': 'images/sin_slavy1.png', 
-        'mail': 'images/sin_slavy1.png',            
-        'minileague': 'images/treninkove_hriste1.png',   
+        'mail': 'images/posta1.png',            
+        'minileague': 'images/miniliga1.jpg',
         'default': 'images/vychozi_pergamen.jpg'     
     };
 

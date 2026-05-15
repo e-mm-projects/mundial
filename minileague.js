@@ -503,7 +503,7 @@ window.runMLSimulation = async function(leagueName, league) {
             content: logA,
             result: `${scoreA}:${scoreB}`,
             rewards: { money: 0, xp: 0, pXp: 0, homeTeam: nameA, awayTeam: nameB, myRating: ratingA, botRating: ratingB, isML: true },
-            date: new Date().toLocaleDateString(),
+            date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' }),
             read: false
         };
         
@@ -513,7 +513,7 @@ window.runMLSimulation = async function(leagueName, league) {
             content: logB,
             result: `${scoreB}:${scoreA}`,
             rewards: { money: 0, xp: 0, pXp: 0, homeTeam: nameB, awayTeam: nameA, myRating: ratingB, botRating: ratingA, isML: true },
-            date: new Date().toLocaleDateString(),
+            date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' }),
             read: false
         };
         
@@ -548,7 +548,7 @@ window.runMLSimulation = async function(leagueName, league) {
                 sender: "🏆 Vedení Miniligy",
                 subject: `Konec sezóny v lize ${leagueName}`,
                 text: `Sezóna v lize ${leagueName} skončila! Skončil jsi na ${finalRank}. místě se ziskem ${finalPts} bodů. Právě byla odstartována nová sezóna, hodně štěstí!`,
-                date: new Date().toLocaleDateString(),
+                date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' }),
                 read: false
             };
             await window.dbSet(window.dbRef(window.db, `mail_queue/${uid}/${endSeasonMail.id}`), endSeasonMail);

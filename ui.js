@@ -291,49 +291,89 @@ function renderPvE() {
                 </div>
             </div>
             ${window.IS_TEST_MODE ? `<button class="btn-task btn-test" onclick="skipPvETime()">[TEST] Přeskočit čekání</button>` : ''}
-            <button class="btn-task btn-full-width" style="background-color: #4b5563; border-color: #374151;" disabled>Odpočinek...</button>
+            <button class="btn-pve-challenge" disabled>Odpočinek...</button>
         `;
     } else {
         actionSection = `
-        <button class="btn-task btn-full-width" 
-            style="background-color: ${hasSpace ? '#b91c1c' : '#4b5563'};" 
-            ${hasSpace ? `onclick="startPvEMatch(${dIndex}, ${sIndex})"` : 'disabled'}>
+        <button class="btn-pve-challenge" ${hasSpace ? `onclick="startPvEMatch(${dIndex}, ${sIndex})"` : 'disabled'}>
             ⚔️ Vyzvat soupeře (Zdarma)
         </button>
         `;
     }
 
+    // Příprava na budoucí obrázek na pozadí z dat configu (pokud tam vlastnost "bgImage" přidáš)
+    const bgImageStyle = stage.bgImage ? `style="background-image: url('images/pve/${stage.bgImage}');"` : '';
+
     mainContent.innerHTML = `
-        <button class="help-btn-corner" onclick="showHelp('pve')">Nápověda</button>
-        <div class="text-center">
-            <h2 class="section-title">${dungeon.name}</h2>
-            <p class="pve-dungeon-description">"${dungeon.desc}"</p>
-        </div>
-
-        <div class="pve-stage-card ${stage.isBoss ? 'is-boss' : ''}">
-            <div class="pve-card-header">
-                <span class="pve-badge ${stage.isBoss ? 'boss' : 'normal'}">
-                    Soupeř ${sIndex + 1} / ${dungeon.stages.length}
-                </span>
-                <button class="btn-task" style="padding: 5px 15px; background-color: #2563eb; border-color: #1d4ed8; font-size: 0.9rem;" onclick="viewPvEBot(${dIndex}, ${sIndex})">
-                    📋 Zobrazit statistiky
-                </button>
-            </div>
-            
-            <h3 class="pve-opponent-title" style="color: ${stage.isBoss ? '#fca5a5' : '#fcd34d'};">
-                ${stage.isBoss ? '☠️ ' : ''}${stage.name}
-            </h3>
-            
-            <div class="pve-reward-box">
-                <h4 class="pve-reward-header">🎁 Odměna za vítězství</h4>
-                <ul class="scout-odds-list" style="color: #e5e7eb;">
-                    <li><strong>+${stage.reward.xp} XP</strong> pro všechny hráče na hřišti</li>
-                    <li><strong>Zisk hráče:</strong> Rank [${stage.reward.rank}] (${stage.reward.minStars} až ${stage.reward.maxStars} ⭐)</li>
-                </ul>
+        <div style="position: relative;">
+            ${testResetHtml} <!-- Testovací tlačítko -->
+            <button class="help-btn-corner" onclick="showHelp('pve')">Nápověda</button>
+            <div class="text-center">
+                <h2 class="section-title">${dungeon.name}</h2>
+                <p class="pve-dungeon-description">"${dungeon.desc}"</p>
             </div>
 
-            ${warningHtml}
-            ${actionSection}
+            <div class="pve-stage-card ${stage.isBoss ? 'is-boss' : ''}">
+                
+                <!-- POZADÍ A PŘECHOD -->
+                <div class="pve-card-bg" ${bgImageStyle}></div>
+                <div class="pve-card-overlay"></div>
+
+                <!-- SAMOTNÝ OBSAH (nad pozadím) -->
+                <div class="pve-card-content">
+                    <div class="pve-card-header" style="justify-content: center; margin-bottom: 15px;">
+                        <span class="pve-badge ${stage.isBoss ? 'boss' : 'normal'}" style="font-size: 1rem; padding: 6px 15px;">
+                            Soupeř ${sIndex + 1} / ${dungeon.stages.length}
+                        </span>
+                    </div>
+                    
+                    <!-- Zmenšili jsme margin-bottom u nadpisu na 15px -->
+                    <h3 class="pve-opponent-title" style="text-align: center; font-size: 1.8rem; color: ${stage.isBoss ? '#fca5a5' : '#fcd34d'}; margin-bottom: 15px;">
+                        ${stage.isBoss ? '☠️ ' : ''}${stage.name}
+                    </h3>
+
+                    <!-- NOVĚ PŘIDANÝ VTIPNÝ POPISEK -->
+                    <div class="pve-stage-desc">
+                        "${stage.desc}"
+                    </div>
+                    
+                    <!-- NOVĚ PŘIDANÉ STATISTIKY SOUPEŘE -->
+                    <div class="pve-inline-stats">
+                        <div class="pve-stat-item">
+                            <span class="pve-stat-label">⚔️ Útok</span>
+                            <span class="pve-stat-val">${stage.botPower.att}</span>
+                        </div>
+                        <div class="pve-stat-item">
+                            <span class="pve-stat-label">🧭 Záloha</span>
+                            <span class="pve-stat-val">${stage.botPower.mid}</span>
+                        </div>
+                        <div class="pve-stat-item">
+                            <span class="pve-stat-label">🛡️ Obrana</span>
+                            <span class="pve-stat-val">${stage.botPower.def}</span>
+                        </div>
+                        <div class="pve-stat-item">
+                            <span class="pve-stat-label">🧤 Brankář</span>
+                            <span class="pve-stat-val">${stage.botPower.gk}</span>
+                        </div>
+                    </div>
+
+                    <!-- VYSVĚTLUJÍCÍ TEXT -->
+                    <div style="text-align: center; font-size: 0.8rem; color: #9ca3af; margin-top: -10px; margin-bottom: 20px; font-style: italic;">
+                        * Uvedené hodnoty představují průměrnou sílu hráčů soupeře.
+                    </div>
+
+                    <div class="pve-reward-box">
+                        <h4 class="pve-reward-header" style="text-align: center; margin-bottom: 10px;">🎁 Odměna za vítězství</h4>
+                        <ul class="scout-odds-list" style="color: #e5e7eb; padding: 0; text-align: center; list-style: none;">
+                            <li style="margin-bottom: 5px;"><strong>+${stage.reward.xp} XP</strong> pro všechny hráče na hřišti</li>
+                            <li><strong>Zisk hráče:</strong> Rank [${stage.reward.rank}] (${stage.reward.minStars} až ${stage.reward.maxStars} ⭐)</li>
+                        </ul>
+                    </div>
+
+                    ${warningHtml}
+                    ${actionSection}
+                </div>
+            </div>
         </div>
     `;
 
@@ -570,7 +610,7 @@ function renderScouting() {
             `;
         } else {
             // SKAUT JE ZAMČENÝ -> ZOBRAZÍME TLAČÍTKO K NÁKUPU (NEBO ZÁMEK)
-            const scoutPrice = 1; // 1 mince
+            const scoutPrice = 1500; // 1 mince
             const canAffordScout = playerData.money >= scoutPrice;
 
             let actionHtml = '';
@@ -765,18 +805,118 @@ function renderMatches() {
     updateTimerUI('match-timer', playerData.nextMatchTime);
 }
 
-// --- POŠTA (Seznam zpráv) ---
+// --- POŠTA (Řádkový styl s vycentrovanými prvky) ---
 window.renderMail = function() {
     const mainContent = document.getElementById('main-content');
     
     if (!playerData.mail || playerData.mail.length === 0) {
         mainContent.innerHTML = `
+            <button class="help-btn-corner" onclick="showHelp('mail')">Nápověda</button>
             <div class="text-center">
-                <h2 class="section-title">Pošta</h2>
-                <p class="mail-empty-text">Schránka je zatím prázdná, trenére.</p>
+                <h2 class="section-title">Doručená pošta</h2>
+            </div>
+            <div class="mail-container" style="text-align: center; color: #fdf5e6; padding: 40px;">
+                Schránka je zatím prázdná, trenére.
             </div>`;
         return;
     }
+
+    // Spočítáme jen NEpřečtené zápasové reporty
+    const unreadMatches = playerData.mail.filter(m => !m.read && !m.type && m.result).length;
+
+    // Menší, vycentrované tlačítko vložené do kontejneru pošty
+    const playAllHtml = unreadMatches > 0 
+        ? `<div class="mail-top-actions">
+               <button class="btn-play-all-small" onclick="playAllMail()">▶ Přehrát vše (${unreadMatches})</button>
+           </div>` 
+        : ``;
+
+    const mailHtml = playerData.mail.map((m, index) => {
+        const isUnread = !m.read;
+        const unreadClass = isUnread ? 'unread' : '';
+
+        // --- 1. ŽÁDOST O PŘIPOJENÍ DO MINILIGY ---
+        if (m.type === "ml_invite") {
+            return `
+            <div class="mail-row ${unreadClass}" style="border-left-color: #f59e0b;">
+                <div class="mail-info">
+                    <div class="mail-title">${m.subject}</div>
+                    <div class="mail-date">${m.date}</div>
+                    <div class="mail-text">${m.text}</div>
+                </div>
+                <div class="mail-action" style="flex-direction: column; justify-content: center; min-width: 100px; gap: 5px;">
+                    <button class="btn-mail-text accept" style="width: 100%;" onclick="acceptMLInvite('${m.id}', '${m.applicantUid}', '${m.applicantName}', '${m.leagueName}', '${m.leagueRank}')">✅ Přijmout</button>
+                    <button class="btn-mail-text reject" style="width: 100%;" onclick="rejectMLInvite('${m.id}', '${m.applicantUid}', '${m.leagueName}')">❌ Zamítnout</button>
+                </div>
+            </div>
+            `;
+        }
+
+        // --- 2. KLASICKÁ TEXTOVÁ ZPRÁVA (S IKONKOU KOŠE) ---
+        if (m.text && !m.result) {
+            return `
+            <div class="mail-row ${unreadClass}" style="border-left-color: #3b82f6;">
+                <div class="mail-info">
+                    <div class="mail-title">${m.subject}</div>
+                    <div class="mail-date">${m.date}</div>
+                    <div class="mail-text">${m.text}</div>
+                </div>
+                <div class="mail-action">
+                    <button class="btn-icon delete" title="Smazat zprávu" onclick="playerData.mail.splice(${index}, 1); saveGame(); renderMail();">
+                        🗑️
+                    </button>
+                </div>
+            </div>
+            `;
+        }
+
+        // --- 3. VIDEO ZÁZNAM ZÁPASU (S Kulatým Tlačítkem) ---
+        const scoreDisplay = m.read ? m.result : '? : ?';
+        let scoreColor = '#4e342e'; 
+        let borderInline = ''; // Pro nepřečtené zprávy necháme HTML čisté, postará se o to CSS třída .unread
+
+        // Nastavíme barvu levé čáry JENOM u přečtených zápasů (podle výsledku)
+        if (m.read && m.result && m.result.includes(':')) {
+            const [myGoals, botGoals] = m.result.split(':').map(Number);
+            let borderColor = '#9ca3af'; // Výchozí šedá
+            
+            if (myGoals > botGoals) {
+                scoreColor = '#166534'; // Zelený text
+                borderColor = '#10b981'; // Zelená čára
+            } else if (myGoals < botGoals) {
+                scoreColor = '#b91c1c'; // Červený text
+                borderColor = '#ef4444'; // Červená čára
+            } else {
+                scoreColor = '#4b5563'; // Šedý text
+                borderColor = '#6b7280'; // Šedá čára
+            }
+            borderInline = `style="border-left-color: ${borderColor};"`;
+        } else if (m.read) {
+            borderInline = `style="border-left-color: #9ca3af;"`; // Pojistka pro přečtené bez skóre
+        }
+
+        const iconClass = isUnread ? 'play' : 'replay';
+        const iconSymbol = isUnread ? '▶' : '↻'; 
+
+        return `
+        <div class="mail-row ${unreadClass}" ${borderInline}>
+            <div class="mail-info">
+                <div class="mail-title">${m.subject}</div>
+                <div class="mail-date">${m.date}</div>
+            </div>
+            
+            <div class="mail-score-box" style="color: ${scoreColor};">
+                ${scoreDisplay}
+            </div>
+            
+            <div class="mail-action">
+                <button class="btn-icon ${iconClass}" title="${isUnread ? 'Přehrát zápas' : 'Znovu přehrát'}" onclick="openMatchReport(${index})">
+                    ${iconSymbol}
+                </button>
+            </div>
+        </div>
+        `;
+    }).join('');
 
     mainContent.innerHTML = `
         <button class="help-btn-corner" onclick="showHelp('mail')">Nápověda</button>
@@ -784,86 +924,29 @@ window.renderMail = function() {
             <h2 class="section-title">Doručená pošta</h2>
         </div>
         <div class="mail-container">
-            ${playerData.mail.map((m, index) => {
-                const unreadClass = m.read ? '' : 'unread';
-
-                // --- 1. ŽÁDOST O PŘIPOJENÍ DO MINILIGY ---
-                if (m.type === "ml_invite") {
-                    return `
-                    <div class="mail-message ${unreadClass}" style="border-left-color: #f59e0b;">
-                        <div>
-                            <strong class="mail-msg-title">${m.subject}</strong> 
-                            <span class="mail-msg-date">(${m.date})</span>
-                            <br><span style="color: #d1d5db; display: block; margin-top: 5px;">${m.text}</span>
-                        </div>
-                        <div style="margin-top: 10px; display: flex; gap: 10px;">
-                            <button class="btn-task" style="background: #10b981; padding: 5px 15px;" 
-                                    onclick="acceptMLInvite('${m.id}', '${m.applicantUid}', '${m.applicantName}', '${m.leagueName}', '${m.leagueRank}')">
-                                ✅ Přijmout
-                            </button>
-                            <button class="btn-task" style="background: #ef4444; padding: 5px 15px;" 
-                                    onclick="rejectMLInvite('${m.id}', '${m.applicantUid}', '${m.leagueName}')">
-                                ❌ Zamítnout
-                            </button>
-                        </div>
-                    </div>
-                    `;
-                }
-
-                // --- 2. KLASICKÁ TEXTOVÁ ZPRÁVA (výsledky miniligy, oznámení atd.) ---
-                if (m.text && !m.result) {
-                    return `
-                    <div class="mail-message ${unreadClass}" style="border-left-color: #3b82f6;">
-                        <div>
-                            <strong class="mail-msg-title">${m.subject}</strong> 
-                            <span class="mail-msg-date">(${m.date})</span>
-                            <br><span style="color: #d1d5db; display: block; margin-top: 5px;">${m.text}</span>
-                        </div>
-                        <button class="btn-task" style="background: #4b5563; padding: 5px 15px; margin-top: 10px;" 
-                                onclick="playerData.mail.splice(${index}, 1); saveGame(); renderMail();">
-                            🗑️ Smazat zprávu
-                        </button>
-                    </div>
-                    `;
-                }
-
-                // --- 3. VIDEO ZÁZNAM BĚŽNÉHO ZÁPASU (Původní logika) ---
-                const scoreDisplay = m.read ? m.result : '❓ : ❓';
-                const scoreText = m.read ? `Konečné skóre: ${scoreDisplay}` : `Skóre je tajné (Pusť si záznam!)`;
-                const btnText = m.read ? 'Znovu přehrát' : '▶ Přehrát zápas';
-
-                let borderColor = '#9a9f05'; 
-                let scoreColor = '#9a9f05';  
-
-                if (m.read && m.result && m.result.includes(':')) {
-                    const [myGoals, botGoals] = m.result.split(':').map(Number);
-                    if (myGoals > botGoals) {
-                        borderColor = '#10b981'; scoreColor = '#166534';
-                    } else if (myGoals < botGoals) {
-                        borderColor = '#ef4444'; scoreColor = '#b91c1c';
-                    } else {
-                        borderColor = '#6b7280'; scoreColor = '#4b5563';
-                    }
-                }
-
-                const btnClass = m.read ? 'btn-replay-read' : 'btn-replay-unread';
-
-                return `
-                <div class="mail-message ${unreadClass}" style="border-left-color: ${borderColor};">
-                    <div>
-                        <strong class="mail-msg-title">${m.subject}</strong> 
-                        <span class="mail-msg-date">(${m.date})</span>
-                        <br><span class="mail-msg-score-text" style="color: ${scoreColor};">${scoreText}</span>
-                    </div>
-                    <button class="btn-task ${btnClass}" onclick="openMatchReport(${index})">
-                        ${btnText}
-                    </button>
-                </div>
-                `;
-            }).join('')}
+            ${playAllHtml}
+            ${mailHtml}
         </div>
     `;
-}
+};
+
+// --- CHYTRÉ HROMADNÉ PŘEHRÁNÍ VÝSLEDKŮ ---
+window.playAllMail = function() {
+    if (!playerData.mail) return;
+    
+    let changed = false;
+    playerData.mail.forEach(m => {
+        if (!m.read && !m.type && m.result) {
+            m.read = true;
+            changed = true;
+        }
+    });
+    
+    if (changed) {
+        saveGame();
+        renderMail(); 
+    }
+};
 
 // Pomocná funkce pro vykreslení JEDNÉ řádky akce v záznamu
 function renderReplayAction(action) {
