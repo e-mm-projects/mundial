@@ -638,7 +638,7 @@ function setupNavigation() {
     const backgrounds = {
         'office': 'images/kancelar_pozadi.png',
         'training': 'images/treninkove_hriste1.png',     
-        'match': 'images/treninkove_hriste1.png',          
+        'match': 'images/zapasy1.png',          
         'shop': 'images/obchod1.png',          
         'scouting': 'images/skauting1.png',    
         'stadium': 'images/stadion1.png',      
