@@ -269,70 +269,7 @@ body {
     align-items: flex-start; 
 }
 
-.player-card {
-    height: max-content; /* Karta bude přesně tak vysoká, jak potřebuje její obsah */
-    background: #fdf5e6;
-    border: 2px solid #8d6e63;
-    border-radius: 8px;
-    padding: 10px;
-    width: 200px;
-    cursor: pointer;
-    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-    transition: transform 0.1s, background-color 0.2s;    
-    /* Zabrání přetékání obsahu z karty */
-    box-sizing: border-box; 
-    overflow: hidden; /* Pro jistotu schová vše, co by chtělo vytéct */
-}
-
-.player-card:hover {
-    transform: translateY(-3px);
-    background-color: #fff;
-}
-
-/* Prázdný slot na střídačce a v sestavě */
-.player-card.empty-slot {
-    background: rgba(0, 0, 0, 0.3); /* Tmavší, poloprůhledné pozadí */
-    border: 2px dashed #6b7280; /* Přerušovaná šedá čára */
-    box-shadow: none; /* Odstraníme stín, aby to vypadalo "prázdně" */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 200px; /* Udržuje výšku stejnou jako reálné karty */
-    transition: all 0.2s ease;
-}
-
-.player-card.empty-slot:hover {
-    background: rgba(0, 0, 0, 0.5);
-    border-color: #9ca3af;
-}
-
-/* Úprava samotného textu uvnitř */
-.player-card.empty-slot div {
-    color: #9ca3af !important; /* Pěkná světle šedá barva textu */
-    font-size: 1rem !important;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
 /* --- ŠTÍTKY A KARTY HRÁČŮ --- */
-
-/* Cenovky na kartách */
-.price-tag {
-    text-align: center;
-    font-size: 0.9rem;
-    font-weight: bold;
-    border-radius: 4px;
-    margin: 5px 0;
-    padding: 2px;
-}
-.price-tag.buy {
-    color: #166534;
-    background-color: #dcfce7;
-}
-.price-tag.sell {
-    color: #b91c1c;
-    background-color: #fef2f2;
-}
 
 /* Karta reprezentující prázdné místo na střídačce */
 .player-card.empty-slot {
@@ -351,103 +288,246 @@ body {
     background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Zvýraznění při kliknutí (když vybíráme hráče k výměně) */
-.player-card.selected {
-    background-color: #ffcc80;
-    border-color: #e65100;
-    transform: scale(1.05);
-    box-shadow: 0 0 10px #e65100;
+/* --- NOVÉ GRAFICKÉ KARTY HRÁČŮ - KOMIKSOVÝ STYL V2 --- */
+.graphic-card {
+    position: relative;
+    width: 240px;
+    height: 336px;
+    background-size: cover;
+    background-position: center;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    font-family: 'Baloo 2', 'Segoe UI', Tahoma, sans-serif;
+    color: #1a0f0a; 
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.player-name {
-    font-weight: bold;
-    font-size: 1.1rem;
-    margin-bottom: 2px;
-    color: #1e3a8a;
-    text-align: center;
-    border-bottom: 2px solid rgba(0,0,0,0.1); /* Podtržení jména */
+.graphic-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.7);
 }
 
-.player-position-row {
-    text-align: center;
+/* 1. Odznak s levelem - styl z obrázku: Zlatý/žlutý nápis na štítu */
+.gc-level-badge {
+    position: absolute;
+    top: 2%;
+    left: 6%;
+    width: 20%;
+    height: 15%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.8rem; /* Větší a bold */
     font-weight: bold;
+    color: #ffffff; /* Číslo na štítu v obrázku je zlatavé */
+    text-shadow:
+        1px 1px 0 #000,
+        2px 2px 4px rgba(0,0,0,0.8); /* Výraznější stín pro komiksový efekt */
+}
+
+/* 2. Hlavička vpravo - Hvězdy, Jméno, Pozice */
+.gc-header {
+    position: absolute;
+    top: 3%; /* Posunuto úplně nahoru podél štítu */
+    left: 28%; /* Vyhýbá se štítu na levé straně */
+    right: 5%;
+    text-align: center;
     text-transform: uppercase;
-    font-size: 0.85rem;
-    padding: 3px 0;
-    margin-bottom: 5px;
-    border-bottom: 1px solid rgba(0,0,0,0.1); /* Podtržení pozice */
-    color: #374151;
+    background: radial-gradient(ellipse at center, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0) 75%);
+    padding: 5px 0;
 }
 
-.player-info-line {
-    font-size: 0.85rem;
-    color: #4b5563;
-    text-align: center;
+/* Plné a prázdné hvězdy */
+.gc-stars {
+    font-size: 1.7rem;
+    margin-bottom: 27px;
+    letter-spacing: 2px;
+}
+
+.star-filled {
+    color: #f59e0b; /* Krásná sytě zlatá */
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+}
+
+.star-empty {
+    color: #4b5563; /* Tmavší šedá pro neaktivní hvězdy */
+    opacity: 0.5; /* Poloprůhlednost pro efekt "vyšednutí" */
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.3); /* Zářez do papíru */
+}
+
+/* Jméno hráče s bílou září pro lepší čitelnost */
+.gc-name {
+    font-size: 1.0rem;
+    font-weight: 700;
+    color: #1a0f0a;
+    line-height: 1.1;
     margin-bottom: 3px;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.9);
+    position: relative;
+    left: -27px;
 }
 
-.player-rank-text {
-    font-size: 0.8rem;
-    font-style: italic;
-    color: #6b7280;
+/* Zvýrazněná pozice s oddělujícím podtržením */
+.gc-position {
+    font-size: 1.4 rem;
+    font-weight: 900;
+    color: #291811; /* Mírně odlišný odstín hnědé */
+    letter-spacing: 1.5px;
+    margin-top: 0;
+    
+    /* Elegantní podtržení jen pod samotným slovem */
+    display: inline-block;
+    border-top:  2px solid rgba(26, 15, 10, 0.4);
+    padding-bottom: 2px;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+    position: relative;
+    left: -27px;
+}
+
+/* 3. Efekt pro prostřední prkno (styl 'KOPYTO') */
+.gc-rank-plank {
+    position: absolute;
+    top: 46%;
+    left: 15%;
+    right: 15%;
     text-align: center;
-    margin-bottom: 5px;
+    font-size: 1 rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    
+    /* Vlastní barva textu, aby se dala dělat záře */
+    color: #1a0f0a; /* Tmavý nápis na prkně */
+    
+    /* KOMPLEXNÍ text-shadow pro oranžový glow efekt na obrázku */
+    text-shadow:
+        0 0 5px #fff,       /* Mírná bílá záře přímo kolem písmen */
+        0 0 10px #f90,      /* Hlavní oranžová záře */
+        0 0 20px #ff0;      /* Mírnější vnější žlutá záře */
 }
 
-.player-stars {
-    color: #f59e0b; /* Krásná zlatá barva */
-    font-size: 0.9rem;
-    text-align: center;
-    margin-bottom: 8px;
-    letter-spacing: 2px; /* Mírná mezera mezi hvězdami */
-}
-
-.player-stats {
-    font-size: 0.85rem;
+/* 4. Tabulka statistik - Zmenšení proti přetékání do čísel */
+.gc-stats-grid {
+    position: absolute;
+    top: 59%;
+    left: 11%;
+    right: 12%;
+    height: 19%;
     display: grid;
-    /* Změněno na jeden sloupec, aby se vešla celá slova, a mírně odsazeno */
-    grid-template-columns: 1fr;
-    gap: 4px;
-    margin-top: 5px;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    align-items: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #1a0f0a;
 }
 
-/* Decentní "vytažení" statistik místo zeleného podbarvení */
-.stat-item.highlighted {
-    background-color: rgba(255, 255, 255, 0.5);
-    border: 1px solid rgba(0,0,0,0.05);
-    border-radius: 4px;
-    box-shadow: 1px 1px 2px rgba(0,0,0,0.05);
-    color: inherit;
-    font-weight: normal;
+.gc-stat-item {
     display: flex;
     justify-content: space-between;
+    padding: 0 8px;
     align-items: center;
-    padding: 3px 8px;
 }
 
-.stat-item.highlighted span {
-    color: #1e3a8a; /* Hodnota statu bude výraznější modrá */
+/* Posunutí popisku mírně doleva, aby nenarážel do svislé čáry v obrázku */
+.gc-stat-item span:first-child {
+    padding-right: 5px; 
+}
+
+.gc-stat-val {
+    font-size: 0.95rem; /* Velikost čísel */
+    color: #1a0f0a;
+}
+
+/* 5. Celková síla - světlý text, tmavý obrys (podle tvého vzoru) */
+.gc-total-plank {
+    position: absolute;
+    bottom: 8%;
+    left: 10%;
+    right: 10%;
+    text-align: center;
+    font-size: 1.2rem; /* Větší nápis */
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #f5f5d4; /* Světle krémová barva výplně */
+    
+    /* Vytvoří tmavý obrys kolem světlého textu */
+    -webkit-text-stroke: 1px #3e2723;
+    paint-order: stroke fill;
+    
+    /* Přidá tvrdší tmavý stín pro hloubku */
+    text-shadow: 2px 2px 3px rgba(0,0,0,0.9); 
+}
+
+/* --- TRÉNINKOVÉ PRVKY NA GRAFICKÉ KARTĚ  --- */
+
+.gc-xp-bar-wrapper {
+    position: absolute;
+    top: 42%;
+    left: 15%;
+    right: 15%;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid #4b5563;
+    border-radius: 10px;
+    height: 8px;
+    overflow: hidden;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
+}
+
+.gc-xp-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #059669, #34d399);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.gc-xp-bar-fill.maxed {
+    background: linear-gradient(90deg, #b45309, #f59e0b);
+}
+
+.btn-upgrade-stat {
+    background: #10b981;
+    color: white;
+    border: 1px solid #047857;
+    border-radius: 8px;
+    width: 22px;
+    height: 18px;
+    font-size: 1.2rem;
     font-weight: bold;
-}
-
-.stat-item span {
-    font-weight: bold;
-    color: #d84315;
-}
-
-/* Zvýrazněná patička karty s celkovou silou */
-.stat-total {
-    display: flex; 
-    justify-content: space-between; 
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
     align-items: center;
-    background: #451a03; 
-    border: 1px solid #78350f; 
-    color: #fbbf24; 
-    padding: 4px 8px; 
-    border-radius: 4px; 
-    margin-top: 6px; 
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+    justify-content: center;
+    box-shadow: 0 2px 0 #047857;
+    transition: transform 0.1s, box-shadow 0.1s;
 }
+
+.btn-upgrade-stat:active {
+    transform: translateY(2px);
+    box-shadow: none;
+}
+
+
+/* --- PRÁZDNÝ SLOT PRO GRAFICKOU KARTU --- */
+.graphic-card.empty-slot {
+    background: rgba(0, 0, 0, 0.4);
+    background-image: none !important; /* Pro jistotu přebije obrázek */
+    border: 2px dashed #9ca3af;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.graphic-card.empty-slot:hover {
+    background: rgba(0, 0, 0, 0.6);
+    border-color: #fcd34d;
+    transform: none; /* Prázdný slot by neměl při najetí myší povyskočit */
+}
+
 
 /* --- XP LIŠTA (Progress bar) --- */
 .xp-bar-container {
@@ -2227,20 +2307,6 @@ body {
     font-size: 0.9rem;
 }
 
-/* --- BARVY KARET PODLE POZIC --- */
-.player-card.pos-att { background-color: #fee2e2 !important; border-color: #f87171; } /* Světle červená */
-.player-card.pos-mid { background-color: #e0f2fe !important; border-color: #7dd3fc; } /* Světle modrá */
-.player-card.pos-def { background-color: #f0fdf4 !important; border-color: #86efac; } /* Světle zelená */
-.player-card.pos-gk  { background-color: #ffffff !important; border-color: #d1d5db; } /* Bílá */
-
-/* Styl pro národnost na kartě */
-.player-nationality {
-    font-size: 0.8rem;
-    color: #6b7280;
-    text-align: center;
-    margin-bottom: 5px;
-}
-
 /* =========================================
    🏆 SEKCE MINILIGA
 ========================================= */
@@ -2416,11 +2482,6 @@ body {
 .btn-ml-remove.active {
     background-color: #ef4444;
     box-shadow: 0 0 10px #ef4444;
-}
-
-.player-card.ml-selected {
-    border: 2px solid #fcd34d;
-    transform: scale(1.05);
 }
 
 /* ========================================= */
@@ -2781,116 +2842,6 @@ body {
     color: #9ca3af;
     font-size: 0.9em;
     font-style: italic;
-}
-
-/* =========================================
-   🏆 DESIGN KARTY HRÁČE
-========================================= */
-
-.card-header {
-    position: relative;
-    padding-bottom: 8px;
-    border-bottom: 1px solid rgba(0,0,0,0.1);
-    margin-bottom: 10px;
-    text-align: center;
-}
-
-.card-top-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 4px;
-}
-
-.card-flag {
-    font-size: 1.2rem;
-    line-height: 1;
-}
-
-.card-name {
-    font-weight: bold;
-    font-size: 1.05rem;
-    color: #1e3a8a;
-    flex: 1;
-    text-align: center;
-    line-height: 1.1;
-    padding: 0 5px;
-}
-
-/* Kroužek pro Level */
-.card-level {
-    width: 24px;
-    height: 24px;
-    background: #1e3a8a;
-    color: white;
-    border-radius: 50%;
-    font-size: 0.8rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    border: 1px solid #fbbf24;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-}
-
-.card-sub-row {
-    font-size: 0.8rem;
-    color: #4b5563;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 5px;
-}
-
-/* Odznáčky Ranků */
-.rank-badge {
-    font-size: 0.7rem;
-    font-weight: bold;
-    padding: 2px 8px;
-    border-radius: 12px;
-    color: white;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    display: inline-block;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-}
-
-.rank-bg-0 { background: #6b7280; } /* Kopyto - Šedá */
-.rank-bg-1 { background: #b45309; } /* Amatér - Bronzová */
-.rank-bg-2 { background: #94a3b8; color: #0f172a; } /* Průměr - Stříbrná */
-.rank-bg-3 { background: #eab308; color: #422006; } /* Talent - Zlatá */
-.rank-bg-4 { background: #8b5cf6; } /* Hvězda - Fialová */
-
-/* Kompaktní mřížka pro statistiky (2x2) */
-.stats-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 5px;
-    margin-bottom: 8px;
-}
-
-.stat-mini {
-    background: rgba(255, 255, 255, 0.6);
-    border: 1px solid rgba(0,0,0,0.05);
-    border-radius: 4px;
-    padding: 4px 2px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-}
-
-.stat-label {
-    font-size: 0.65rem;
-    color: #6b7280;
-    text-transform: uppercase;
-    font-weight: bold;
-}
-
-.stat-val {
-    font-size: 0.95rem;
-    font-weight: bold;
-    color: #1e3a8a;
 }
 
 /* --- SÍŇ SLÁVY - PVE TROFEJE --- */

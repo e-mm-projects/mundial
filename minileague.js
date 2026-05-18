@@ -1136,53 +1136,13 @@ window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
 }
 
 // Funkce pro karty - je nyní 100% identická s hlavní šatnou
-function renderMLPlayerCard(player, index, leagueName) {
+window.renderMLPlayerCard = function(player, index, leagueName) {
     const isSelected = window.selectedMLIndex === index ? 'ml-selected' : '';
+    const onClickAction = `handleMLPlayerClick('${leagueName}', ${index})`;
     
-    if (!player) {
-        return `<div class="player-card empty-slot ${isSelected}" onclick="handleMLPlayerClick('${leagueName}', ${index})">
-                    <div class="empty-text">Volné místo</div>
-                </div>`;
-    }
-    
-    const posConfig = POSITION_STATS[player.position];
-    const statLabels = { atk: 'Útok', def: 'Obrana', spd: 'Rychlost', str: 'Síla', eng: 'Výdrž', tek: 'Technika', gk: 'Brankář' };
-    const starsHtml = player.stars > 0 ? '⭐'.repeat(player.stars) : '<span>&nbsp;</span>';
-    const totalStats = posConfig.stats.reduce((sum, s) => sum + player.stats[s], 0);
-
-    // Tlačítko pro návrat do rezervy (pouze pro střídačku)
-    const returnHtml = index >= 11 
-        ? `<button class="btn-reserve-action btn-to-reserve" onclick="event.stopPropagation(); returnFromMLToReserve('${leagueName}', ${index})" style="margin-top:5px; background-color: #3b82f6;">Vrátit do rezervy</button>` 
-        : '';
-
-    return `
-        <div class="player-card ${posConfig.colorClass} ${isSelected}" onclick="handleMLPlayerClick('${leagueName}', ${index})">
-            <div class="player-name">${player.name}</div>
-            <div class="player-position-row">${posConfig.label}</div>
-            
-            <div class="player-info-line">
-                <span style="font-style: italic; color: #6b7280;">${player.rank}</span> | ${getPlayerLevelText(player)} ${starsHtml}
-            </div>
-            
-            <div class="player-nationality">Národnost: ${player.nationality}</div>
-
-            ${returnHtml}
-
-            <div class="player-stats" style="margin-top: 10px;">
-                ${posConfig.stats.map(s => `
-                    <div class="stat-item highlighted">
-                        ${statLabels[s]}: <span>${player.stats[s]}</span>
-                    </div>
-                `).join('')}
-
-                <div class="stat-total">
-                    <span>Celková síla:</span> 
-                    <span style="font-weight: bold;">${totalStats}</span>
-                </div> 
-            </div>
-        </div>
-    `;
-}
+    // Zavoláme naši novou chytrou funkci z cards.js
+    return window.createGraphicCardHtml(player, index, onClickAction, isSelected);
+};
 
 window.renderMyMinileaguesList = async function() {
     const mainContent = document.getElementById('main-content');
@@ -1309,14 +1269,36 @@ window.openMLSelector = function(playerId) {
     const player = playerData.reserve.find(p => p.id === playerId);
     if (!player) return;
 
-    // Filtrujeme ligy podle ranku
+    // 1. Zjistíme číselný index ranku hráče (např. Kopyto = 0)
+    const playerRankIndex = PLAYER_RANKS.findIndex(r => r.name === player.rank);
+
+    // 2. Chytřejší filtr lig, který zvládá stará i nová data
     const compatibleLeagues = (playerData.myMinileagues || []).filter(l => {
-        if (typeof l === 'object') return l.rank === player.rank;
+        if (typeof l === 'object' && l.rank !== undefined) {
+            let leagueRankIndex = 999; // Výchozí stav (propustí vše)
+            
+            // Pokud je rank v save souboru uložený jako číslo (nový systém)
+            if (typeof l.rank === 'number') {
+                leagueRankIndex = l.rank;
+            } 
+            // Pokud je rank uložený jako text (starý systém ze dřívějška)
+            else if (typeof l.rank === 'string') {
+                const foundIndex = PLAYER_RANKS.findIndex(r => r.name === l.rank);
+                if (foundIndex !== -1) {
+                    leagueRankIndex = foundIndex; // Převedeme text na číslo
+                } else if (l.rank.toLowerCase() === "všechny") {
+                    leagueRankIndex = 999; // "Všechny" má nekonečný limit
+                }
+            }
+
+            // Hráč může vstoupit, pokud je jeho rank menší nebo roven stropu ligy
+            return playerRankIndex <= leagueRankIndex;
+        }
         return false;
     });
 
     if (compatibleLeagues.length === 0) {
-        alert(`Nemáš žádnou aktivní miniligu pro rank: ${player.rank}`);
+        alert(`Nemáš žádnou aktivní miniligu, do které by mohl hráč ranku "${player.rank}" nastoupit (z důvodu omezení ranků).`);
         return;
     }
 
@@ -1336,7 +1318,7 @@ window.openMLSelector = function(playerId) {
             <h3 style="color: #fcd34d; margin-top:0;">Odeslat do miniligy</h3>
             <p style="font-size: 0.85rem; color: #ccc;">
                 Hráč <strong>${player.name}</strong> (${player.rank})<br>
-                bude odeslán do vybrané ligy:
+                bude odeslán na střídačku do vybrané ligy:
             </p>
             <div class="ml-selector-list">${listHtml}</div>
             <button class="btn-close-selector" onclick="document.getElementById('ml-selector-modal').remove()">Zavřít</button>

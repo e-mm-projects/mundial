@@ -1,97 +1,42 @@
-// --- TRÉNINKOVÉ HŘIŠTĚ ---
+// --- TRÉNINKOVÉ HŘIŠTĚ --- //
 function renderTraining() {
-    let html = '';
-    const statLabels = { atk: 'Útok', def: 'Obrana', spd: 'Rychlost', str: 'Síla', eng: 'Výdrž', tek: 'Technika', gk: 'Brankář' };
     const mainContent = document.getElementById('main-content');
 
-    // 1. Rozdělíme hráče do 3 přesných kategorií
-    // Mají volné body = jdou do první sekce
     const trainablePlayers = playerData.players.filter(p => p.unspentPoints > 0);
-    
-    // Nemají body, mají hvězdy a ještě nedosáhli maxima = sbírají praxi
-    // POZN: (p.stars > 0) zaručí, že sem nikdy nepropadne Kopyto ze starého savu
     const practicePlayers = playerData.players.filter(p => p.unspentPoints === 0 && p.level < p.maxLevel && p.stars > 0);
-    
-    // Nemají body a jsou na stropu NEBO nemají vůbec žádné hvězdy = veteráni a kopyta
     const maxedPlayers = playerData.players.filter(p => p.unspentPoints === 0 && (p.level >= p.maxLevel || p.stars === 0));
 
-    // Pomocná funkce pro vykreslení karty v tréninku
-    const createTrainingCard = (player) => {
-        const starsHtml = player.stars > 0 ? '⭐'.repeat(player.stars) : '<span>&nbsp;</span>';
-        const posConfig = POSITION_STATS[player.position];
-        
-        let xpPercentage = 100;
-        if (player.maxLevel > 0 && player.level < player.maxLevel) {
-            const requiredXp = player.level * 100;
-            xpPercentage = Math.floor((player.xp / requiredXp) * 100);
-        }
-
-        const xpBarHtml = player.stars > 0 
-            ? `<div class="xp-bar-container"><div class="xp-bar-fill ${player.level >= player.maxLevel ? 'maxed' : ''}" style="width: ${xpPercentage}%;"></div></div>` 
-            : `<div style="text-align: center; font-size: 0.8rem; color: #ef4444; margin: 8px 0; font-weight: bold;">[Bez talentu]</div>`;
-
-        const renderStatRow = (statKey, label) => {
-            const val = player.stats[statKey];
-            const isMaxed = val >= player.statCap;
-            const canUpgrade = player.unspentPoints > 0 && !isMaxed;
+    // Chytrá funkce: Pokud je isTrainableGroup true, přidá pod kartu tlačítko "Přiřadit"
+    const renderTrainingCards = (players, isTrainableGroup = false) => {
+        return players.map(p => {
+            const cardHtml = window.createGraphicCardHtml(p, null, '', '', true);
             
-            const btnHtml = canUpgrade 
-                ? `<button onclick="trainPlayerStat('${player.id}', '${statKey}')" class="btn-small-add">+</button>` 
-                : '';
-            
-            const maxHtml = isMaxed ? `<span style="color: #ef4444; font-size: 0.75rem; margin-left: 5px; font-weight: bold;">(MAX)</span>` : '';
-
-            return `
-                <div class="stat-row">
-                    <span>${label}: <strong>${val}</strong> <span style="font-size:0.75rem; color:#6b7280;">/ ${player.statCap}</span>${maxHtml}</span>
-                    ${btnHtml}
-                </div>
-            `;
-        };
-
-        return `
-            <div class="player-card ${posConfig.colorClass}" style="cursor: default; border-width: 2px;">
-                <div class="player-name">${player.name}</div>
-                <div class="player-position-row">${posConfig.label}</div>
-                
-                <div class="player-info-line">
-                    <span style="font-style: italic; color: #6b7280;">${player.rank}</span> | ${getPlayerLevelText(player)} ${starsHtml}
-                </div>
-
-                <div class="player-nationality">Národnost: ${player.nationality}</div>
-                
-                ${xpBarHtml}
-                
-                <div style="text-align: center; font-size: 0.85rem; margin-bottom: 12px; color: #4b5563;">
-                    Volné body: <strong style="color: ${player.unspentPoints > 0 ? '#10b981' : '#6b7280'}; font-size: 1.1rem;">${player.unspentPoints}</strong>
-                </div>
-
-                <div style="text-align: left; font-size: 0.9rem;">
-                    ${posConfig.stats.map(s => renderStatRow(s, statLabels[s])).join('')}
-                </div>
-            </div>
-        `;
+            if (isTrainableGroup) {
+                return `
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                        ${cardHtml}
+                        <button class="btn-upgrade" style="width: 100%; max-width: 240px; background: #10b981; font-weight: bold; padding: 10px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.4);" onclick="assignRandomPoints('${p.id}')">
+                            Přiřadit body
+                        </button>
+                    </div>
+                `;
+            } else {
+                return cardHtml;
+            }
+        }).join('');
     };
 
-    // Vložení kompletní struktury obrazovky
     mainContent.innerHTML = `
         <button class="help-btn-corner" onclick="showHelp('training')">Nápověda</button>
-        <div style="text-align: center;">
+        <div class="text-center">
             <h2 class="section-title">Tréninkové hřiště</h2>
-            
-            <div class="info-box success">
-                <p class="info-text-base">
-                    Zde můžeš vylepšovat statistiky svých hráčů za body získané v zápasech.<br>
-                    Každý hráč má svůj strop (Max) podle svého Ranku.
-                </p>
-            </div>
         </div>
         
         <h3 style="color: #fdf5e6; background: rgba(16, 185, 129, 0.8); padding: 5px 15px; border-radius: 5px; display: inline-block;">Hráči připravení k tréninku</h3>
         
-        <div class="player-list" style="margin-bottom: 30px;">
+        <div class="player-list" style="margin-bottom: 30px; align-items: flex-start;">
             ${trainablePlayers.length > 0 
-                ? trainablePlayers.map(p => createTrainingCard(p)).join('') 
+                ? renderTrainingCards(trainablePlayers, true) // TADY PŘIDÁME TRUE PRO TLAČÍTKO
                 : '<p style="color: #4b5563; font-style: italic; background: #fdf5e6; padding: 10px; border-radius: 5px; width: 100%; text-align: center;">Nikdo aktuálně nemá volné tréninkové body.</p>'}
         </div>
 
@@ -99,9 +44,9 @@ function renderTraining() {
             <summary class="collapsible-header">
                 Hráči, kteří sbírají zápasovou praxi (Rozbalit) ▾
             </summary>
-            <div class="player-list" style="margin-top: 20px; opacity: 0.95;">
+            <div class="player-list" style="margin-top: 20px; opacity: 0.95; align-items: flex-start;">
                 ${practicePlayers.length > 0 
-                    ? practicePlayers.map(p => createTrainingCard(p)).join('') 
+                    ? renderTrainingCards(practicePlayers, false) 
                     : '<p style="color: #4b5563; font-style: italic; background: #fdf5e6; padding: 10px; border-radius: 5px; width: 100%; text-align: center;">Všichni aktivní hráči čekají na trénink.</p>'}
             </div>
         </details>
@@ -111,13 +56,47 @@ function renderTraining() {
             <summary class="collapsible-header">
                 Hráči na maximální úrovni (Rozbalit) ▾
             </summary>
-            <div class="player-list" style="opacity: 0.8; margin-top: 20px;">
-                ${maxedPlayers.map(p => createTrainingCard(p)).join('')}
+            <div class="player-list" style="opacity: 0.8; margin-top: 20px; align-items: flex-start;">
+                ${renderTrainingCards(maxedPlayers, false)}
             </div>
         </details>
         ` : ''}
     `;
 }
+
+// --- NÁHODNÉ PŘIŘAZENÍ TRÉNINKOVÝCH BODŮ ---
+window.assignRandomPoints = function(playerId) {
+    const player = playerData.players.find(p => p.id === playerId);
+    if (!player || player.unspentPoints <= 0) return;
+
+    const posConfig = POSITION_STATS[player.position];
+    let pointsAssigned = 0;
+
+    // Dokud má hráč body ke spálení
+    while (player.unspentPoints > 0) {
+        // Najdeme jen ty staty, které ještě nejsou na maximálním stropu (Cap)
+        const availableStats = posConfig.stats.filter(s => player.stats[s] < player.statCap);
+
+        // Pokud už má hráč všechno na max, cyklus ukončíme
+        if (availableStats.length === 0) {
+            alert(`Hráč ${player.name} má všechny klíčové vlastnosti na maximu (${player.statCap}) pro svůj rank! Další body mu v tuto chvíli nelze přiřadit.`);
+            break; 
+        }
+
+        // Vybereme náhodný stat ze zbývajících volných a přidáme mu bod
+        const randomStat = availableStats[Math.floor(Math.random() * availableStats.length)];
+        
+        player.stats[randomStat]++;
+        player.unspentPoints--;
+        pointsAssigned++;
+    }
+
+    // Pokud se něco vytrénovalo, uložíme a překreslíme
+    if (pointsAssigned > 0) {
+        saveGame();
+        renderTraining(); // Okamžitě se projeví změna na kartě
+    }
+};
 
 // --- KANCELÁŘ (ÚKOLY) --- //
 window.renderOffice = function() {
@@ -536,44 +515,24 @@ function renderScouting() {
     else if (currentDiv === 2) rankOddsHtml = "<li>Legenda: 20 %</li><li>Reprezentant: 60 %</li><li>Ligový borec: 20 %</li>";
     else if (currentDiv === 1) rankOddsHtml = "<li>Legenda: 25 %</li><li>Reprezentant: 75 %</li>";
 
-    // Převodník popisků statů
-    const statLabels = { atk: 'Útok', def: 'Obrana', spd: 'Rychlost', str: 'Síla', eng: 'Výdrž', tek: 'Technika', gk: 'Brankář' };
-
-    // VYKRESLENÍ HRÁČŮ OD HLAVNÍHO SKAUTA
+    // --- VYKRESLENÍ HRÁČŮ OD HLAVNÍHO SKAUTA (S VYUŽITÍM CARDS.JS) ---
     const playersHtml = playerData.scoutedPlayers.map((player, index) => {
-        const starsHtml = player.stars > 0 ? '⭐'.repeat(player.stars) : '<span>&nbsp;</span>';
-        const posConfig = POSITION_STATS[player.position];
         const price = getPlayerPrice(player);
         const canAfford = playerData.money >= price;
-        const totalStats = posConfig.stats.reduce((sum, s) => sum + player.stats[s], 0);
+        
+        // Vygenerování samotné karty (třetí parametr je prázdný, na skautovací kartu se nekliká)
+        const cardHtml = window.createGraphicCardHtml(player, index, '', '');
 
+        // Zabalíme kartu a přidáme pod ni tlačítka s pevnou šířkou (aby lícovala s kartou)
         return `
-            <div class="player-card ${posConfig.colorClass}">
-                <div class="player-name">${player.name}</div>
-                <div class="player-position-row">${posConfig.label}</div>
-                
-                <div class="player-info-line">
-                    <span style="font-style: italic; color: #6b7280;">${player.rank}</span> | ${getPlayerLevelText(player)} ${starsHtml}
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                ${cardHtml}
+                <div style="background: rgba(0,0,0,0.8); border: 2px solid #f59e0b; padding: 6px 15px; border-radius: 6px; color: #fcd34d; font-weight: bold; width: 100%; text-align: center; box-sizing: border-box; max-width: 240px; box-shadow: 0 4px 6px rgba(0,0,0,0.4);">
+                    Cena: ${price} 💰
                 </div>
-
-                <div class="player-nationality">Národnost: ${player.nationality}</div>
-                
-                <div class="price-tag buy">Cena: ${price} 💰</div>
-
-                <div class="player-stats">
-                    ${posConfig.stats.map(s => `
-                        <div class="stat-item highlighted">
-                            ${statLabels[s]}: <span>${player.stats[s]}</span>
-                        </div>
-                    `).join('')}
-                    
-                    <div class="stat-total">
-                        <span>Celková síla:</span> 
-                        <span style="font-weight: bold;">${totalStats}</span>
-                    </div> 
-
-                </div>
-                <button class="btn-upgrade" style="width: 100%; margin-top: 10px;" onclick="buyPlayer(${index}, ${price})" ${!canAfford ? 'disabled' : ''}>Koupit</button>
+                <button class="btn-upgrade" style="width: 100%; max-width: 240px; font-weight: bold;" onclick="buyPlayer(${index}, ${price})" ${!canAfford ? 'disabled' : ''}>
+                    ${canAfford ? 'Koupit hráče' : 'Nedostatek financí'}
+                </button>
             </div>
         `;
     }).join('');
@@ -604,37 +563,25 @@ function renderScouting() {
         const isAllowedToBuy = rankIdx <= maxAllowedSideRank;
 
         if (isUnlocked) {
-            // SKAUT JE ODEMČENÝ -> ZOBRAZÍME JEHO HRÁČE
+            // SKAUT JE ODEMČENÝ -> ZOBRAZÍME JEHO HRÁČE (S VYUŽITÍM CARDS.JS)
             const sPlayers = playerData.sideScoutedPlayers[rankIdx] || [];
             let sPlayersCards = sPlayers.map((player, pIndex) => {
-                const starsHtml = player.stars > 0 ? '⭐'.repeat(player.stars) : '<span>&nbsp;</span>';
-                const posConfig = POSITION_STATS[player.position];
                 const price = getPlayerPrice(player);
                 const canAfford = playerData.money >= price;
-                const totalStats = posConfig.stats.reduce((sum, s) => sum + player.stats[s], 0);
+                
+                // Vygenerování grafické karty
+                const cardHtml = window.createGraphicCardHtml(player, pIndex, '', '');
 
+                // Opět zabaleno do úhledného sloupce s cenou a tlačítkem (lehce zmenšeno transform: scale)
                 return `
-                    <div class="player-card ${posConfig.colorClass}" style="transform: scale(0.95);">
-                        <div class="player-name">${player.name}</div>
-                        <div class="player-position-row">${posConfig.label}</div>
-                        <div class="player-info-line">
-                            <span style="font-style: italic; color: #6b7280;">${player.rank}</span> | ${getPlayerLevelText(player)} ${starsHtml}
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; transform: scale(0.95); transform-origin: top center;">
+                        ${cardHtml}
+                        <div style="background: rgba(0,0,0,0.8); border: 2px solid #6366f1; padding: 6px 15px; border-radius: 6px; color: #c7d2fe; font-weight: bold; width: 100%; text-align: center; box-sizing: border-box; max-width: 240px; box-shadow: 0 4px 6px rgba(0,0,0,0.4);">
+                            Cena: ${price} 💰
                         </div>
-                        <div class="player-nationality">Nár: ${player.nationality}</div>
-                        <div class="price-tag buy">Cena: ${price} 💰</div>
-                        <div class="player-stats">
-                            ${posConfig.stats.map(s => `
-                                <div class="stat-item highlighted">
-                                    ${statLabels[s]}: <span>${player.stats[s]}</span>
-                                </div>
-                            `).join('')}
-                            
-                            <div class="stat-total">
-                                <span>Celková síla:</span> 
-                                <span style="font-weight: bold;">${totalStats}</span>
-                            </div> 
-                        </div>
-                        <button class="btn-upgrade" style="width: 100%; margin-top: 10px; background: #4f46e5;" onclick="buySideScoutedPlayer(${rankIdx}, ${pIndex}, ${price})" ${!canAfford ? 'disabled' : ''}>Koupit</button>
+                        <button class="btn-upgrade" style="width: 100%; max-width: 240px; background: #4f46e5; font-weight: bold;" onclick="buySideScoutedPlayer(${rankIdx}, ${pIndex}, ${price})" ${!canAfford ? 'disabled' : ''}>
+                            ${canAfford ? 'Koupit hráče' : 'Nedostatek financí'}
+                        </button>
                     </div>
                 `;
             }).join('');
@@ -642,7 +589,7 @@ function renderScouting() {
             sideScoutsHtml += `
                 <div style="margin-bottom: 30px; background: rgba(17, 24, 39, 0.7); padding: 15px; border-radius: 8px; border: 1px solid #4b5563;">
                     <h3 style="color: #fcd34d; margin: 0 0 15px 0; text-shadow: 1px 1px 2px black;"> Skaut na rank: ${rankObj.name}</h3>
-                    ${sPlayers.length > 0 ? `<div class="player-list">${sPlayersCards}</div>` : '<p style="color:#e5e7eb; text-align: center; font-style: italic;">Skaut obchází hospody, počkej na další refresh.</p>'}
+                    ${sPlayers.length > 0 ? `<div class="player-list" style="align-items: flex-start;">${sPlayersCards}</div>` : '<p style="color:#e5e7eb; text-align: center; font-style: italic;">Skaut obchází hospody, počkej na další refresh.</p>'}
                 </div>
             `;
         } else {
@@ -714,7 +661,7 @@ function renderScouting() {
             </div>
         </div>
         
-        <div class="player-list">
+        <div class="player-list" style="align-items: flex-start;">
             ${playersHtml}
         </div>
 
@@ -1360,29 +1307,16 @@ window.viewBotTeam = function(teamName) {
 
     const layout = FORMATIONS_LAYOUT[botTeam.formation];
 
-    // Místo přepisování playerData.players vytvoříme dočasnou funkci jen pro toto zobrazení
+    // Pomocná funkce, která teď jen tahá hotové grafické karty z cards.js
     const renderBotGroup = (startIndex, endIndex, players) => {
         let html = '';
-        const statLabels = { atk: 'Útok', def: 'Obrana', spd: 'Rychlost', str: 'Síla', eng: 'Výdrž', tek: 'Technika', gk: 'Brankář' };
-
         for (let i = startIndex; i < endIndex; i++) {
             const player = players[i];
             if (!player) continue;
-            const posConfig = POSITION_STATS[player.position];
             
-            html += `
-                <div class="player-card ${posConfig.colorClass}">
-                    <div class="player-name">${player.name}</div>
-                    <div class="player-position-row">${posConfig.label}</div>
-                    
-                    <div class="player-info-line">
-                        <span style="font-style: italic; color: #6b7280;">${player.rank}</span> | Lvl.${player.level} ${'⭐'.repeat(player.stars)}
-                    </div>
-                    
-                    <div class="player-stats">
-                        ${posConfig.stats.map(s => `<div class="stat-item highlighted">${statLabels[s]}: <span>${player.stats[s]}</span></div>`).join('')}
-                    </div>
-                </div>`;
+            // Využijeme univerzální generátor!
+            // Předáme prázdnou onClick akci, protože na soupeře se nekliká
+            html += window.createGraphicCardHtml(player, i, '', '');
         }
         return html;
     };
@@ -1480,39 +1414,21 @@ function renderReservePlayers(filter) {
 
     if (players.length === 0) return `<p class="text-muted" style="width:100%; text-align:center;">V této kategorii nemáš žádné hráče.</p>`;
 
-    // Plné názvy statistik jako v hlavní hře
-    const statLabels = { atk: 'Útok', def: 'Obrana', spd: 'Rychlost', str: 'Síla', eng: 'Výdrž', tek: 'Technika', gk: 'Brankář' };
-
-    return players.map(player => {
-        const posConfig = POSITION_STATS[player.position];
-        const totalStats = posConfig.stats.reduce((sum, s) => sum + player.stats[s], 0);
-        const starsHtml = player.stars > 0 ? '⭐'.repeat(player.stars) : '<span>&nbsp;</span>';
+    return players.map((player, index) => {
+        // Vygenerování samotné grafické karty (prázdné parametry pro kliknutí, v rezervě klikáme až na tlačítka pod ní)
+        const cardHtml = window.createGraphicCardHtml(player, index, '', '');
         
         return `
-            <div class="player-card ${posConfig.colorClass}">
-                <div class="player-name">${player.name}</div>
-                <div class="player-position-row">${posConfig.label}</div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                ${cardHtml}
                 
-                <div class="player-info-line">
-                    <span style="font-style: italic; color: #6b7280;">${player.rank}</span> | ${getPlayerLevelText(player)} ${starsHtml}
-                </div>
-                
-                <div class="player-nationality">Národnost: ${player.nationality}</div>
-
-                <button class="btn-reserve-action btn-to-bench" onclick="returnFromReserve('${player.id}')">Na střídačku</button>
-                <button class="btn-reserve-action btn-to-ml" onclick="openMLSelector('${player.id}')">Do miniligy</button>
-
-                <div class="player-stats" style="margin-top: 10px;">
-                    ${posConfig.stats.map(s => `
-                        <div class="stat-item highlighted">
-                            ${statLabels[s]}: <span>${player.stats[s]}</span>
-                        </div>
-                    `).join('')}
-
-                    <div class="stat-total">
-                        <span>Celková síla:</span> 
-                        <span style="font-weight: bold;">${totalStats}</span>
-                    </div>
+                <div style="display: flex; gap: 6px; width: 100%; max-width: 240px;">
+                    <button class="btn-reserve-action btn-to-bench" style="flex: 1; padding: 8px 4px; font-size: 0.85rem; font-weight: bold; border-radius: 6px; box-shadow: 0 3px 5px rgba(0,0,0,0.3);" onclick="returnFromReserve('${player.id}')">
+                        Na střídačku
+                    </button>
+                    <button class="btn-reserve-action btn-to-ml" style="flex: 1; padding: 8px 4px; font-size: 0.85rem; font-weight: bold; border-radius: 6px; box-shadow: 0 3px 5px rgba(0,0,0,0.3);" onclick="openMLSelector('${player.id}')">
+                        Do miniligy
+                    </button>
                 </div>
             </div>
         `;

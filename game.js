@@ -1147,47 +1147,6 @@ window.toggleSellMode = function() {
 }
 
 window.handlePlayerClick = function(index) {
-    if (isSellMode) {
-        const playerToSell = playerData.players[index];
-        
-        // 1. Rychlá kontrola pro aktuální zobrazenou sestavu
-        if (index < 11) {
-            alert("Hráče ze základní sestavy nelze prodat! Nejdříve ho přesuň na střídačku.");
-            return;
-        }
-
-        // 2. Kontrola všech uložených taktik (presetů)
-        let activeFormations = [];
-        if (playerData.presets) {
-            for (const form in playerData.presets) {
-                const presetIds = playerData.presets[form];
-                const playerIndexInPreset = presetIds.indexOf(playerToSell.id);
-                
-                // Pokud je hráč v dané formaci mezi prvními 11, znamená to, že tam hraje v základu
-                if (playerIndexInPreset !== -1 && playerIndexInPreset < 11) {
-                    activeFormations.push(form);
-                }
-            }
-        }
-
-        if (activeFormations.length > 0) {
-            alert(`Tohoto hráče nelze prodat! Nastupuje v základní sestavě pro formace: ${activeFormations.join(', ')}. Musíš si v Šatně tyto formace přepnout a hráče z nich sundat.`);
-            return;
-        }
-        
-        // 3. Vlastní prodej
-        const sellPrice = Math.floor(getPlayerPrice(playerToSell) / 2);
-        if (confirm(`Opravdu chceš vyhodit hráče ${playerToSell.name} z klubu? Dostaneš za něj ${sellPrice} Peněz.`)) {
-            playerData.money += sellPrice;
-            playerData.players.splice(index, 1); 
-            isSellMode = false; 
-            
-            saveGame();
-            updateTopBarUI();
-            renderLockerRoom();
-        }
-        return;
-    }
 
     if (selectedPlayerIndex === null) {
         selectedPlayerIndex = index;
@@ -1240,6 +1199,47 @@ window.handlePlayerClick = function(index) {
     renderLockerRoom();
 }
 
+// TADY VLOŽÍŠ TU NOVOU FUNKCI PRO PRODEJ:
+window.sellPlayer = function(index) {
+    const playerToSell = playerData.players[index];
+    if (!playerToSell) return;
+    
+    // 1. Rychlá kontrola pro aktuální zobrazenou sestavu
+    if (index < 11) {
+        alert("Hráče ze základní sestavy nelze prodat! Nejdříve ho přesuň na střídačku.");
+        return;
+    }
+
+    // 2. Kontrola všech uložených taktik (presetů)
+    let activeFormations = [];
+    if (playerData.presets) {
+        for (const form in playerData.presets) {
+            const presetIds = playerData.presets[form];
+            const playerIndexInPreset = presetIds.indexOf(playerToSell.id);
+            
+            // Pokud je hráč v dané formaci mezi prvními 11, znamená to, že tam hraje v základu
+            if (playerIndexInPreset !== -1 && playerIndexInPreset < 11) {
+                activeFormations.push(form);
+            }
+        }
+    }
+
+    if (activeFormations.length > 0) {
+        alert(`Tohoto hráče nelze prodat! Nastupuje v základní sestavě pro formace: ${activeFormations.join(', ')}. Musíš si v Šatně tyto formace přepnout a hráče z nich sundat.`);
+        return;
+    }
+    
+    // 3. Vlastní prodej
+    const sellPrice = Math.floor(getPlayerPrice(playerToSell) / 2);
+    if (confirm(`Opravdu chceš vyhodit hráče ${playerToSell.name} z klubu? Dostaneš za něj ${sellPrice} Peněz.`)) {
+        playerData.money += sellPrice;
+        playerData.players.splice(index, 1); 
+        
+        saveGame();
+        if (typeof updateTopBarUI === 'function') updateTopBarUI();
+        renderLockerRoom();
+    }
+}
 
 // --- SKAUTING ---
 function getScoutInterval() {
@@ -1862,9 +1862,10 @@ function processSeasonEndOffline() {
     playerData.isPrepared = false;
 }
 // PŘESUNY HRÁČŮ - REZERVA , STŘÍDAČKA, MINILIGA
-// 1. Ze střídačky do rezervy (s limitem 10 na rank a hráč nesmí být aktivní v základní sestavě v žádné formaci)
+// 1. Ze střídačky do rezervy (s limitem 10 na rank a hlídáním formací)
 window.sendToReserve = function(index) {
     const playerToMove = playerData.players[index];
+    if (!playerToMove) return;
 
     // 1. Kontrola základní sestavy (index 0-10)
     if (index < 11) {
@@ -1892,19 +1893,18 @@ window.sendToReserve = function(index) {
     }
 
     // 3. Kontrola kapacity rezervy (max 10 na rank)
-    const countInRank = (playerData.reserve || []).filter(p => p.rank === playerToMove.rank).length;
+    if (!playerData.reserve) playerData.reserve = [];
+    const countInRank = playerData.reserve.filter(p => p.rank === playerToMove.rank).length;
     if (countInRank >= 10) {
         alert(`Rezerva pro rank "${playerToMove.rank}" je plná (10/10).`);
         return;
     }
 
-    // Pokud vše projde, přesuneme
-    if (confirm(`Opravdu chceš přesunout hráče ${playerToMove.name} do rezervy?`)) {
-        playerData.reserve.push(playerToMove);
-        playerData.players.splice(index, 1);
-        saveGame();
-        renderLockerRoom();
-    }
+    // Pokud vše projde, přesuneme bez ptaní
+    playerData.reserve.push(playerToMove);
+    playerData.players.splice(index, 1);
+    saveGame();
+    renderLockerRoom();
 }
 
 //  Z rezervy zpět na střídačku
