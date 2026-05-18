@@ -1689,6 +1689,8 @@ function addMailMessage(subject, log, result, rewards = null, customDate = null)
 }
 
 // --- OFFLINE SIMULACE (Když hráč není ve hře) ---
+// Zavolá dohnání minilig ihned po přihlášení hráče!
+window.catchUpMinileagues();
 
 window.checkOfflineProgress = function() {
     if (!playerData.league || playerData.league.length === 0) return;

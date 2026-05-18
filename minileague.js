@@ -383,9 +383,14 @@ window.leaveMinileague = async function(leagueName) {
 }
 
 //  JÁDRO SIMULÁTORU MINILIGY  // 
-window.runMLSimulation = async function(leagueName, league) {
+window.runMLSimulation = async function(leagueName, league, simulatedTime) {
     const participants = Object.keys(league.participants);
     if (participants.length < 2) return; // Miniliga musí mít alespoň 2 hráče
+
+    // Pokud není zadán historický čas, použijeme aktuální
+    const matchTimestamp = simulatedTime || Date.now();
+    const matchDateObj = new Date(matchTimestamp);
+    const formattedMatchDate = matchDateObj.toLocaleDateString() + ' ' + matchDateObj.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
 
     // --- ALGORITMUS ROUND-ROBIN (Každý s každým) ---
     let rrTeams = [...participants];
@@ -468,17 +473,14 @@ window.runMLSimulation = async function(leagueName, league) {
                 const [gA, gB] = newAct.score.split(':');
                 newAct.score = `${gB}:${gA}`;
             }
-            // --- OTOČENÍ TYPŮ AKCÍ (BAREV V KOMENTÁŘI) ---
             if (newAct.type === 'goal') newAct.type = 'bad-goal';
             else if (newAct.type === 'bad-goal') newAct.type = 'goal';
-            else if (newAct.type === 'chance') newAct.type = 'danger'; // NOVÉ
-            else if (newAct.type === 'danger') newAct.type = 'chance'; // NOVÉ
+            else if (newAct.type === 'chance') newAct.type = 'danger'; 
+            else if (newAct.type === 'danger') newAct.type = 'chance'; 
 
-            // Otočení pozice míče! (Pokud je míč na 80%, host ho vidí na 20%)
             if (typeof newAct.zone === 'number') {
                 newAct.zone = 100 - newAct.zone;
             }
-            
             return newAct;
         });
 
@@ -503,7 +505,7 @@ window.runMLSimulation = async function(leagueName, league) {
             content: logA,
             result: `${scoreA}:${scoreB}`,
             rewards: { money: 0, xp: 0, pXp: 0, homeTeam: nameA, awayTeam: nameB, myRating: ratingA, botRating: ratingB, isML: true },
-            date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' }),
+            date: formattedMatchDate,
             read: false
         };
         
@@ -513,7 +515,7 @@ window.runMLSimulation = async function(leagueName, league) {
             content: logB,
             result: `${scoreB}:${scoreA}`,
             rewards: { money: 0, xp: 0, pXp: 0, homeTeam: nameB, awayTeam: nameA, myRating: ratingB, botRating: ratingA, isML: true },
-            date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' }),
+            date: formattedMatchDate,
             read: false
         };
         
@@ -522,13 +524,14 @@ window.runMLSimulation = async function(leagueName, league) {
     }
 
     playerData.managerName = originalManagerName;
-
-    // --- GLOBÁLNÍ POČÍTADLO KOL (PŘIČTENÍ) ---
-    // Přičteme 1 kolo, protože se právě odehrál jeden celý "hrací blok"
     league.globalPlayedRounds = (league.globalPlayedRounds || 0) + 1;
 
-    // --- KONEC SEZÓNY (7 DNÍ) ---
-    const isSeasonOver = Date.now() >= league.seasonEndTime;
+    // --- KLÍČOVÁ OPRAVA POSUNU ČASU ---
+    const EIGHT_HOURS = 8 * 60 * 60 * 1000;
+    const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+
+    const isSeasonOver = (league.nextMatchTime + EIGHT_HOURS) > league.seasonEndTime;
+    
     if (isSeasonOver) {
         const sortedFinal = Object.keys(league.standings)
             .sort((a,b) => league.standings[b].pts - league.standings[a].pts);
@@ -548,26 +551,25 @@ window.runMLSimulation = async function(leagueName, league) {
                 sender: "🏆 Vedení Miniligy",
                 subject: `Konec sezóny v lize ${leagueName}`,
                 text: `Sezóna v lize ${leagueName} skončila! Skončil jsi na ${finalRank}. místě se ziskem ${finalPts} bodů. Právě byla odstartována nová sezóna, hodně štěstí!`,
-                date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' }),
+                date: formattedMatchDate,
                 read: false
             };
             await window.dbSet(window.dbRef(window.db, `mail_queue/${uid}/${endSeasonMail.id}`), endSeasonMail);
         }
 
         league.lastResults = top3;
-        
         participants.forEach(uid => {
             league.standings[uid] = { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0, byes: 0 };
         });
 
-        // --- GLOBÁLNÍ POČÍTADLO KOL (RESTART NA KONCI SEZÓNY) ---
         league.globalPlayedRounds = 0;
-
-        // Nová sezóna se opět odrazí od příštího zápasu
-        league.seasonEndTime = window.getNextMatchSlot() + (7 * 24 * 60 * 60 * 1000);
+        
+        // Nový konec sezony navazuje přesně na další zápas
+        league.seasonEndTime = league.nextMatchTime + SEVEN_DAYS; 
     }
 
-    league.nextMatchTime = window.getNextMatchSlot();
+    // A TADY JE TO KOUZLO: Posuneme čas přesně o 8 hodin, žádné zjišťování aktuálního času!
+    league.nextMatchTime += EIGHT_HOURS;
     await window.dbSet(window.dbRef(window.db, `minileagues/${leagueName}`), league);
 };
 
@@ -970,11 +972,12 @@ window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
 
         // --- SPOUŠTĚČ SIMULACE ---
         if (Date.now() >= league.nextMatchTime) {
-            let loops = 0; // Bezpečnostní pojistka (max 10 kol najednou)
+            let loops = 0; // Pojistka zvýšena na 25 (celá sezona má 21 kol)
             
-            while (Date.now() >= league.nextMatchTime && loops < 10) {
-                await window.runMLSimulation(leagueName, league);
-                // Po každém kole načteme nová data, abychom měli aktuální čas nextMatchTime
+            while (Date.now() >= league.nextMatchTime && loops < 25) {
+                const simulatedTime = league.nextMatchTime; // Zjistíme, z jaké doby zápas je
+                await window.runMLSimulation(leagueName, league, simulatedTime); // Pošleme čas
+                
                 const newSnap = await window.dbGet(window.dbChild(dbRef, `minileagues/${leagueName}`));
                 league = newSnap.val();
                 loops++;
@@ -1342,3 +1345,40 @@ window.openMLSelector = function(playerId) {
 
     document.body.appendChild(overlay);
 }
+
+// --- GLOBÁLNÍ DOHNÁNÍ ZÁPASŮ MINILIGY NA POZADÍ ---
+window.catchUpMinileagues = async function() {
+    if (!playerData.myMinileagues || playerData.myMinileagues.length === 0) return;
+    
+    let simulatedAny = false;
+    const dbRef = window.dbRef(window.db);
+
+    for (let i = 0; i < playerData.myMinileagues.length; i++) {
+        const lName = typeof playerData.myMinileagues[i] === 'object' ? playerData.myMinileagues[i].name : playerData.myMinileagues[i];
+        
+        try {
+            const snap = await window.dbGet(window.dbChild(dbRef, `minileagues/${lName}`));
+            if (!snap.exists()) continue;
+            
+            let league = snap.val();
+            let loops = 0;
+
+            // Úplně stejná smyčka jako uvnitř miniligy - první hráč, který ráno zapne hru, odsimuluje víkend všem!
+            while (Date.now() >= league.nextMatchTime && loops < 25) {
+                const simulatedTime = league.nextMatchTime;
+                await window.runMLSimulation(lName, league, simulatedTime);
+                
+                const newSnap = await window.dbGet(window.dbChild(dbRef, `minileagues/${lName}`));
+                league = newSnap.val();
+                loops++;
+                simulatedAny = true;
+            }
+        } catch (e) {
+            console.error(`Chyba při dohánění miniligy ${lName}:`, e);
+        }
+    }
+
+    if (simulatedAny) {
+        console.log("Miniligy byly úspěšně dorovnány s reálným časem.");
+    }
+};
