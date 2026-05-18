@@ -324,7 +324,6 @@ window.returnFromMLToReserve = async function(leagueName, index) {
 }
 
 // MINILIGA - OPUŠTĚNÍ MINILIGY //
-
 window.leaveMinileague = async function(leagueName) {
     if (!confirm(`Opravdu chceš opustit miniligu ${leagueName}? Tvé body a statistiky v ní budou smazány. Tví hráči se vrátí do Rezervy (pokud tam máš místo).`)) {
         return;
@@ -805,18 +804,13 @@ window.renderMinileague = function() {
             const lData = typeof l === 'object' ? l : { name: l };
             const lName = lData.name;
             const creator = lData.creator || "Neznámý";
-            
-            // Vezmeme čas konce sezóny (pokud ho ještě nemáme, dáme 0)
             const seasonEndTime = lData.seasonEndTime || 0; 
             
-            // --- NOVÝ VÝPOČET ZBÝVAJÍCÍCH KOL PODLE ČASU ---
             let roundsLeft = 0;
             if (seasonEndTime > 0) {
                 const timeLeft = seasonEndTime - Date.now();
                 if (timeLeft > 0) {
-                    // Vydělíme zbývající čas 8 hodinami a zaokrouhlíme nahoru
                     roundsLeft = Math.ceil(timeLeft / (8 * 60 * 60 * 1000));
-                    // Pojistka, aby to nikdy neukázalo více než 21
                     roundsLeft = Math.min(21, roundsLeft);
                 }
             }
@@ -836,6 +830,8 @@ window.renderMinileague = function() {
                         <div class="ml-league-info">⛔ Omezení: <span style="color:#60a5fa;">${rankName}</span></div>
                         <div class="ml-league-info">🗓️ Zbývá kol: <span style="color:white; font-weight:bold;">${roundsLeft} / 21</span></div>
                         <div class="ml-league-info">⏳ Konec ligy za: <span id="ml-season-timer-${index}" data-endtime="${seasonEndTime}" style="color:#fcd34d; font-weight:bold;">Načítám...</span></div>
+                        
+                        <div class="ml-league-info">⚔️ Příští soupeř: <span id="ml-next-opp-${index}" style="color:#ef4444; font-weight:bold;">Zjišťuji...</span></div>
                     </div>
                     
                     <div class="ml-timer-box">
@@ -854,6 +850,7 @@ window.renderMinileague = function() {
 
     const rankOptions = PLAYER_RANKS.map((r, i) => `<option value="${i}">${r.name}</option>`).join('');
 
+    // Vykreslení hlavní kostry okna do DOMu
     mainContent.innerHTML = `
         <button class="help-btn-corner" onclick="showHelp('minileague')" title="Nápověda">Nápověda</button>
 
@@ -901,13 +898,31 @@ window.renderMinileague = function() {
         </div>
     `;
 
+    // --- ZJIŠTĚNÍ SOUPEŘŮ NA POZADÍ (Ihned po vykreslení) ---
+    playerData.myMinileagues.forEach(async (l, index) => {
+        const lName = typeof l === 'object' ? l.name : l;
+        try {
+            const dbRef = window.dbRef(window.db);
+            const snap = await window.dbGet(window.dbChild(dbRef, `minileagues/${lName}`));
+            if (snap.exists()) {
+                const league = snap.val();
+                // Spočítáme soupeře pomocí naší čisté matematické funkce
+                const oppName = window.getMLNextOpponent(league, playerData.uid);
+                const oppEl = document.getElementById(`ml-next-opp-${index}`);
+                if (oppEl) oppEl.innerText = oppName;
+            }
+        } catch (e) { 
+            console.error("Chyba při zjišťování soupeře na přehledu:", e); 
+        }
+    });
+
     // --- MOTOR PRO ŽIVÝ ODPOČET ČASU ---
     window.mlTimersInterval = setInterval(() => {
         const now = Date.now();
-        const nextMatch = window.getGlobalNextMatchTime(); // Spočítá další 8:00, 16:00 nebo 0:00
+        const nextMatch = window.getGlobalNextMatchTime(); 
 
         playerData.myMinileagues.forEach((l, index) => {
-            // 1. Aktualizace času do dalšího zápasu
+            // 1. Čas do dalšího zápasu
             const matchEl = document.getElementById(`ml-match-timer-${index}`);
             if (matchEl) {
                 const diff = nextMatch - now;
@@ -917,12 +932,11 @@ window.renderMinileague = function() {
                     const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
                     const m = Math.floor((diff / 1000 / 60) % 60);
                     const s = Math.floor((diff / 1000) % 60);
-                    // Přidá nulu před čísla menší než 10 (např. 03:05:09)
                     matchEl.innerText = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
                 }
             }
 
-            // 2. Aktualizace času do konce ligy
+            // 2. Čas do konce ligy
             const seasonEl = document.getElementById(`ml-season-timer-${index}`);
             if (seasonEl) {
                 const endTime = parseInt(seasonEl.getAttribute('data-endtime')) || 0;
@@ -941,7 +955,7 @@ window.renderMinileague = function() {
                 }
             }
         });
-    }, 1000); // 1000 ms = 1 vteřina
+    }, 1000); 
 };
 
 // MINILIGA - DETAILY //
@@ -1018,6 +1032,8 @@ window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
         const layout = FORMATIONS_LAYOUT['4-4-2'];
         // --- GENEROVÁNÍ NOVÉ TABULKY --- //
         const isOwner = league.owner === playerData.uid; // Zjistíme, jestli jsi zakladatel
+        // Nový kód pro zjištění soupeře (vlož někde před generování mainContent.innerHTML)
+        const nextOpponent = window.getMLNextOpponent(league, playerData.uid);
 
         let standingsHtml = Object.keys(league.standings)
             .sort((a,b) => {
@@ -1082,6 +1098,7 @@ window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
                     <div id="ml-match-timer" style="font-family: 'Courier New', monospace; font-size: 1.8rem; font-weight: bold; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.3);">
                         00:00:00
                     </div>
+                    <p style="margin: 5px 0 0 0; font-size: 1.1rem; color: #fff;">⚔️ Soupeř: <strong style="color: #ef4444;">${nextOpponent}</strong></p>
                     <p style="margin: 5px 0 0 0; font-size: 0.8rem; color: #9ca3af;">Zápasy se hrají automaticky každých 8 hodin.</p>
                 </div>
 
@@ -1134,6 +1151,40 @@ window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
         renderMinileague(); 
     }
 }
+
+// --- POMOCNÁ FUNKCE: ZJIŠTĚNÍ PŘÍŠTÍHO SOUPEŘE V MINILIZE ---
+window.getMLNextOpponent = function(league, myUid) {
+    if (!league || !league.participants || !league.standings) return "Neznámý";
+    
+    const participants = Object.keys(league.participants);
+    if (participants.length < 2) return "Čeká se na hráče";
+
+    // Vytvoříme losovací pole stejně jako v simulátoru
+    let rrTeams = [...participants];
+    if (rrTeams.length % 2 !== 0) rrTeams.push("BYE"); 
+
+    // Zjistíme, v jakém kole se momentálně nacházíme
+    let totalMatchesPlayed = 0;
+    participants.forEach(uid => { totalMatchesPlayed += (league.standings[uid]?.p || 0); });
+    let currentRound = Math.floor(totalMatchesPlayed / (participants.length / 2)) || 0;
+    
+    // Posuneme týmy na pozice pro toto kolo
+    let n = rrTeams.length;
+    for (let r = 0; r < currentRound % (n - 1); r++) {
+        rrTeams.splice(1, 0, rrTeams.pop());
+    }
+
+    // Najdeme, na koho v tomto kole vyšel tvůj tým
+    for (let i = 0; i < n / 2; i++) {
+        const team1 = rrTeams[i];
+        const team2 = rrTeams[n - 1 - i];
+        
+        if (team1 === myUid) return team2 === "BYE" ? "Volný los (bez zápasu)" : league.participants[team2];
+        if (team2 === myUid) return team1 === "BYE" ? "Volný los (bez zápasu)" : league.participants[team1];
+    }
+
+    return "Neznámý";
+};
 
 // Funkce pro karty - je nyní 100% identická s hlavní šatnou
 window.renderMLPlayerCard = function(player, index, leagueName) {
