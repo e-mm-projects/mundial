@@ -423,6 +423,7 @@ function initGame() {
             }
         }
     }
+    window.updateMailNotification();
 }
 
 function startGameUI() {
@@ -435,6 +436,9 @@ function startGameUI() {
 
     setInterval(gameLoop, 1000);
     setTimeout(fetchCloudMail, 2000); // 2 vteřiny po startu UI zkontrolujeme cloud poštu
+
+    // --- SPUŠTĚNÍ MOTORU PRO DOHNÁNÍ ZMEŠKANÝCH ZÁPASŮ MINILIGY ---
+    window.catchUpMinileagues();
 }
 
 function saveGame() {
@@ -680,72 +684,7 @@ function setupNavigation() {
     });
 }
 
-function generateTasks() {
-    const levelMultiplier = 1 + ((playerData.level - 1) * 0.05);
-    const energyMoney = Math.floor(Math.random() * 10) + 1;
-    const energyXP = Math.floor(Math.random() * 10) + 1;
-
-    const baseMoney = energyMoney * (Math.floor(Math.random() * 15) + 10);
-    const baseXP = energyXP * (Math.floor(Math.random() * 5) + 5);
-
-    playerData.officeTasks = [
-        { title: 'Jednání se sponzory', type: 'money', energy: energyMoney, reward: Math.floor(baseMoney * levelMultiplier) },
-        { title: 'Taktický rozbor videa', type: 'xp', energy: energyXP, reward: Math.floor(baseXP * levelMultiplier) }
-    ];
-    saveGame();
-}
-
-window.startTask = function(taskIndex) {
-    const task = playerData.officeTasks[taskIndex]; 
-    if (playerData.energy < task.energy) return alert("Nedostatek energie!");
-
-    playerData.energy -= task.energy;
-    playerData.activeTask = {
-        title: task.title,
-        type: task.type,
-        reward: task.reward,
-        endTime: Date.now() + (task.energy * 60 * 1000) 
-    };
-    
-    saveGame();
-    updateTopBarUI();
-    renderOffice();
-}
-
-function finishTask() {
-    const task = playerData.activeTask;
-    if (task.type === 'money') playerData.money += task.reward;
-    else if (task.type === 'xp') {
-        playerData.xp += task.reward;
-        checkLevelUp();
-    }
-
-    alert(`Úkol dokončen! +${task.reward} ${task.type === 'money' ? 'Peníze' : 'XP'}`);
-    playerData.activeTask = null;
-    playerData.officeTasks = []; 
-    saveGame();
-    
-    const activeBtn = document.querySelector('.nav-btn.active');
-    if (activeBtn && activeBtn.getAttribute('data-target') === 'office') {
-        renderOffice();
-    }
-}
-
-
 // --- TESTOVACÍ FUNKCE A UTILITKY ---
-window.resetEnergy = function() {
-    playerData.energy = 100;
-    saveGame();
-    updateTopBarUI();
-}
-
-window.skipTask = function() {
-    if (playerData.activeTask) {
-        playerData.activeTask.endTime = Date.now(); 
-        saveGame();
-        gameLoop(); 
-    }
-}
 
 window.startNewClub = function() {
     if(confirm("Tímto smažeš celou svou aktuální hru a začneš úplně od nuly. Jsi si jistý?")) {
@@ -961,163 +900,6 @@ function addPlayerXp(player, xpAmount) {
     return levelUp;
 }
 
-// =======================================================================
-// --------------- FOTBALOVÉ PODZEMÍ (PvE) --------------- 
-// =======================================================================
-
-// Testovací tlačítko pro přeskočení cooldownu
-window.skipPvETime = function() {
-    if (playerData.pve) {
-        playerData.pve.nextMatchTime = 0;
-        saveGame();
-        renderPvE();
-    }
-}
-
-// Generátor odměny v podobě hráče
-function generateRewardPlayer(rankName, minStars, maxStars) {
-    // 1. Náhodně určíme pozici a národnost
-    const positions = ['att', 'mid', 'def', 'gk'];
-    const position = positions[Math.floor(Math.random() * positions.length)];
-    const nat = NATIONALITIES[Math.floor(Math.random() * NATIONALITIES.length)];
-    
-    // 2. Základní nastavení ranku a hvězd
-    const stars = Math.floor(Math.random() * (maxStars - minStars + 1)) + minStars;
-    const rankObj = PLAYER_RANKS.find(r => r.name === rankName);
-    
-    // 3. Generování statistik (Pouze ty, které pozice potřebuje)
-    const stats = { atk: 0, def: 0, spd: 0, str: 0, eng: 0, gk: 0, tek: 0 };
-    const allowedStats = POSITION_STATS[position].stats;
-    
-    // Odměny z podzemí mají základní statistiky 1-5
-    allowedStats.forEach(s => {
-        stats[s] = Math.floor(Math.random() * 10) + 1;
-    });
-
-    return {
-        id: 'pve_' + Math.random().toString(36).substr(2, 9),
-        name: `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`,
-        position: position,
-        nationality: nat.name,
-        flag: nat.flag, // Ponecháme v datech pro jistotu, i když ho teď nekreslíme
-        rank: rankObj.name,
-        statCap: rankObj.cap,
-        stars: stars,
-        level: 1,           
-        maxLevel: stars === 0 ? 1 : stars * 5, 
-        xp: 0,
-        unspentPoints: 0,
-        stats: stats
-    };
-}
-
-// Simulace podzemí
-window.startPvEMatch = function(dIndex, sIndex) {
-    const stage = PVE_DUNGEONS[dIndex].stages[sIndex];
-    
-    playerData.pve.nextMatchTime = Date.now() + 3600000;
-
-    const botFormation = '4-4-2';
-    const layout = FORMATIONS_LAYOUT[botFormation];
-    const botPlayers = [];
-
-    // Vygenerujeme 11 hráčů bota na správných pozicích s fixní silou
-    for (let i = 0; i < 11; i++) {
-        let pos = 'att';
-        if (i >= layout.gk[0] && i < layout.gk[1]) pos = 'gk';
-        else if (i >= layout.def[0] && i < layout.def[1]) pos = 'def';
-        else if (i >= layout.mid[0] && i < layout.mid[1]) pos = 'mid';
-
-        // Vezmeme sílu pro danou pozici z configu
-        const power = stage.botPower[pos];
-        const stats = { atk: 0, def: 0, spd: 0, str: 0, eng: 0, gk: 0, tek: 0 };
-        
-        // Tato síla se zapíše do všech 4 statistik, které daná pozice používá
-        POSITION_STATS[pos].stats.forEach(s => stats[s] = power);
-
-        botPlayers.push({
-            name: `Hráč soupeře`,
-            position: pos,
-            stats: stats
-        });
-    }
-
-    const mySectors = calculateSectorStrength(playerData.players, playerData.formation, playerData.isPrepared);
-    const botSectors = calculateSectorStrength(botPlayers, botFormation, false);
-    
-    // ---  Výpočet ratingu (0.0 - 10.0) pro zobrazení v záznamu ---
-    const myBaseRating = calculateBaseTeamRating(playerData.players, playerData.formation);
-    const botBaseRating = calculateBaseTeamRating(botPlayers, botFormation);
-
-    const result = simulateMatch(mySectors, botSectors, playerData.formation, botFormation, playerData.players, botPlayers, stage.name);
-
-    let isVictory = result.myGoals > result.botGoals;
-
-    let mailSubject = `⚔️ Záznam z podzemí: FC ${playerData.managerName} vs ${stage.name}`;
-
-    if (isVictory) {
-        let levelUps = [];
-        playerData.players.slice(0, 11).forEach(p => {
-            if (addPlayerXp(p, stage.reward.xp)) levelUps.push(p.name);
-        });
-        if (levelUps.length > 0) {
-            result.log.push({ min: 'Konec', text: `🌟 ZLEPŠENÍ: Hráči ${levelUps.join(', ')} postoupili na novou úroveň!`, score: `${result.myGoals}:${result.botGoals}`, zone: 50, type: 'neutral' });
-        }
-        const newPlayer = generateRewardPlayer(stage.reward.rank, stage.reward.minStars, stage.reward.maxStars);
-        playerData.players.push(newPlayer);
-        
-        result.log.push({ min: 'Konec', text: `🎁 ZÍSKAL JSI NOVÉHO HRÁČE! Podívej se do Šatny. Jmenuje se ${newPlayer.name}.`, score: `${result.myGoals}:${result.botGoals}`, zone: 50, type: 'goal' });
-
-        // --- KONTROLA BOSSE PRO SÍŇ SLÁVY ---
-        if (stage.reward && stage.reward.isBoss) {
-            window.awardPvETrophy(PVE_DUNGEONS[dIndex].name, stage.name);
-        }
-
-        playerData.pve.stageIndex++;
-        if (playerData.pve.stageIndex >= PVE_DUNGEONS[dIndex].stages.length) {
-            playerData.pve.stageIndex = 0;
-            playerData.pve.dungeonIndex++; 
-        }
-    } else {
-        result.log.push({ min: 'Konec', text: `Soupeř byl tentokrát příliš silný. Odpočiň si, uprav taktiku a zkus to za hodinu znovu!`, score: `${result.myGoals}:${result.botGoals}`, zone: 50, type: 'bad-goal' });
-    }
-
-    // --- Předání dat o síle týmů do poštovní zprávy ---
-    const matchRewards = {
-        homeTeam: `FC ${playerData.managerName}`,
-        awayTeam: stage.name,
-        myRating: myBaseRating,
-        botRating: botBaseRating,
-        money: 0,
-        xp: isVictory ? 50 : 0,
-        pXp: isVictory ? stage.reward.xp : 0
-    };
-    
-    addMailMessage(
-        mailSubject, 
-        result.log, 
-        `${result.myGoals}:${result.botGoals}`, 
-        matchRewards
-    );
-
-    playerData.mail[0].isPvE = true;
-
-    saveGame();
-    renderPvE();
-}
-
-// reset podzemí pro testování //
-window.resetDungeonTest = function() {
-    if (confirm("Opravdu chceš resetovat postup v podzemí pro testování?")) {
-        playerData.pve.dungeonIndex = 0;
-        playerData.pve.stageIndex = 0;
-        playerData.pve.nextMatchTime = 0; // Zrušíme i čekání
-        saveGame();
-        renderPvE();
-        alert("Podzemí bylo resetováno na úplný začátek!");
-    }
-};
-
 // --- ŠATNA ---
 let selectedPlayerIndex = null;
 let isSellMode = false;
@@ -1251,9 +1033,12 @@ function getScoutInterval() {
 }
 
 function generateScoutedPlayers() {
-    // 1. HLAVNÍ SKAUT (Funguje normálně)
+    // 1. HLAVNÍ SKAUT
     playerData.scoutedPlayers = [];
-    const amount = 3 + Math.floor(playerData.buildings.scout / 2); 
+    
+    // Tady jsme to natvrdo omezili na 3. 
+    // (Do budoucna tady pak můžeš přičíst prémiové sloty, např.: const amount = 3 + (playerData.premiumScoutSlots || 0); )
+    const amount = 3; 
     
     for (let i = 0; i < amount; i++) {
         playerData.scoutedPlayers.push(generatePlayer(false)); 
@@ -1686,6 +1471,7 @@ function addMailMessage(subject, log, result, rewards = null, customDate = null)
         playerData.mail = playerData.mail.slice(0, 10);
     }
     saveGame();
+    window.updateMailNotification();
 }
 
 // --- OFFLINE SIMULACE (Když hráč není ve hře) ---
@@ -1790,16 +1576,25 @@ function simulateOfflineMatch(matchTime) {
 
     if (levelUps.length > 0) result.log.push({ min: '90+', text: `🌟 ZLEPŠENÍ: Hráči ${levelUps.join(', ')} postoupili na novou úroveň!`, score: `${result.myGoals}:${result.botGoals}` });
 
-    // --- OPRAVA HODNOCENÍ: Výpočet ratingu (0.0 - 10.0) ---
+    // --- Výpočet ratingu (0.0 - 10.0) ---
     const myBaseRating = calculateBaseTeamRating(playerData.players, playerData.formation);
     const botBaseRating = calculateBaseTeamRating(opponent.players, opponent.formation);
+
+    // --- SJEDNOCENÝ FORMÁT ČASU (jako v minilize) ---
+    const matchDateObj = new Date(matchTime);
+    const formattedMatchDate = matchDateObj.toLocaleString('cs-CZ', {
+        day: 'numeric',
+        month: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 
     addMailMessage(
         `Report: ${myTeam.name} vs ${opponent.name}`, 
         result.log, 
         `${result.myGoals}:${result.botGoals}`, 
         { money: rewardMoney, xp: rewardXP, pXp: pXpGained, homeTeam: myTeam.name, awayTeam: opponent.name, myRating: myBaseRating, botRating: botBaseRating },
-        new Date(matchTime).toLocaleString('cs-CZ') // Správný historický čas
+        formattedMatchDate // Vložení zformátovaného času bez vteřin
     );
 
     playerData.isPrepared = false;
@@ -2004,27 +1799,37 @@ window.fetchCloudMail = async function() {
     }
 }
 
-// --- SÍŇ SLÁVY (ZÁPIS ÚSPĚCHŮ) ---
+// --- SÍŇ SLÁVY (VITRÍNOVÝ ZÁPIS ÚSPĚCHŮ) ---
 window.awardLeagueTitle = function(division) {
     if (!playerData.hallOfFame) playerData.hallOfFame = { league: [], pve: [] };
+    if (!playerData.hallOfFame.league) playerData.hallOfFame.league = [];
     
-    // Zkopírujeme si prvních 11 hráčů (základní sestavu)
-    const roster = playerData.players.slice(0, 11).map(p => ({
-        name: p.name,
-        position: p.position,
-        rank: p.rank
-    }));
+    // Podíváme se, zda už pohár z této divize ve vitríně máme
+    const existingTrophy = playerData.hallOfFame.league.find(t => t.div === division);
 
-    playerData.hallOfFame.league.unshift({
-        id: Date.now(),
-        div: division,
-        date: new Date().toLocaleDateString('cs-CZ'),
-        roster: roster
-    });
+    if (existingTrophy) {
+        // Pokud už pohár existuje, pouze navýšíme celkový počet titulů
+        existingTrophy.count = (existingTrophy.count || 1) + 1;
+    } else {
+        // Pokud je to historicky poprvé, vyfotíme aktuální vítěznou 11 a zapíšeme datum
+        const roster = playerData.players.slice(0, 11).map(p => ({
+            name: p.name,
+            position: p.position,
+            rank: p.rank
+        }));
+
+        playerData.hallOfFame.league.push({
+            div: division,
+            date: new Date().toLocaleDateString('cs-CZ'),
+            roster: roster,
+            count: 1 // První triumf
+        });
+    }
 };
 
 window.awardPvETrophy = function(dungeonName, bossName) {
     if (!playerData.hallOfFame) playerData.hallOfFame = { league: [], pve: [] };
+    if (!playerData.hallOfFame.pve) playerData.hallOfFame.pve = [];
     
     playerData.hallOfFame.pve.unshift({
         id: Date.now(),

@@ -392,14 +392,16 @@ window.runMLSimulation = async function(leagueName, league, simulatedTime) {
     const formattedMatchDate = matchDateObj.toLocaleDateString() + ' ' + matchDateObj.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
 
     // --- ALGORITMUS ROUND-ROBIN (Každý s každým) ---
-    let rrTeams = [...participants];
+    const participantsList = Object.keys(league.participants);
+    // Vždy musíme hráče seřadit podle ID, jinak se při každém spuštění rozbije pořadí a algoritmus začne losovat nesmysly (někdo hraje víckrát, někdo vůbec).
+    let rrTeams = [...participantsList].sort(); 
+    
     if (rrTeams.length % 2 !== 0) {
         rrTeams.push("BYE"); 
     }
 
-    let totalMatchesPlayed = 0;
-    participants.forEach(uid => { totalMatchesPlayed += league.standings[uid].p; });
-    let currentRound = Math.floor(totalMatchesPlayed / (participants.length / 2)) || 0;
+    // Použijeme globální počítadlo kol
+    let currentRound = league.globalPlayedRounds || 0;
     
     let n = rrTeams.length;
     for (let r = 0; r < currentRound % (n - 1); r++) {
@@ -500,7 +502,7 @@ window.runMLSimulation = async function(leagueName, league, simulatedTime) {
 
         const mailA = {
             id: 'ml_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
-            subject: `🏆 ML: ${nameA} vs ${nameB}`,
+            subject: `🏆 ML: ${leagueName} - ${nameA} vs ${nameB}`,
             content: logA,
             result: `${scoreA}:${scoreB}`,
             rewards: { money: 0, xp: 0, pXp: 0, homeTeam: nameA, awayTeam: nameB, myRating: ratingA, botRating: ratingB, isML: true },
@@ -510,7 +512,7 @@ window.runMLSimulation = async function(leagueName, league, simulatedTime) {
         
         const mailB = {
             id: 'ml_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
-            subject: `🏆 ML: ${nameB} vs ${nameA}`,
+            subject: `🏆 ML: ${leagueName} - ${nameB} vs ${nameA}`,
             content: logB,
             result: `${scoreB}:${scoreA}`,
             rewards: { money: 0, xp: 0, pXp: 0, homeTeam: nameB, awayTeam: nameA, myRating: ratingB, botRating: ratingA, isML: true },
@@ -567,7 +569,7 @@ window.runMLSimulation = async function(leagueName, league, simulatedTime) {
         league.seasonEndTime = league.nextMatchTime + SEVEN_DAYS; 
     }
 
-    // A TADY JE TO KOUZLO: Posuneme čas přesně o 8 hodin, žádné zjišťování aktuálního času!
+    //  Posuneme čas přesně o 8 hodin, žádné zjišťování aktuálního času!
     league.nextMatchTime += EIGHT_HOURS;
     await window.dbSet(window.dbRef(window.db, `minileagues/${leagueName}`), league);
 };
@@ -828,7 +830,7 @@ window.renderMinileague = function() {
                         <div class="ml-league-header">${lName}</div>
                         <div class="ml-league-info">👑 Zakladatel: <span style="color:white;">${creator}</span></div>
                         <div class="ml-league-info">⛔ Omezení: <span style="color:#60a5fa;">${rankName}</span></div>
-                        <div class="ml-league-info">🗓️ Zbývá kol: <span style="color:white; font-weight:bold;">${roundsLeft} / 21</span></div>
+                        <div class="ml-league-info">🗓️ Zbývá kol: <span id="ml-rounds-left-${index}" style="color:white; font-weight:bold;">${roundsLeft} / 21</span></div>
                         <div class="ml-league-info">⏳ Konec ligy za: <span id="ml-season-timer-${index}" data-endtime="${seasonEndTime}" style="color:#fcd34d; font-weight:bold;">Načítám...</span></div>
                         
                         <div class="ml-league-info">⚔️ Příští soupeř: <span id="ml-next-opp-${index}" style="color:#ef4444; font-weight:bold;">Zjišťuji...</span></div>
@@ -898,7 +900,7 @@ window.renderMinileague = function() {
         </div>
     `;
 
-    // --- ZJIŠTĚNÍ SOUPEŘŮ NA POZADÍ (Ihned po vykreslení) ---
+    // --- ZJIŠTĚNÍ SOUPEŘŮ A REÁLNÝCH KOL NA POZADÍ ---
     playerData.myMinileagues.forEach(async (l, index) => {
         const lName = typeof l === 'object' ? l.name : l;
         try {
@@ -906,13 +908,22 @@ window.renderMinileague = function() {
             const snap = await window.dbGet(window.dbChild(dbRef, `minileagues/${lName}`));
             if (snap.exists()) {
                 const league = snap.val();
-                // Spočítáme soupeře pomocí naší čisté matematické funkce
+                
+                // 1. Zjištění soupeře
                 const oppName = window.getMLNextOpponent(league, playerData.uid);
                 const oppEl = document.getElementById(`ml-next-opp-${index}`);
                 if (oppEl) oppEl.innerText = oppName;
+
+                // 2. Skutečný výpočet odehraných kol z globálního počítadla ligy
+                let currentRound = league.globalPlayedRounds || 0;
+                let actualRoundsLeft = 21 - currentRound;
+                if (actualRoundsLeft < 0) actualRoundsLeft = 0;
+
+                const roundsEl = document.getElementById(`ml-rounds-left-${index}`);
+                if (roundsEl) roundsEl.innerText = `${actualRoundsLeft} / 21`;
             }
         } catch (e) { 
-            console.error("Chyba při zjišťování soupeře na přehledu:", e); 
+            console.error("Chyba při zjišťování dat na přehledu:", e); 
         }
     });
 
@@ -990,10 +1001,9 @@ window.renderMinileagueDetail = async function(leagueName, skipLoader = false) {
             
             while (Date.now() >= league.nextMatchTime && loops < 25) {
                 const simulatedTime = league.nextMatchTime; // Zjistíme, z jaké doby zápas je
-                await window.runMLSimulation(leagueName, league, simulatedTime); // Pošleme čas
                 
-                const newSnap = await window.dbGet(window.dbChild(dbRef, `minileagues/${leagueName}`));
-                league = newSnap.val();
+                // Samotná funkce runMLSimulation nám rovnou v paměti posune nextMatchTime o 8 hodin vpřed
+                await window.runMLSimulation(leagueName, league, simulatedTime); 
                 loops++;
             }
         }
@@ -1159,14 +1169,12 @@ window.getMLNextOpponent = function(league, myUid) {
     const participants = Object.keys(league.participants);
     if (participants.length < 2) return "Čeká se na hráče";
 
-    // Vytvoříme losovací pole stejně jako v simulátoru
-    let rrTeams = [...participants];
+    // Musíme to seřadit úplně stejně jako v simulátoru!
+    let rrTeams = [...participants].sort();
     if (rrTeams.length % 2 !== 0) rrTeams.push("BYE"); 
 
-    // Zjistíme, v jakém kole se momentálně nacházíme
-    let totalMatchesPlayed = 0;
-    participants.forEach(uid => { totalMatchesPlayed += (league.standings[uid]?.p || 0); });
-    let currentRound = Math.floor(totalMatchesPlayed / (participants.length / 2)) || 0;
+    // Použijeme přesné globální počítadlo kol místo složité matematiky z tabulky
+    let currentRound = league.globalPlayedRounds || 0;
     
     // Posuneme týmy na pozice pro toto kolo
     let n = rrTeams.length;
@@ -1396,13 +1404,10 @@ window.catchUpMinileagues = async function() {
             let league = snap.val();
             let loops = 0;
 
-            // Úplně stejná smyčka jako uvnitř miniligy - první hráč, který ráno zapne hru, odsimuluje víkend všem!
+            // Úplně stejná smyčka jako v detailu ligy - dožene všechny zmeškané zápasy bleskově za sebou
             while (Date.now() >= league.nextMatchTime && loops < 25) {
                 const simulatedTime = league.nextMatchTime;
                 await window.runMLSimulation(lName, league, simulatedTime);
-                
-                const newSnap = await window.dbGet(window.dbChild(dbRef, `minileagues/${lName}`));
-                league = newSnap.val();
                 loops++;
                 simulatedAny = true;
             }
@@ -1412,6 +1417,10 @@ window.catchUpMinileagues = async function() {
     }
 
     if (simulatedAny) {
-        console.log("Miniligy byly úspěšně dorovnány s reálným časem.");
+        console.log("Všechny miniligy byly úspěšně dorovnány s reálným časem.");
+        // Pokud jsme zrovna na obrazovce miniligy, tak ji překreslíme, ať se ukážou aktuální kola
+        if (document.querySelector('.minileague-container')) {
+            renderMinileague();
+        }
     }
 };

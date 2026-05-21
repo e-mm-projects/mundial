@@ -309,6 +309,14 @@ body {
     box-shadow: 0 10px 25px rgba(0,0,0,0.7);
 }
 
+.graphic-card.selected-card {
+    border: 3px solid #fcd34d !important; /* Zlatý rámeček */
+    transform: scale(1.05) translateY(-5px) !important; /* Karta povyskočí a zvětší se */
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.9) !important; /* Silná zlatá záře */
+    z-index: 50 !important; /* Aby vyskočila nad ostatní karty */
+    filter: brightness(1.1); /* Lehce se nasvítí */
+}
+
 /* 1. Odznak s levelem - styl z obrázku: Zlatý/žlutý nápis na štítu */
 .gc-level-badge {
     position: absolute;
@@ -647,7 +655,7 @@ body {
 
 /* 1. Stylový nadpis s tmavým pozadím */
 .section-title {
-    background-color: rgba(233, 227, 227, 0.75);
+    background-color: #e5e7eb;
     color: #fdf5e6;
     padding: 10px 30px;
     border-radius: 8px;
@@ -734,6 +742,8 @@ body {
 
 /* === SEKCE ZÁPASY A LIGOVÁ TABULKA === */
 
+
+
 .next-match-card {
     background-color: rgba(0, 0, 0, 0.85);
     color: white;
@@ -795,6 +805,111 @@ body {
     background-color: rgba(245, 158, 11, 0.25) !important;
     font-weight: bold;
     color: #92400e;
+}
+
+/* --- KRESLENÁ CEDULKA PRO ZBÝVAJÍCÍ ZÁPASY --- */
+.season-remaining-board {
+    background: #5d4037; /* Základní hnědá barva (dřevo) */
+    background-image: linear-gradient(to bottom, #795548, #4e342e);
+    border: 3px solid #3e2723;
+    border-radius: 8px;
+    color: #fcd34d;
+    font-weight: bold;
+    font-size: 1.1rem;
+    text-align: center;
+    padding: 8px 20px;
+    margin: 0 auto 20px auto;
+    max-width: fit-content;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.2);
+    text-shadow: 1px 1px 2px black;
+}
+
+/* --- VELKÁ GRAFICKÁ TABULE PRO ZÁPAS  --- */
+.match-graphic-board {
+    background-image: none;
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    
+    /* ZÁKLADNÍ NASTAVENÍ ROZMĚRŮ A ODSAZENÍ (POUZE PRO TEXTY) */
+    padding: 50px 30px 20px 30px; 
+    margin: 0 auto 30px auto; 
+    max-width: 550px; 
+    min-height: 200px;
+    
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 5;
+}
+
+/* --- FALEŠNÁ GRAFICKÁ PODLOŽKA (KTEROU MŮŽEME POSOUVAT A ROZTAHOVAT) --- */
+.match-graphic-board::before {
+    content: ""; 
+    position: absolute;
+    
+    /* POSUNUTÍ A ROZTAŽENÍ NAHORU */
+    top: -180px;    
+    /* POSUNUTÍ A ROZTAŽENÍ DOLŮ */
+    bottom: -10px;    
+    /* ROZTAŽENÍ DO STRAN */
+    left: 0; 
+    right: 0; 
+    
+    /* ZDE JE NAČTENÝ OBRÁZEK A JEHO NASTAVENÍ */
+    background-image: url('images/tabule_bez_pozadi.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    
+    /* Musí mít z-index: -1, aby ležel POD texty */
+    z-index: -1;
+}
+
+/* Úprava nadpisu uvnitř tabule, aby tam seděl */
+.match-graphic-board h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+}
+
+/* --- KRESLENÉ TLAČÍTKO PRO PŘÍPRAVU --- */
+.btn-prepare-wood {
+    background-color: #166534;
+    background-image: linear-gradient(to bottom, #15803d, #14532d);
+    border: 3px solid #064e3b;
+    border-radius: 8px;
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 1.1rem;
+    text-align: center;
+    padding: 12px 20px;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.2);
+    text-shadow: 1px 1px 2px black;
+    transform: rotate(1deg); /* Lehký náklon na druhou stranu než horní cedulka */
+    cursor: pointer;
+    transition: transform 0.1s ease, filter 0.2s ease;
+}
+
+/* Reakce po najetí myší */
+.btn-prepare-wood:hover:not(:disabled) {
+    filter: brightness(1.2);
+    transform: rotate(1deg) scale(1.03);
+}
+
+/* Zašedlý stav, když už je tým připraven */
+.btn-prepare-wood:disabled {
+    background-color: #4b5563;
+    background-image: linear-gradient(to bottom, #6b7280, #374151);
+    border-color: #1f2937;
+    color: #9ca3af;
+    cursor: not-allowed;
+    transform: none; /* Vypneme náklon, ať to vypadá "zaklapnutě" */
 }
 
 /* --- ZÁZNAM UTKÁNÍ A MINIATURA HŘIŠTĚ --- */
@@ -925,6 +1040,42 @@ body {
     font-weight: bold;
     text-shadow: 1px 1px 2px black;
     margin-left: 5px; /* Drobná mezera od samotného čísla levelu */
+}
+
+/* --- DŘEVĚNÁ TLAČÍTKA PRO OVLÁDÁNÍ ZÁZNAMU UTKÁNÍ --- */
+.btn-wood-action {
+    background: #5d4037; /* Základní hnědá barva (dřevo) */
+    background-image: linear-gradient(to bottom, #795548, #4e342e);
+    border: 3px solid #3e2723;
+    border-radius: 8px;
+    color: #fcd34d; /* Zlatavý text jako na cedulce */
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.2);
+    text-shadow: 1px 1px 2px black;
+    cursor: pointer;
+    transition: filter 0.2s ease, transform 0.1s ease;
+}
+
+/* Stav pro aktivované/stisknuté dřevěné tlačítko */
+.btn-wood-action.pressed {
+    background-image: linear-gradient(to bottom, #3e2723, #2d1a12); /* Obrácený gradient - stín jde dovnitř */
+    border-color: #1a0f0b;
+    color: #10b981; /* Zelené zvýraznění textu */
+    box-shadow: inset 0 4px 8px rgba(0,0,0,0.8); /* Vnitřní stín místo vnějšího */
+    transform: translateY(2px) rotate(1deg); /* Fyzicky se posune o 2 pixely dolů, jako by bylo zamáčknuté */
+}
+
+/* Hover efekt, aby bylo poznat, že na to jde kliknout */
+.btn-wood-action:hover {
+    filter: brightness(1.15);
+    transform: scale(1.02);
+}
+
+/* Stav, když na tlačítko nejde kliknout (např. už je přeskočeno) */
+.btn-wood-action:disabled {
+    filter: grayscale(0.8) brightness(0.7);
+    cursor: not-allowed;
+    transform: none;
 }
 
 /* --- UNIVERZÁLNÍ KOMPONENTY (Nové) --- */
@@ -1167,33 +1318,35 @@ body {
     border-bottom: 1px dashed rgba(141, 110, 99, 0.4);
 }
 
-/* --- NOTIFIKAČNÍ BANNERY (Upozornění na poštu) --- */
-.notification-banner {
-    background: linear-gradient(135deg, #d97706, #b45309);
-    color: white;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    font-weight: bold;
-    text-align: center;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-    border: 2px solid #fcd34d;
-    cursor: pointer;
-    animation: pulse 2s infinite; /* Tady voláme animaci pulzování */
+/* --- NOTIFIKAČNÍ TEČKA PRO POŠTU --- */
+.nav-btn[data-target="mail"] {
+    position: relative; /* Nutné, aby se tečka držela tlačítka */
 }
 
-/* Modifikátor pro větší verzi banneru (do Podzemí) */
-.notification-banner.large {
-    padding: 30px;
-    max-width: 600px;
-    margin: 0 auto 20px auto;
+.mail-badge {
+    position: absolute;
+    top: 3px;
+    right: 5px;
+    width: 12px;
+    height: 12px;
+    background-color: #ef4444; /* Výrazná červená */
+    border-radius: 50%;
+    border: 2px solid #1f2937; /* Tmavý okraj pro lepší kontrast */
+    box-shadow: 0 0 5px rgba(239, 68, 68, 0.8);
+    display: none; /* Ve výchozím stavu skryto */
+    pointer-events: none; /* Aby tečka neblokovala kliknutí na tlačítko */
 }
 
-/* Samotná animace pulzování */
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.02); }
-    100% { transform: scale(1); }
+.mail-badge.active {
+    display: block;
+    animation: pulse-badge 2s infinite;
+}
+
+/* Animace pulzování */
+@keyframes pulse-badge {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+    70% { transform: scale(1.2); box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 
 /* --- VELKÉ ODPOČTY ČASU --- */
